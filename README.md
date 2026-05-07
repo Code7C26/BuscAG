@@ -1,27 +1,32 @@
-# AG360 - Realidad Aumentada en Alta Gracia
+# 🔍 buscAG
 
-## Descripción del Problema
-A pesar de la riqueza histórica de Alta Gracia, muchos turistas y ciudadanos locales no cuentan con herramientas interactivas que les permitan conocer la historia profunda de los monumentos en tiempo real. La cartelería tradicional es estática y limitada, lo que genera una experiencia de visita menos enriquecedora.
+> **"La red social para recuperar lo que creías perdido."**
 
-## Propuesta de Solución
-AG360 propone un sistema de cartelería inteligente mediante códigos QR ubicados en puntos estratégicos de la ciudad. Al escanearlos, el usuario podrá visualizar elementos en Realidad Aumentada, reconstrucciones históricas y datos curiosos directamente en su smartphone, transformando el recorrido turístico en una experiencia inmersiva.
+---
 
-## Público Objetivo
-* Turistas nacionales e internacionales que visitan Córdoba.
-* Instituciones educativas y estudiantes de la zona.
-* Residentes de Alta Gracia interesados en su patrimonio cultural.
+## 🖼️ Logotipo
+![Logo de buscAG](./assets/logo.png)
+*(Imagen representativa del proyecto)*
 
-## Stack Tecnológico
-* **Hardware:** Dispositivos móviles con sensores de cámara y GPS.
-* **Software:** Desarrollo basado en tecnologías de Realidad Aumentada (AR), herramientas de diseño para modelos 3D y sistemas de gestión de contenido para los códigos QR.
+---
 
-## Estructura del Repositorio
-* `/src`: Código fuente de la aplicación o sitio web.
-* `/docs`: Documentación inicial, manuales y archivos de texto.
-* `/design`: Prototipos de la interfaz de usuario y mapas de experiencia.
-* `/assets`: Logotipos, imágenes representativas y modelos 3D.
+## 📋 Descripción del Problema
+En nuestra comunidad, la pérdida de objetos personales genera una problemática real de desorganización y estrés. Actualmente, cuando alguien encuentra algo, la información se dispersa en chats de WhatsApp que se borran o en avisos físicos que nadie lee. Esto provoca que la mayoría de los objetos valiosos nunca regresen a sus dueños originales por falta de un canal de comunicación eficiente.
 
-## Integrantes y Roles
-* **German Lujan**: 
-* **[valentino Mamonde]**: 
+## 💡 Propuesta de Solución
+**buscAG** resuelve este problema mediante una plataforma centralizada con estética de red social. El sistema permite que cualquier persona que encuentre un objeto pueda cargar una foto y una descripción de forma instantánea. De esta manera, el sistema funciona como un catálogo visual dinámico donde los damnificados pueden "scrollear" y reconocer sus pertenencias, facilitando el reencuentro de manera rápida y segura.
+
+## 👥 Público Objetivo
+Nuestro sistema está diseñado para:
+*   **Estudiantes y Docentes:** Que transitan espacios comunes y suelen extraviar pertenencias.
+*   **Vecinos de la comunidad:** Usuarios que buscan una herramienta solidaria y moderna para gestionar hallazgos, mejorando su calidad de vida al recuperar objetos de valor económico o sentimental.
+
+---
+
+## 👥 Integrantes y Roles
+| Nombre y Apellido | Rol en la "Startup" |
+| :--- | :--- |
+| **[NOMBRE 1]** | 🛡️ Scrum Master |
+| **[NOMBRE 2]** | 💻 Desarrollador |
+| **[NOMBRE 3]** | ⚙️ Hardware Lead |
 

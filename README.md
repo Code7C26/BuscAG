@@ -24,9 +24,7 @@ Nuestro sistema está diseñado para:
 ---
 
 ## 👥 Integrantes y Roles
-| Nombre y Apellido | Rol en la "Startup" |
-| :--- | :--- |
-| **[NOMBRE 1]** | 🛡️ Scrum Master |
-| **[NOMBRE 2]** | 💻 Desarrollador |
-| **[NOMBRE 3]** | ⚙️ Hardware Lead |
+Mamonde Valentino
+German Lujan
+
 

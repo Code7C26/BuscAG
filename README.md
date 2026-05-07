@@ -22,6 +22,6 @@ AG360 propone un sistema de cartelería inteligente mediante códigos QR ubicado
 * `/assets`: Logotipos, imágenes representativas y modelos 3D.
 
 ## Integrantes y Roles
-* **German Lujan**: Scrum Master / Desarrollo.
-* **[Nombre del compañero]**: Hardware Lead / Desarrollador.
-* **[Nombre del compañero]**: UX/UI Designer / Documentación.
+* **German Lujan**: 
+* **[valentino Mamonde]**: 
+

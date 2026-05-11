@@ -26,5 +26,6 @@ Nuestro sistema está diseñado para:
 ## 👥 Integrantes y Roles
 Mamonde Valentino
 German Lujan
+los mas pros
 
 

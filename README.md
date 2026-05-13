@@ -20,8 +20,16 @@ Esto provoca que los objetos valiosos nunca regresen a sus dueños por falta de 
 * **Seguridad:** Un puente rápido y seguro entre quien encuentra y quien busca.
 
 ## 👥 Público Objetivo
-* **Estudiantes y Docentes:** Que transitan espacios comunes y suelen extraviar pertenencias.
-* **Vecinos de la Comunidad:** Usuarios que buscan una herramienta solidaria y moderna.
+Nuestro sistema está diseñado para:
+*   **Estudiantes y Docentes:** Que transitan espacios comunes y suelen extraviar pertenencias.
+*   **Vecinos de la comunidad:** Usuarios que buscan una herramienta solidaria y moderna para gestionar hallazgos, mejorando su calidad de vida al recuperar objetos de valor económico o sentimental.
+
+---
+
+## 👥 Integrantes y Roles
+Mamonde Valentino
+German Lujan
+los mas pros
 
 ## 🛠️ Integrantes y Roles
 * **Mamonde Valentino-German Lujan** 

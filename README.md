@@ -29,10 +29,16 @@ Esto provoca que los objetos valiosos nunca regresen a sus dueños por falta de 
 ---
 
 ## 👥 Público Objetivo
-* **Estudiantes y Docentes:** Que transitan espacios comunes y suelen extraviar pertenencias.
-* **Vecinos de la Comunidad:** Usuarios que buscan una herramienta solidaria y moderna, para ayudarse entre ellos.
+Nuestro sistema está diseñado para:
+*   **Estudiantes y Docentes:** Que transitan espacios comunes y suelen extraviar pertenencias.
+*   **Vecinos de la comunidad:** Usuarios que buscan una herramienta solidaria y moderna para gestionar hallazgos, mejorando su calidad de vida al recuperar objetos de valor económico o sentimental.
 
 ---
+
+## 👥 Integrantes y Roles
+Mamonde Valentino
+German Lujan
+los mas pros
 
 ## 🛠️ Integrantes y Roles
 * 💻 **German Lujan** - 

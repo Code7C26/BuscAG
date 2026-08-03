@@ -4,6 +4,7 @@
 ## 🖼️ Logotipo
 ![Logo de buscAG](./assets/logo.png)
 *(Imagen representativa del proyecto)*
+hb   v
 
 
 ## 📝 Descripción del Problema

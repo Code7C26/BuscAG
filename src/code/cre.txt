@@ -1,0 +1,5 @@
+que es el dominio de colision, choque entre las señales.
+def s1()=3
+def s2()=4
+def suma=s1+s2
+print suma4

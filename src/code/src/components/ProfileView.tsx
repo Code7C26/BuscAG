@@ -1,0 +1,272 @@
+import React, { useState } from 'react';
+import { User, Item } from '../types';
+import { ShieldCheck, CheckCircle2, Package, Settings, LogOut, Users, Trash2, Edit3, Plus, ChevronRight } from 'lucide-react';
+import { ItemCard } from './ItemCard';
+
+interface ProfileViewProps {
+  currentUser: User;
+  allUsers: User[];
+  userItems: Item[];
+  onSwitchUser: (user: User) => void;
+  onViewItem: (item: Item) => void;
+  onOpenPublish: () => void;
+  onMarkAsRecovered: (itemId: string) => void;
+  onDeleteItem: (itemId: string) => void;
+}
+
+export const ProfileView: React.FC<ProfileViewProps> = ({
+  currentUser,
+  allUsers,
+  userItems,
+  onSwitchUser,
+  onViewItem,
+  onOpenPublish,
+  onMarkAsRecovered,
+  onDeleteItem
+}) => {
+  const [activeSubTab, setActiveSubTab] = useState<'published' | 'recovered' | 'settings'>('published');
+
+  const publishedItems = userItems.filter(i => i.status !== 'recuperado');
+  const recoveredItems = userItems.filter(i => i.status === 'recuperado');
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6 pb-24 space-y-6">
+      {/* Profile Header Card */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs relative overflow-hidden">
+        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90" />
+        
+        <div className="relative pt-4 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
+          {/* Avatar */}
+          <div className="relative">
+            <img
+              src={currentUser.avatar}
+              alt={currentUser.name}
+              className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md bg-white"
+            />
+            {currentUser.verified && (
+              <div className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full border-2 border-white shadow-xs">
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+            )}
+          </div>
+
+          {/* User Details */}
+          <div className="flex-1 min-w-0">
+            <h2 className="font-extrabold text-slate-900 text-xl flex items-center justify-center sm:justify-start gap-1.5">
+              {currentUser.name}
+            </h2>
+            <p className="text-xs text-slate-500 font-medium">{currentUser.email}</p>
+            <p className="text-xs text-slate-600 mt-1">📍 {currentUser.location}</p>
+
+            {/* Quick Stats */}
+            <div className="mt-4 flex items-center justify-center sm:justify-start gap-6 border-t border-slate-100 pt-3">
+              <div>
+                <span className="font-extrabold text-slate-900 text-base block leading-none">
+                  {userItems.length}
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">Publicados</span>
+              </div>
+              <div className="border-r border-slate-200 h-6" />
+              <div>
+                <span className="font-extrabold text-emerald-600 text-base block leading-none">
+                  {currentUser.totalRecovered}
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">Recuperados</span>
+              </div>
+              <div className="border-r border-slate-200 h-6" />
+              <div>
+                <span className="font-extrabold text-amber-500 text-base block leading-none">
+                  ⭐ {currentUser.rating}
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">Calificación</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Demo Profile Switcher Pill */}
+      <div className="bg-blue-50 border border-blue-200/80 rounded-2xl p-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-blue-600 shrink-0" />
+          <div>
+            <span className="text-xs font-bold text-slate-800 block">Probar como otro usuario (Demo):</span>
+            <span className="text-[11px] text-slate-500">Cambia de perfil para simular conversaciones</span>
+          </div>
+        </div>
+
+        <select
+          value={currentUser.id}
+          onChange={(e) => {
+            const selected = allUsers.find(u => u.id === e.target.value);
+            if (selected) onSwitchUser(selected);
+          }}
+          className="px-3 py-1.5 bg-white border border-blue-300 rounded-xl text-xs font-bold text-blue-700 outline-none cursor-pointer"
+        >
+          {allUsers.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Sub-tabs Navigation */}
+      <div className="flex border-b border-slate-200">
+        <button
+          onClick={() => setActiveSubTab('published')}
+          className={`py-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
+            activeSubTab === 'published'
+              ? 'border-blue-600 text-blue-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          Mis Publicaciones ({publishedItems.length})
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('recovered')}
+          className={`py-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
+            activeSubTab === 'recovered'
+              ? 'border-emerald-600 text-emerald-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          Objetos Recuperados ({recoveredItems.length})
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('settings')}
+          className={`py-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
+            activeSubTab === 'settings'
+              ? 'border-slate-800 text-slate-800'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          Configuración
+        </button>
+      </div>
+
+      {/* Published Items Tab */}
+      {activeSubTab === 'published' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-extrabold text-slate-900 text-sm">Tus objetos activos</h3>
+            <button
+              onClick={onOpenPublish}
+              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Publicar otro
+            </button>
+          </div>
+
+          {publishedItems.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center space-y-3">
+              <Package className="w-12 h-12 text-slate-300 mx-auto" />
+              <p className="font-bold text-slate-700 text-sm">No tienes publicaciones activas</p>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                ¿Encontraste o perdiste algo? Publica para conectar con la comunidad.
+              </p>
+              <button
+                onClick={onOpenPublish}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Publicar ahora
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {publishedItems.map(item => (
+                <div key={item.id} className="relative group">
+                  <ItemCard item={item} onViewMore={onViewItem} />
+                  
+                  {/* Quick Owner Actions overlay */}
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => onMarkAsRecovered(item.id)}
+                      className="flex-1 py-1.5 px-3 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Marcar Recuperado
+                    </button>
+                    <button
+                      onClick={() => onDeleteItem(item.id)}
+                      className="p-1.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-xl transition cursor-pointer"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Recovered Items Tab */}
+      {activeSubTab === 'recovered' && (
+        <div className="space-y-4">
+          <h3 className="font-extrabold text-slate-900 text-sm">Historial de Objetos Devueltos / Recuperados</h3>
+
+          {recoveredItems.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center space-y-2">
+              <CheckCircle2 className="w-12 h-12 text-emerald-300 mx-auto" />
+              <p className="font-bold text-slate-700 text-sm">Aún no hay casos cerrados como recuperados</p>
+              <p className="text-xs text-slate-500">
+                Cuando devuelvas o recuperes un objeto, aparecerá en esta sección de honor.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {recoveredItems.map(item => (
+                <ItemCard key={item.id} item={item} onViewMore={onViewItem} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Settings Tab */}
+      {activeSubTab === 'settings' && (
+        <div className="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
+          <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
+            <div>
+              <span className="font-bold text-slate-800 text-sm block">Notificaciones push</span>
+              <span className="text-xs text-slate-500">Avisos de objetos cercanos y mensajes</span>
+            </div>
+            <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
+          </div>
+
+          <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
+            <div>
+              <span className="font-bold text-slate-800 text-sm block">Radio de alerta de ubicación</span>
+              <span className="text-xs text-slate-500">Recibir avisos hasta 5 km a la redonda</span>
+            </div>
+            <span className="text-xs font-bold text-blue-600">5 km</span>
+          </div>
+
+          <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
+            <div>
+              <span className="font-bold text-slate-800 text-sm block">Verificación de identidad</span>
+              <span className="text-xs text-slate-500">Aumenta la confianza de la comunidad</span>
+            </div>
+            <span className="text-xs font-bold text-emerald-600">Verificado ✓</span>
+          </div>
+
+          <button 
+            onClick={() => alert('Sesión cerrada correctamente (Modo demo)')}
+            className="w-full p-4 flex items-center justify-between text-red-600 hover:bg-red-50 transition cursor-pointer font-bold text-sm"
+          >
+            <span className="flex items-center gap-2">
+              <LogOut className="w-4 h-4" />
+              Cerrar sesión
+            </span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};

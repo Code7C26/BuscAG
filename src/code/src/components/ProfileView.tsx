@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Item } from '../types';
-import { ShieldCheck, CheckCircle2, Package, Settings, LogOut, Users, Trash2, Edit3, Plus, ChevronRight } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Package, Settings, LogOut, Users, Trash2, Edit3, Plus, ChevronRight, Sparkles } from 'lucide-react';
 import { ItemCard } from './ItemCard';
 
 interface ProfileViewProps {
@@ -12,6 +12,8 @@ interface ProfileViewProps {
   onOpenPublish: () => void;
   onMarkAsRecovered: (itemId: string) => void;
   onDeleteItem: (itemId: string) => void;
+  onGoToMatches?: () => void;
+  userMatchesCount?: number;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
@@ -22,7 +24,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onViewItem,
   onOpenPublish,
   onMarkAsRecovered,
-  onDeleteItem
+  onDeleteItem,
+  onGoToMatches,
+  userMatchesCount = 0
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'published' | 'recovered' | 'settings'>('published');
 
@@ -150,6 +154,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Published Items Tab */}
       {activeSubTab === 'published' && (
         <div className="space-y-4">
+          {/* Alerta de coincidencias para el usuario */}
+          {userMatchesCount > 0 && onGoToMatches && (
+            <div className="p-4 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between gap-3 shadow-md shadow-blue-500/15">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold leading-tight">
+                    ¡Tienes {userMatchesCount} posible{userMatchesCount > 1 ? 's' : ''} coincidencia{userMatchesCount > 1 ? 's' : ''} detectada{userMatchesCount > 1 ? 's' : ''}!
+                  </p>
+                  <p className="text-[11px] text-blue-100 mt-0.5">
+                    El sistema detectó objetos de tu misma categoría con alta similitud.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onGoToMatches}
+                className="px-3 py-1.5 rounded-xl bg-white text-blue-700 text-xs font-black shrink-0 hover:bg-blue-50 transition cursor-pointer shadow-xs"
+              >
+                Ver matches
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <h3 className="font-extrabold text-slate-900 text-sm">Tus objetos activos</h3>
             <button

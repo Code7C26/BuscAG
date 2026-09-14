@@ -21,6 +21,9 @@ export type Category =
 // Filtros rápidos disponibles en la barra superior de la pantalla de inicio y mapa
 export type FilterType = 'todos' | 'encontrados' | 'perdidos' | 'cerca';
 
+// Pestañas de navegación de la aplicación
+export type TabType = 'home' | 'map' | 'matches' | 'notifications' | 'profile';
+
 /**
  * Representa al usuario de la plataforma (quien publica o busca)
  */
@@ -87,4 +90,19 @@ export interface NotificationItem {
   read: boolean;                                       // Estado de lectura
   relatedItemId?: string;                              // ID del objeto asociado (si aplica)
 }
+
+/**
+ * Resultado del algoritmo de comparación automática entre un objeto perdido y uno encontrado
+ */
+export interface MatchResult {
+  id: string;                                          // Identificador único del match
+  lostItem: Item;                                      // Objeto reportado como perdido
+  foundItem: Item;                                     // Objeto reportado como encontrado
+  score: number;                                       // Porcentaje de coincidencia (0 - 100)
+  confidence: 'muy_alta' | 'alta' | 'media';           // Nivel cualitativo de confianza
+  reasons: string[];                                   // Razones que explican la coincidencia
+  distanceKm: number;                                  // Distancia en km entre ambos reportes
+  matchedKeywords: string[];                           // Palabras clave coincidentes
+}
+
 

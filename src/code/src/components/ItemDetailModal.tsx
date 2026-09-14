@@ -8,11 +8,12 @@
  * - Acciones contextuales: Si es el dueño, permite marcarlo como "Recuperado" o eliminarlo.
  *   Si es otro usuario, permite abrir el flujo de contacto directo.
  */
-import React, { useEffect, useRef, useState } from 'react';
-import { X, MapPin, Clock, Tag, ShieldCheck, MessageCircle, Phone, Share2, CheckCircle2, AlertCircle, Trash2, PartyPopper } from 'lucide-react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { X, MapPin, Clock, Tag, ShieldCheck, MessageCircle, Phone, Share2, CheckCircle2, AlertCircle, Trash2, PartyPopper, Sparkles, ChevronRight } from 'lucide-react';
 import L from 'leaflet';
-import { Item, User } from '../types';
+import { Item, User, MatchResult } from '../types';
 import { formatTimeAgo } from '../utils/geo';
+import { findMatchesForSingleItem } from '../utils/matcher';
 
 // Propiedades que recibe el modal de detalle
 interface ItemDetailModalProps {
@@ -22,6 +23,8 @@ interface ItemDetailModalProps {
   currentUser: User;                             // Usuario que está utilizando la app actualmente
   onMarkAsRecovered?: (itemId: string) => void;  // Cambia el estado a 'recuperado'
   onDeleteItem?: (itemId: string) => void;       // Elimina la publicación de la lista
+  allItems?: Item[];                             // Catálogo completo de publicaciones para calcular matches
+  onOpenMatchComparison?: (match: MatchResult) => void; // Abre la vista de comparación lado a lado
 }
 
 export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
@@ -30,7 +33,9 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   onContact,
   currentUser,
   onMarkAsRecovered,
-  onDeleteItem
+  onDeleteItem,
+  allItems = [],
+  onOpenMatchComparison
 }) => {
   // Si no hay ningún objeto seleccionado, no renderizamos el modal
   if (!item) return null;
@@ -46,6 +51,12 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   const isOwner = currentUser.id === item.user.id;
   const isLost = item.status === 'perdido';
   const isRecovered = item.status === 'recuperado';
+
+  // Calcula automáticamente las coincidencias para este objeto específico
+  const suggestedMatches = useMemo(() => {
+    if (!allItems.length || isRecovered) return [];
+    return findMatchesForSingleItem(item, allItems);
+  }, [item, allItems, isRecovered]);
 
   /**
    * EFECTO: Inicializa el mini-mapa Leaflet enfocado exactamente en la lat/lng del objeto
@@ -223,6 +234,81 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               <div ref={miniMapRef} className="w-full h-full z-0" />
             </div>
           </div>
+
+          {/* SECCIÓN DE COINCIDENCIAS SUGERIDAS AUTOMÁTICAMENTE */}
+          {suggestedMatches.length > 0 && (
+            <div className="rounded-2xl border-2 border-blue-200 bg-linear-to-b from-blue-50/70 to-white p-4 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
+                    <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      Coincidencias Automáticas Sugeridas
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-600 text-white font-bold">
+                        {suggestedMatches.length}
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      {isLost ? 'Objetos encontrados de la misma categoría compatibles' : 'Reportes de pérdida de la misma categoría compatibles'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {suggestedMatches.slice(0, 3).map((match) => {
+                  const counterpart = isLost ? match.foundItem : match.lostItem;
+                  return (
+                    <div
+                      key={match.id}
+                      className="bg-white rounded-xl p-2.5 sm:p-3 border border-slate-200/90 shadow-2xs flex items-center justify-between gap-3 hover:border-blue-400 transition"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={counterpart.imageUrl}
+                          alt={counterpart.title}
+                          className="w-11 h-11 sm:w-12 sm:h-12 rounded-lg object-cover shrink-0 border border-slate-200"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`px-2 py-0.2 rounded-full text-[10px] font-extrabold ${
+                              match.score >= 75 ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'
+                            }`}>
+                              {match.score}% Match
+                            </span>
+                            <span className="text-[10px] font-semibold text-slate-500">
+                              {counterpart.status === 'encontrado' ? '🟢 Encontrado' : '🔴 Perdido'}
+                            </span>
+                          </div>
+                          <p className="font-bold text-slate-900 text-xs truncate mt-0.5">
+                            {counterpart.title}
+                          </p>
+                          <p className="text-[11px] text-slate-500 truncate flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-blue-600 shrink-0" />
+                            {counterpart.locationName} ({match.distanceKm < 1 ? `${(match.distanceKm * 1000).toFixed(0)}m` : `${match.distanceKm.toFixed(1)} km`})
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {onOpenMatchComparison && (
+                          <button
+                            onClick={() => onOpenMatchComparison(match)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer flex items-center gap-1"
+                          >
+                            Comparar
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Tarjeta del usuario que publicó el objeto */}
           <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">

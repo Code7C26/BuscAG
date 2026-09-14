@@ -8,11 +8,13 @@ import React, { useState, useMemo } from 'react';
 // Iconos de Lucide para la interfaz visual
 import { Search, MapPin, SlidersHorizontal, Plus, AlertCircle, CheckCircle2, Sparkles, Navigation, X, ShieldAlert } from 'lucide-react';
 // Tipos TypeScript para tipado estricto
-import { Item, FilterType, Category, User, NotificationItem, Message } from './types';
+import { Item, FilterType, Category, User, NotificationItem, Message, MatchResult, TabType } from './types';
 // Datos iniciales de demostración
 import { INITIAL_ITEMS, CURRENT_USER, DEMO_USERS, INITIAL_NOTIFICATIONS, INITIAL_MESSAGES } from './data/initialData';
 // Utilidades de cálculo geográfico (Haversine)
 import { getDistanceKm, DEFAULT_CENTER } from './utils/geo';
+// Motor de coincidencia automática (Lost & Found Matcher)
+import { findAllMatches, findMatchesForSingleItem } from './utils/matcher';
 // Componentes modulares de la aplicación
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
@@ -23,6 +25,8 @@ import { ItemDetailModal } from './components/ItemDetailModal';
 import { ContactModal } from './components/ContactModal';
 import { ProfileView } from './components/ProfileView';
 import { NotificationsView } from './components/NotificationsView';
+import { MatchesView } from './components/MatchesView';
+import { MatchComparisonModal } from './components/MatchComparisonModal';
 
 export default function App() {
   // ==========================================
@@ -44,8 +48,11 @@ export default function App() {
   // ==========================================
   // NAVEGACIÓN Y VISTAS
   // ==========================================
-  // activeTab: Pestaña actualmente visible ('home', 'map', 'notifications', 'profile')
-  const [activeTab, setActiveTab] = useState<'home' | 'map' | 'notifications' | 'profile'>('home');
+  // activeTab: Pestaña actualmente visible ('home', 'map', 'matches', 'notifications', 'profile')
+  const [activeTab, setActiveTab] = useState<TabType>('home');
+
+  // selectedMatchComparison: Coincidencia seleccionada para examinar en el comparador lado a lado
+  const [selectedMatchComparison, setSelectedMatchComparison] = useState<MatchResult | null>(null);
 
   // ==========================================
   // FILTROS Y BÚSQUEDA
@@ -151,7 +158,25 @@ export default function App() {
   }, [itemsWithDistance, searchQuery, activeFilter, selectedCategory]);
 
   /**
+   * useMemo: Ejecuta el motor de coincidencia automática (Lost & Found Matcher)
+   * Compara sistemáticamente todos los objetos perdidos con los encontrados de la misma categoría.
+   */
+  const matches = useMemo(() => {
+    return findAllMatches(items);
+  }, [items]);
+
+  /**
+   * Cuenta cuántas coincidencias involucran al usuario actual (ya sea como dueño o quien encontró)
+   */
+  const userMatchesCount = useMemo(() => {
+    return matches.filter(
+      m => m.lostItem.user.id === currentUser.id || m.foundItem.user.id === currentUser.id
+    ).length;
+  }, [matches, currentUser.id]);
+
+  /**
    * Recibe los datos del nuevo objeto desde el formulario y lo agrega al inicio de la lista
+   * Activa de inmediato el sistema de match para alertar al usuario si ya hay coincidencias.
    */
   const handlePublishSubmit = (newItemData: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => {
     const newItem: Item = {
@@ -163,7 +188,30 @@ export default function App() {
 
     // Actualiza el array agregando el nuevo ítem arriba
     setItems(prev => [newItem, ...prev]);
-    triggerToast('¡Objeto publicado con éxito! 🎉');
+
+    // Evaluación automática de posibles coincidencias inmediatas para el nuevo ítem
+    const potentialMatches = findMatchesForSingleItem(newItem, items);
+
+    if (potentialMatches.length > 0) {
+      const best = potentialMatches[0];
+      const otherTitle = newItem.status === 'perdido' ? best.foundItem.title : best.lostItem.title;
+      triggerToast(`✨ ¡Coincidencia del ${best.score}% detectada con "${otherTitle}"!`);
+
+      // Registra una notificación en el historial de alertas
+      const matchNotif: NotificationItem = {
+        id: `notif_match_${Date.now()}`,
+        title: `✨ ¡Coincidencia del ${best.score}% encontrada!`,
+        message: `El sistema detectó que "${newItem.title}" coincide con "${otherTitle}".`,
+        date: new Date().toISOString(),
+        type: 'match',
+        read: false,
+        relatedItemId: newItem.status === 'perdido' ? best.foundItem.id : best.lostItem.id
+      };
+      setNotifications(prev => [matchNotif, ...prev]);
+    } else {
+      triggerToast('¡Objeto publicado con éxito! 🎉');
+    }
+
     setActiveTab('home'); // Regresa a la vista principal
   };
 
@@ -289,9 +337,10 @@ export default function App() {
       <Header
         currentUser={currentUser}
         unreadNotificationsCount={unreadNotificationsCount}
+        matchesCount={matches.length}
         onOpenNotifications={() => setActiveTab('notifications')}
         onOpenProfile={() => setActiveTab('profile')}
-        onSelectTab={(tab) => setActiveTab(tab as any)}
+        onSelectTab={(tab) => setActiveTab(tab)}
         activeTab={activeTab}
       />
 
@@ -303,6 +352,31 @@ export default function App() {
            ========================================== */}
         {activeTab === 'home' && (
           <div className="px-4 py-5 space-y-5">
+            {/* Alerta de coincidencias para el usuario actual */}
+            {userMatchesCount > 0 && (
+              <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-2xl p-3.5 text-white flex items-center justify-between gap-3 shadow-md shadow-blue-600/15">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black block leading-snug">
+                      ¡Detectamos {userMatchesCount} posible{userMatchesCount > 1 ? 's' : ''} coincidencia{userMatchesCount > 1 ? 's' : ''} en tus reportes!
+                    </span>
+                    <span className="text-[11px] text-blue-100 block">
+                      El sistema comparó tus objetos con publicaciones recientes por categoría.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab('matches')}
+                  className="px-3 py-1.5 rounded-xl bg-white text-blue-700 text-xs font-black shrink-0 hover:bg-blue-50 transition cursor-pointer shadow-xs"
+                >
+                  Ver matches
+                </button>
+              </div>
+            )}
+
             {/* Barra de búsqueda por texto */}
             <div className="relative">
               <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-2 flex items-center gap-3">
@@ -451,7 +525,20 @@ export default function App() {
         )}
 
         {/* ==========================================
-            3. VISTA DE NOTIFICACIONES Y ALERTAS
+            3. VISTA DE COINCIDENCIAS Y MATCHES AUTOMÁTICOS
+           ========================================== */}
+        {activeTab === 'matches' && (
+          <MatchesView
+            matches={matches}
+            onSelectMatch={(match) => setSelectedMatchComparison(match)}
+            onContactItem={(itemToContact) => setContactingItem(itemToContact)}
+            onViewItemDetail={(item) => setSelectedDetailItem(item)}
+            currentUser={currentUser}
+          />
+        )}
+
+        {/* ==========================================
+            4. VISTA DE NOTIFICACIONES Y ALERTAS
            ========================================== */}
         {activeTab === 'notifications' && (
           <NotificationsView
@@ -471,7 +558,7 @@ export default function App() {
         )}
 
         {/* ==========================================
-            4. VISTA DE PERFIL Y GESTIÓN DE REPORTES
+            5. VISTA DE PERFIL Y GESTIÓN DE REPORTES
            ========================================== */}
         {activeTab === 'profile' && (
           <ProfileView
@@ -483,6 +570,8 @@ export default function App() {
             onOpenPublish={() => setIsPublishOpen(true)}
             onMarkAsRecovered={handleMarkAsRecovered}
             onDeleteItem={handleDeleteItem}
+            onGoToMatches={() => setActiveTab('matches')}
+            userMatchesCount={userMatchesCount}
           />
         )}
       </main>
@@ -499,6 +588,7 @@ export default function App() {
         }}
         onOpenPublish={() => setIsPublishOpen(true)}
         unreadNotificationsCount={unreadNotificationsCount}
+        matchesCount={matches.length}
       />
 
       {/* Modal 1: Formulario para publicar nuevo objeto perdido o encontrado */}
@@ -517,6 +607,11 @@ export default function App() {
         currentUser={currentUser}
         onMarkAsRecovered={handleMarkAsRecovered}
         onDeleteItem={handleDeleteItem}
+        allItems={items}
+        onOpenMatchComparison={(match) => {
+          setSelectedDetailItem(null);
+          setSelectedMatchComparison(match);
+        }}
       />
 
       {/* Modal 3: Chat directo y opciones de contacto (llamada/WhatsApp) */}
@@ -527,6 +622,22 @@ export default function App() {
         currentUser={currentUser}
         messages={messages}
         onSendMessage={handleSendMessage}
+      />
+
+      {/* Modal 4: Comparación lado a lado de coincidencias sugeridas */}
+      <MatchComparisonModal
+        match={selectedMatchComparison}
+        isOpen={Boolean(selectedMatchComparison)}
+        onClose={() => setSelectedMatchComparison(null)}
+        onContact={(itemToContact) => {
+          setSelectedMatchComparison(null);
+          setContactingItem(itemToContact);
+        }}
+        onViewItemDetail={(item) => {
+          setSelectedMatchComparison(null);
+          setSelectedDetailItem(item);
+        }}
+        currentUser={currentUser}
       />
     </div>
   );

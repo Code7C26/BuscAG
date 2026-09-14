@@ -1,17 +1,27 @@
+/**
+ * MODAL DE PUBLICACIÓN DE OBJETOS (PublishModal.tsx)
+ * Permite a cualquier usuario reportar un objeto perdido o encontrado.
+ * Incluye:
+ * - Selección de estado (Perdido / Encontrado)
+ * - Carga o selección de fotografía (soporta fotos locales con FileReader y presets de prueba)
+ * - Selector interactivo de ubicación con mini-mapa Leaflet y soporte para GPS
+ * - Campos para título, descripción, categoría, fecha y recompensa opcional
+ */
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, Upload, MapPin, Tag, Calendar, AlertCircle, CheckCircle2, Sparkles, Navigation } from 'lucide-react';
 import L from 'leaflet';
 import { Category, ItemStatus, Item, User } from '../types';
 import { DEFAULT_CENTER } from '../utils/geo';
 
+// Propiedades que recibe el modal de publicación
 interface PublishModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (newItem: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => void;
-  currentUser: User;
+  isOpen: boolean;        // Determina si el modal está visible en pantalla
+  onClose: () => void;    // Función para cerrar la ventana modal
+  onSubmit: (newItem: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => void; // Emite los datos validados
+  currentUser: User;      // Usuario que está publicando
 }
 
-// Sample quick preset photos for testing rapid publication
+// Galería de fotos de ejemplo para facilitar pruebas rápidas durante la demostración del proyecto
 const PRESET_PHOTOS = [
   { label: 'Mochila', url: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80' },
   { label: 'Celular', url: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&auto=format&fit=crop&q=80' },
@@ -27,26 +37,32 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   onSubmit,
   currentUser
 }) => {
+  // Si el modal está cerrado, no renderiza nada en el DOM
   if (!isOpen) return null;
 
-  const [status, setStatus] = useState<ItemStatus>('encontrado');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<Category>('Electrónicos');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
-  const [locationName, setLocationName] = useState('Plaza Italia, Palermo');
-  const [lat, setLat] = useState(DEFAULT_CENTER.lat);
-  const [lng, setLng] = useState(DEFAULT_CENTER.lng);
-  const [imageUrl, setImageUrl] = useState(PRESET_PHOTOS[0].url);
-  const [reward, setReward] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // ==========================================
+  // ESTADOS DEL FORMULARIO
+  // ==========================================
+  const [status, setStatus] = useState<ItemStatus>('encontrado');      // Estado inicial: encontrado
+  const [title, setTitle] = useState('');                             // Título del objeto
+  const [description, setDescription] = useState('');                 // Descripción detallada
+  const [category, setCategory] = useState<Category>('Electrónicos'); // Categoría seleccionada
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 16)); // Fecha y hora local
+  const [locationName, setLocationName] = useState('Plaza Italia, Palermo'); // Nombre legible del lugar
+  const [lat, setLat] = useState(DEFAULT_CENTER.lat);                 // Coordenada latitud
+  const [lng, setLng] = useState(DEFAULT_CENTER.lng);                 // Coordenada longitud
+  const [imageUrl, setImageUrl] = useState(PRESET_PHOTOS[0].url);     // Foto del objeto (URL o Base64)
+  const [reward, setReward] = useState('');                           // Recompensa voluntaria
+  const [isSubmitting, setIsSubmitting] = useState(false);             // Estado de carga al enviar
   const [cameraActive, setCameraActive] = useState(false);
 
+  // Referencias para el input de archivo y el mapa selector
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mapPickerRef = useRef<HTMLDivElement>(null);
   const leafletPickerRef = useRef<L.Map | null>(null);
   const pickerMarkerRef = useRef<L.Marker | null>(null);
 
+  // Lista de categorías para el menú desplegable
   const categories: Category[] = [
     'Electrónicos',
     'Documentos y Billeteras',
@@ -57,21 +73,27 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     'Otros'
   ];
 
-  // Initialize interactive location picker map inside modal
+  /**
+   * EFECTO: Inicializa el mini-mapa interactivo para escoger la ubicación exacta
+   */
   useEffect(() => {
     if (!mapPickerRef.current || leafletPickerRef.current) return;
 
+    // Crea el mapa dentro del contenedor mapPickerRef
     const map = L.map(mapPickerRef.current, {
       center: [lat, lng],
       zoom: 14,
       zoomControl: false
     });
 
+    // Añade la capa de mosaicos de OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
+    // Crea un marcador arrastrable (draggable: true)
     const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
     pickerMarkerRef.current = marker;
 
+    // Evento al terminar de arrastrar el pin: actualiza coordenadas
     marker.on('dragend', () => {
       const pos = marker.getLatLng();
       setLat(pos.lat);
@@ -79,6 +101,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
       setLocationName(`Ubicación seleccionada (${pos.lat.toFixed(3)}, ${pos.lng.toFixed(3)})`);
     });
 
+    // Evento al hacer clic en cualquier parte del mapa: mueve el pin allí
     map.on('click', (e) => {
       marker.setLatLng(e.latlng);
       setLat(e.latlng.lat);
@@ -88,12 +111,16 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
     leafletPickerRef.current = map;
 
+    // Invalida tamaño para asegurar renderizado correcto dentro de la ventana modal
     setTimeout(() => {
       map.invalidateSize();
     }, 200);
   }, []);
 
-  // Handle Custom File Upload
+  /**
+   * Manejador para cargar una foto propia del usuario desde su dispositivo
+   * Utiliza la API nativa de FileReader para convertir la imagen en DataURL (Base64)
+   */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -105,7 +132,9 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     }
   };
 
-  // Use GPS Location
+  /**
+   * Manejador para obtener la posición GPS actual del usuario y mover el pin en el mapa
+   */
   const handleUseGPS = () => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -125,7 +154,9 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     }
   };
 
-  // Submit Handler
+  /**
+   * Valida los datos y ejecuta el callback onSubmit para agregar la publicación
+   */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
@@ -135,6 +166,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
     setIsSubmitting(true);
 
+    // Breve temporizador para dar retroalimentación visual al usuario
     setTimeout(() => {
       onSubmit({
         title,
@@ -157,7 +189,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-        {/* Header */}
+        {/* Cabecera de la ventana modal */}
         <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
           <div>
             <h2 className="font-extrabold text-slate-900 text-lg leading-tight flex items-center gap-2">
@@ -168,14 +200,15 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-full transition cursor-pointer"
+            title="Cerrar modal"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Scrollable Form Body */}
+        {/* Formulario scrolleable */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
-          {/* Status Selection: 🔴 Perdido / 🟢 Encontrado */}
+          {/* Selector de estado: Encontrado (verde) / Perdido (rojo) */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               Estado del Objeto *
@@ -209,7 +242,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             </div>
           </div>
 
-          {/* Image Upload / Selector */}
+          {/* Subida o selección de imagen */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               📷 Foto del Objeto *
@@ -239,6 +272,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               )}
             </div>
 
+            {/* Input oculto tipo file para abrir el explorador de archivos */}
             <input
               type="file"
               ref={fileInputRef}
@@ -247,7 +281,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               className="hidden"
             />
 
-            {/* Quick Preset Photo Selector */}
+            {/* Galería de fotos de muestra para pruebas rápidas */}
             <div className="mt-2">
               <span className="text-[11px] text-slate-500 font-medium block mb-1">
                 Fotos de muestra rápidas:
@@ -271,7 +305,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             </div>
           </div>
 
-          {/* Title */}
+          {/* Campo de título */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
               Nombre del objeto *
@@ -286,7 +320,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             />
           </div>
 
-          {/* Description */}
+          {/* Campo de descripción detallada */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
               Descripción *
@@ -301,7 +335,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             />
           </div>
 
-          {/* Category & Date Grid */}
+          {/* Categoría y Fecha */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
@@ -333,7 +367,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             </div>
           </div>
 
-          {/* Reward (Optional if Lost) */}
+          {/* Campo opcional de recompensa (solo si es un objeto perdido) */}
           {status === 'perdido' && (
             <div>
               <label className="block text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">
@@ -349,7 +383,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             </div>
           )}
 
-          {/* Location Picker */}
+          {/* Selector de ubicación geográfica */}
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
@@ -359,6 +393,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
                 type="button"
                 onClick={handleUseGPS}
                 className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
+                title="Detectar mi ubicación actual con GPS"
               >
                 <Navigation className="w-3.5 h-3.5" />
                 Usar mi GPS
@@ -374,7 +409,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-medium mb-2 focus:ring-2 focus:ring-blue-600 outline-none"
             />
 
-            {/* Mini Map Picker */}
+            {/* Mini mapa Leaflet para arrastrar o tocar la posición exacta */}
             <div className="h-36 rounded-2xl overflow-hidden border border-slate-300 relative shadow-inner">
               <div ref={mapPickerRef} className="w-full h-full" />
               <span className="absolute bottom-2 left-2 bg-slate-900/80 text-white text-[10px] px-2 py-0.5 rounded-md font-semibold z-10 pointer-events-none">
@@ -383,7 +418,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Botón de publicación final */}
           <div className="pt-2">
             <button
               type="submit"
@@ -405,3 +440,4 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     </div>
   );
 };
+

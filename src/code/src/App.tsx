@@ -1,8 +1,19 @@
+/**
+ * COMPONENTE PRINCIPAL (App.tsx)
+ * Es el núcleo de la aplicación. Administra el estado global (publicaciones, usuario activo,
+ * filtros, geolocalización y mensajes), maneja la navegación por pestañas y renderiza las
+ * vistas principales y modales.
+ */
 import React, { useState, useMemo } from 'react';
+// Iconos de Lucide para la interfaz visual
 import { Search, MapPin, SlidersHorizontal, Plus, AlertCircle, CheckCircle2, Sparkles, Navigation, X, ShieldAlert } from 'lucide-react';
+// Tipos TypeScript para tipado estricto
 import { Item, FilterType, Category, User, NotificationItem, Message } from './types';
+// Datos iniciales de demostración
 import { INITIAL_ITEMS, CURRENT_USER, DEMO_USERS, INITIAL_NOTIFICATIONS, INITIAL_MESSAGES } from './data/initialData';
+// Utilidades de cálculo geográfico (Haversine)
 import { getDistanceKm, DEFAULT_CENTER } from './utils/geo';
+// Componentes modulares de la aplicación
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { ItemCard } from './components/ItemCard';
@@ -14,36 +25,67 @@ import { ProfileView } from './components/ProfileView';
 import { NotificationsView } from './components/NotificationsView';
 
 export default function App() {
-  // Application State
+  // ==========================================
+  // ESTADOS PRINCIPALES DE LA APLICACIÓN
+  // ==========================================
+
+  // items: Lista de todas las publicaciones (perdidos, encontrados, recuperados)
   const [items, setItems] = useState<Item[]>(INITIAL_ITEMS);
+
+  // currentUser: Usuario que actualmente tiene la sesión iniciada
   const [currentUser, setCurrentUser] = useState<User>(CURRENT_USER);
+
+  // notifications: Historial de avisos y alertas del sistema
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+
+  // messages: Historial de mensajes del chat de contacto interno
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
 
-  // Tab & Navigation State
+  // ==========================================
+  // NAVEGACIÓN Y VISTAS
+  // ==========================================
+  // activeTab: Pestaña actualmente visible ('home', 'map', 'notifications', 'profile')
   const [activeTab, setActiveTab] = useState<'home' | 'map' | 'notifications' | 'profile'>('home');
 
-  // Home Filters State
+  // ==========================================
+  // FILTROS Y BÚSQUEDA
+  // ==========================================
+  // searchQuery: Texto escrito por el usuario en el buscador
   const [searchQuery, setSearchQuery] = useState('');
+
+  // activeFilter: Filtro rápido por estado ('todos', 'encontrados', 'perdidos', 'cerca')
   const [activeFilter, setActiveFilter] = useState<FilterType>('todos');
+
+  // selectedCategory: Filtro de categoría seleccionada ('Todos', 'Electrónicos', etc.)
   const [selectedCategory, setSelectedCategory] = useState<Category | 'Todos'>('Todos');
 
-  // User Location State
+  // userLocation: Coordenadas GPS del usuario actual para calcular distancias
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>({
     lat: DEFAULT_CENTER.lat,
     lng: DEFAULT_CENTER.lng
   });
 
-  // Modal States
+  // ==========================================
+  // ESTADO DE MODALES Y MENSAJES FLOTANTES
+  // ==========================================
+  // isPublishOpen: Controla si el modal de publicar está abierto
   const [isPublishOpen, setIsPublishOpen] = useState(false);
+
+  // selectedDetailItem: Objeto seleccionado para ver ficha detallada (null si está cerrado)
   const [selectedDetailItem, setSelectedDetailItem] = useState<Item | null>(null);
+
+  // contactingItem: Objeto con el que se abrió la ventana de chat directo
   const [contactingItem, setContactingItem] = useState<Item | null>(null);
+
+  // toastMessage: Texto breve de alerta temporal tipo 'toast'
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Unread notifications count
+  // Cuenta la cantidad de notificaciones que el usuario todavía no ha leído
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
-  // Show quick toast alert
+  /**
+   * Muestra un mensaje flotante 'toast' en pantalla durante 3.5 segundos
+   */
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -51,7 +93,7 @@ export default function App() {
     }, 3500);
   };
 
-  // Categories list
+  // Lista de categorías para generar los botones de filtro rápido
   const categoriesList: (Category | 'Todos')[] = [
     'Todos',
     'Electrónicos',
@@ -63,10 +105,14 @@ export default function App() {
     'Otros'
   ];
 
-  // Calculate items with distance if user location exists
+  /**
+   * useMemo: Calcula la distancia exacta en km de cada publicación
+   * respecto a la posición actual del usuario para evitar recálculos innecesarios.
+   */
   const itemsWithDistance = useMemo(() => {
     return items.map(item => {
       if (userLocation) {
+        // Ejecuta la fórmula de Haversine entre usuario e ítem
         const distance = getDistanceKm(userLocation.lat, userLocation.lng, item.lat, item.lng);
         return { ...item, distanceKm: distance };
       }
@@ -74,43 +120,56 @@ export default function App() {
     });
   }, [items, userLocation]);
 
-  // Filtered items for Home Screen
+  /**
+   * useMemo: Aplica los filtros combinados de búsqueda por texto,
+   * estado (encontrado/perdido/cerca) y categoría.
+   */
   const filteredItems = useMemo(() => {
     return itemsWithDistance.filter(item => {
       const queryLower = searchQuery.toLowerCase().trim();
+      
+      // Coincidencia con el texto ingresado en el buscador
       const matchesSearch = queryLower === '' ||
         item.title.toLowerCase().includes(queryLower) ||
         item.description.toLowerCase().includes(queryLower) ||
         item.locationName.toLowerCase().includes(queryLower) ||
         item.category.toLowerCase().includes(queryLower);
 
+      // Coincidencia con el tipo de filtro activo
       const matchesFilter =
         activeFilter === 'todos' ? true :
         activeFilter === 'encontrados' ? item.status === 'encontrado' :
         activeFilter === 'perdidos' ? item.status === 'perdido' :
         activeFilter === 'cerca' ? (item.distanceKm !== undefined && item.distanceKm <= 4) : true;
 
+      // Coincidencia con la categoría
       const matchesCategory = selectedCategory === 'Todos' || item.category === selectedCategory;
 
+      // Debe cumplir todas las condiciones activas
       return matchesSearch && matchesFilter && matchesCategory;
     });
   }, [itemsWithDistance, searchQuery, activeFilter, selectedCategory]);
 
-  // Handle New Item Publication
+  /**
+   * Recibe los datos del nuevo objeto desde el formulario y lo agrega al inicio de la lista
+   */
   const handlePublishSubmit = (newItemData: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => {
     const newItem: Item = {
       ...newItemData,
-      id: `item_${Date.now()}`,
-      createdAt: new Date().toISOString(),
+      id: `item_${Date.now()}`,          // Genera un ID único con timestamp
+      createdAt: new Date().toISOString(), // Fecha de creación actual
       contactCount: 0
     };
 
+    // Actualiza el array agregando el nuevo ítem arriba
     setItems(prev => [newItem, ...prev]);
     triggerToast('¡Objeto publicado con éxito! 🎉');
-    setActiveTab('home');
+    setActiveTab('home'); // Regresa a la vista principal
   };
 
-  // Handle Mark Item as Recovered
+  /**
+   * Cambia el estado de un objeto a 'recuperado' y genera una notificación
+   */
   const handleMarkAsRecovered = (itemId: string) => {
     setItems(prev => prev.map(item => {
       if (item.id === itemId) {
@@ -119,7 +178,7 @@ export default function App() {
       return item;
     }));
 
-    // Add notification
+    // Registra una notificación en la lista
     const newNotif: NotificationItem = {
       id: `notif_${Date.now()}`,
       title: '¡Objeto Recuperado! 🎉',
@@ -133,17 +192,22 @@ export default function App() {
     triggerToast('🎉 ¡Excelente! Objeto marcado como RECUPERADO.');
   };
 
-  // Delete item handler
+  /**
+   * Elimina una publicación de la lista por su ID
+   */
   const handleDeleteItem = (itemId: string) => {
     setItems(prev => prev.filter(i => i.id !== itemId));
     triggerToast('Publicación eliminada');
   };
 
-  // Send Message Handler with simulated auto-reply
+  /**
+   * Envía un mensaje en el chat y simula una respuesta automática del publicador
+   */
   const handleSendMessage = (itemId: string, text: string) => {
     const item = items.find(i => i.id === itemId);
     if (!item) return;
 
+    // Crea el mensaje del usuario emisor
     const newMsg: Message = {
       id: `msg_${Date.now()}`,
       itemId,
@@ -160,7 +224,7 @@ export default function App() {
 
     setMessages(prev => [...prev, newMsg]);
 
-    // Simulated Auto-Reply from publisher
+    // Simula una respuesta después de 1.5 segundos para mostrar el funcionamiento del chat
     setTimeout(() => {
       const autoReply: Message = {
         id: `msg_reply_${Date.now()}`,
@@ -177,7 +241,7 @@ export default function App() {
       };
       setMessages(prev => [...prev, autoReply]);
 
-      // Notification for auto-reply
+      // Alerta de nueva respuesta en notificaciones
       const replyNotif: NotificationItem = {
         id: `notif_${Date.now()}`,
         title: `Respuesta de ${item.user.name} 💬`,
@@ -191,16 +255,20 @@ export default function App() {
     }, 1500);
   };
 
-  // Handle Geolocation trigger for "Cerca de mí"
+  /**
+   * Solicita la posición real del dispositivo usando la API de Geolocalización del navegador
+   */
   const handleNearMeFilter = () => {
     setActiveFilter('cerca');
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          // Guarda latitud y longitud obtenidas del GPS
           setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
           triggerToast('📍 Ubicación actualizada para búsqueda cercana.');
         },
         () => {
+          // Si el usuario deniega permisos o hay error, usa la ubicación por defecto
           triggerToast('Mostrando objetos cercanos a la zona central.');
         }
       );
@@ -209,7 +277,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
-      {/* Toast Banner Alert */}
+      {/* Mensaje flotante de alerta (Toast) */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-2xl border border-slate-700 flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
           <Sparkles className="w-4 h-4 text-blue-400" />
@@ -217,7 +285,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Main Header */}
+      {/* Encabezado superior con logo, selector de usuario y acceso a notificaciones */}
       <Header
         currentUser={currentUser}
         unreadNotificationsCount={unreadNotificationsCount}
@@ -227,13 +295,15 @@ export default function App() {
         activeTab={activeTab}
       />
 
-      {/* Main View Area */}
+      {/* Área de contenido principal */}
       <main className="flex-1 max-w-5xl w-full mx-auto pb-20">
         
-        {/* 1. HOME VIEW */}
+        {/* ==========================================
+            1. VISTA DE INICIO (HOME)
+           ========================================== */}
         {activeTab === 'home' && (
           <div className="px-4 py-5 space-y-5">
-            {/* Search Bar */}
+            {/* Barra de búsqueda por texto */}
             <div className="relative">
               <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-2 flex items-center gap-3">
                 <Search className="w-5 h-5 text-slate-400 ml-2 shrink-0" />
@@ -248,6 +318,7 @@ export default function App() {
                   <button
                     onClick={() => setSearchQuery('')}
                     className="p-1 hover:bg-slate-100 rounded-full text-slate-400 cursor-pointer"
+                    title="Limpiar búsqueda"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -255,7 +326,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Filter Buttons: Todos, Encontrados, Perdidos, Cerca de mí */}
+            {/* Botones de filtro rápido: Todos, Encontrados, Perdidos, Cerca de mí */}
             <div>
               <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                 <button
@@ -307,7 +378,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Category Filter Chips */}
+            {/* Chips de filtro por categorías */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
               {categoriesList.map((cat) => (
                 <button
@@ -324,7 +395,7 @@ export default function App() {
               ))}
             </div>
 
-            {/* Publication List Grid */}
+            {/* Cuadrícula o lista de publicaciones filtradas */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-extrabold text-slate-900 text-base">
@@ -335,6 +406,7 @@ export default function App() {
                 </span>
               </div>
 
+              {/* Mensaje de estado vacío si ningún ítem coincide */}
               {filteredItems.length === 0 ? (
                 <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center space-y-3">
                   <ShieldAlert className="w-12 h-12 text-slate-300 mx-auto" />
@@ -351,6 +423,7 @@ export default function App() {
                   </button>
                 </div>
               ) : (
+                /* Renderizado de tarjetas de objetos */
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredItems.map((item) => (
                     <ItemCard
@@ -365,7 +438,9 @@ export default function App() {
           </div>
         )}
 
-        {/* 2. MAP VIEW */}
+        {/* ==========================================
+            2. VISTA DE MAPA INTERACTIVO (LEAFLET)
+           ========================================== */}
         {activeTab === 'map' && (
           <MapView
             items={itemsWithDistance}
@@ -375,7 +450,9 @@ export default function App() {
           />
         )}
 
-        {/* 3. NOTIFICATIONS VIEW */}
+        {/* ==========================================
+            3. VISTA DE NOTIFICACIONES Y ALERTAS
+           ========================================== */}
         {activeTab === 'notifications' && (
           <NotificationsView
             notifications={notifications}
@@ -393,7 +470,9 @@ export default function App() {
           />
         )}
 
-        {/* 4. PROFILE VIEW */}
+        {/* ==========================================
+            4. VISTA DE PERFIL Y GESTIÓN DE REPORTES
+           ========================================== */}
         {activeTab === 'profile' && (
           <ProfileView
             currentUser={currentUser}
@@ -408,7 +487,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom Navigation Bar */}
+      {/* Barra de navegación inferior móvil */}
       <BottomNav
         activeTab={activeTab}
         onSelectTab={(tab) => {
@@ -422,7 +501,7 @@ export default function App() {
         unreadNotificationsCount={unreadNotificationsCount}
       />
 
-      {/* Modal 1: Publish Object */}
+      {/* Modal 1: Formulario para publicar nuevo objeto perdido o encontrado */}
       <PublishModal
         isOpen={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}
@@ -430,7 +509,7 @@ export default function App() {
         currentUser={currentUser}
       />
 
-      {/* Modal 2: Object Detail */}
+      {/* Modal 2: Vista detallada con fotos, descripción completa, mapa y acciones */}
       <ItemDetailModal
         item={selectedDetailItem}
         onClose={() => setSelectedDetailItem(null)}
@@ -440,7 +519,7 @@ export default function App() {
         onDeleteItem={handleDeleteItem}
       />
 
-      {/* Modal 3: Direct Contact / Chat */}
+      {/* Modal 3: Chat directo y opciones de contacto (llamada/WhatsApp) */}
       <ContactModal
         item={contactingItem}
         isOpen={Boolean(contactingItem)}
@@ -452,3 +531,4 @@ export default function App() {
     </div>
   );
 }
+

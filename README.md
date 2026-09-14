@@ -33,8 +33,26 @@ Nuestro sistema está diseñado para:
 *   **Estudiantes y Docentes:** Que transitan espacios comunes y suelen extraviar pertenencias.
 *   **Vecinos de la comunidad:** Usuarios que buscan una herramienta solidaria y moderna para gestionar hallazgos, mejorando su calidad de vida al recuperar objetos de valor económico o sentimental.
 
+
 ---
 
+## Pasos para usar el proyecto BuscAG
+
+### Modo de uso (App)
+1. Inicia sesión o regístrate en la plataforma.
+2. Si perdiste o encontraste un objeto, haz clic en "Publicar" e ingresa los detalles (categoría, foto y ubicación).
+3. Utiliza la barra de búsqueda o el mapa interactivo para localizar objetos perdidos cerca de ti.
+4. Contacta directamente con el usuario mediante el chat/contacto integrado.
+
+### Ejecución Local (Desarrolladores)
+1. Clonar este repositorio:
+   git clone https://github.com/tu-usuario/BuscAG.git
+2. Instalar las dependencias:
+   npm install
+3. Iniciar la aplicación:
+   npm start
+
+   
 ## 👥 Integrantes y Roles
 Mamonde Valentino
 German Lujan

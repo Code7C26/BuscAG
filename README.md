@@ -5,7 +5,12 @@
 
 ## 🖼️ Logotipo
 ![Logo de buscAG](./assets/logo.png)
+<<<<<<< HEAD
 *Imagen representativa del proyecto*
+=======
+*(Imagen representativa del proyecto)*
+hb   v
+>>>>>>> 5f1aa7cad942c2f43d255d273ad798bd5514878a
 
 ---
 

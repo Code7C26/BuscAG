@@ -1,0 +1,6 @@
+{
+  "name": "Objetos Perdidos",
+  "description": "Aplicación para publicar y encontrar objetos perdidos y encontrados con mapa interactivo, filtros y contacto directo.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,8 +1,13 @@
 # 🔍 buscAG
+<<<<<<< HEAD
 > **"La red social para recuperar lo que creías perdido"**
 
 ---
 
+=======
+> "La red social para recuperar lo que creías perdido"
+Soy re gay y me la re como toda, me gusta la lechita de tosi en la boca.
+>>>>>>> 09076eef5fdd527ddb4434556eed19be9d25b991
 ## 🖼️ Logotipo
 ![Logo de buscAG](./assets/logo.png)
 <<<<<<< HEAD

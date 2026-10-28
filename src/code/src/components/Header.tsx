@@ -1,19 +1,21 @@
 import React from 'react';
-import { Search, MapPin, Bell, User as UserIcon, Compass } from 'lucide-react';
-import { User } from '../types';
+import { Search, MapPin, Bell, User as UserIcon, Compass, Sparkles } from 'lucide-react';
+import { User, TabType } from '../types';
 
 interface HeaderProps {
   currentUser: User;
   unreadNotificationsCount: number;
+  matchesCount?: number;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
-  onSelectTab: (tab: 'home' | 'map' | 'publish' | 'notifications' | 'profile') => void;
-  activeTab: string;
+  onSelectTab: (tab: TabType) => void;
+  activeTab: TabType;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   currentUser,
   unreadNotificationsCount,
+  matchesCount = 0,
   onOpenNotifications,
   onOpenProfile,
   onSelectTab,
@@ -40,6 +42,27 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Quick Navigation / Actions */}
         <div className="flex items-center gap-2">
+          {/* Matches quick link on header */}
+          <button
+            onClick={() => onSelectTab('matches')}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+              activeTab === 'matches'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+            }`}
+            title="Ver coincidencias automáticas"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${activeTab === 'matches' ? 'text-amber-300 fill-amber-300' : 'text-blue-600'}`} />
+            <span>Matches</span>
+            {matchesCount > 0 && (
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                activeTab === 'matches' ? 'bg-white/20 text-white' : 'bg-amber-500 text-white'
+              }`}>
+                {matchesCount}
+              </span>
+            )}
+          </button>
+
           {/* Notifications button */}
           <button
             onClick={onOpenNotifications}

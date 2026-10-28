@@ -1,0 +1,254 @@
+/**
+ * MOTOR DE MATCH AUTOMÁTICO (matcher.ts)
+ * Algoritmo inteligente para comparar publicaciones de objetos perdidos
+ * con objetos encontrados y sugerir coincidencias altamente probables.
+ *
+ * Criterios de evaluación:
+ * 1. Categoría: Deben coincidir exactamente (filtro excluyente).
+ * 2. Similitud de texto y palabras clave: Marcas, colores, modelos y descripción.
+ * 3. Proximidad geográfica: Distancia en kilómetros entre el lugar de pérdida y hallazgo.
+ * 4. Proximidad temporal: Coherencia de fechas (el hallazgo debe ser contemporáneo o posterior a la pérdida).
+ */
+
+import { Item, MatchResult } from '../types';
+import { getDistanceKm } from './geo';
+
+// Palabras vacías en español a ignorar en la tokenización para enfocar en palabras distintivas
+const STOP_WORDS = new Set([
+  'de', 'la', 'el', 'en', 'y', 'a', 'los', 'del', 'se', 'las', 'por', 'un', 'para',
+  'con', 'no', 'una', 'su', 'al', 'lo', 'como', 'mas', 'pero', 'sus', 'le', 'ya',
+  'o', 'fue', 'este', 'ha', 'si', 'porque', 'esta', 'son', 'entre', 'esta', 'cuando',
+  'muy', 'sin', 'sobre', 'ser', 'tiene', 'tambien', 'me', 'hasta', 'hay', 'donde',
+  'quien', 'desde', 'todo', 'nos', 'durante', 'todos', 'uno', 'les', 'ni', 'contra',
+  'otros', 'ese', 'eso', 'ante', 'ellos', 'e', 'esto', 'mi', 'antes', 'algunos',
+  'unos', 'yo', 'otro', 'otras', 'otra', 'él', 'tanto', 'esa', 'estos', 'mucho',
+  'quienes', 'nada', 'muchos', 'cual', 'sea', 'poco', 'ella', 'estar', 'estas',
+  'algunas', 'algo', 'nosotros', 'mi', 'mis', 'tu', 'tus', 'cerca', 'alrededor',
+  'tiradas', 'olvidada', 'olvidado', 'encontre', 'perdi', 'extravio', 'recuperado',
+  'av', 'avenida', 'calle', 'plaza'
+]);
+
+/**
+ * Normaliza y divide una cadena en palabras clave relevantes
+ */
+export function extractKeywords(text: string): string[] {
+  if (!text) return [];
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Quita tildes
+    .replace(/[^a-z0-9\s]/g, ' ')   // Solo letras y números
+    .split(/\s+/)
+    .filter(word => word.length >= 3 && !STOP_WORDS.has(word));
+}
+
+/**
+ * Calcula la similitud de Jaccard entre dos conjuntos de palabras clave
+ */
+function calculateKeywordOverlap(words1: string[], words2: string[]): {
+  overlapScore: number;
+  matchedWords: string[];
+} {
+  const set1 = new Set(words1);
+  const matchedWords: string[] = [];
+
+  for (const w of words2) {
+    if (set1.has(w) && !matchedWords.includes(w)) {
+      matchedWords.push(w);
+    }
+  }
+
+  const unionSize = new Set([...words1, ...words2]).size;
+  if (unionSize === 0) return { overlapScore: 0, matchedWords: [] };
+
+  const overlapScore = matchedWords.length / unionSize;
+  return { overlapScore, matchedWords };
+}
+
+/**
+ * Compara un objeto perdido con un objeto encontrado y devuelve el resultado del match
+ * Si la puntuación mínima no se alcanza, devuelve null.
+ */
+export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | null {
+  // 1. REGLA FUNDAMENTAL: Ambos deben pertenecer a la misma categoría
+  if (lostItem.category !== foundItem.category) {
+    return null;
+  }
+
+  // Si alguno está recuperado o ambos tienen el mismo estado, no hacemos match
+  if (lostItem.status !== 'perdido' || foundItem.status !== 'encontrado') {
+    return null;
+  }
+
+  const reasons: string[] = [];
+
+  // Categoría idéntica confirmada
+  reasons.push(`Misma categoría: ${lostItem.category}`);
+
+  // 2. SIMILITUD DE TEXTO (TÍTULO Y DESCRIPCIÓN)
+  const lostKeywords = [
+    ...extractKeywords(lostItem.title),
+    ...extractKeywords(lostItem.description)
+  ];
+  const foundKeywords = [
+    ...extractKeywords(foundItem.title),
+    ...extractKeywords(foundItem.description)
+  ];
+
+  const { overlapScore, matchedWords } = calculateKeywordOverlap(lostKeywords, foundKeywords);
+
+  let textScore = 0;
+  if (matchedWords.length >= 3) {
+    textScore = 100;
+    reasons.push(`Alta coincidencia de términos (${matchedWords.slice(0, 4).join(', ')})`);
+  } else if (matchedWords.length === 2) {
+    textScore = 75;
+    reasons.push(`Coincidencia en palabras clave: "${matchedWords.join('", "')}"`);
+  } else if (matchedWords.length === 1) {
+    textScore = 45;
+    reasons.push(`Término coincidente: "${matchedWords[0]}"`);
+  } else {
+    // Si no hay palabras exactas, verificamos si una palabra contiene a otra (ej: jansport)
+    const partialMatches = lostKeywords.filter(lw =>
+      foundKeywords.some(fw => fw.includes(lw) || lw.includes(fw))
+    );
+    if (partialMatches.length > 0) {
+      textScore = 30;
+      reasons.push(`Términos similares detectados`);
+    } else {
+      textScore = 10;
+    }
+  }
+
+  // 3. PROXIMIDAD GEOGRÁFICA (Distancia GPS con Haversine)
+  const distanceKm = getDistanceKm(lostItem.lat, lostItem.lng, foundItem.lat, foundItem.lng);
+  let geoScore = 0;
+
+  if (distanceKm <= 1.0) {
+    geoScore = 100;
+    reasons.push(`Extremadamente cercanos: a solo ${(distanceKm * 1000).toFixed(0)} metros`);
+  } else if (distanceKm <= 3.0) {
+    geoScore = 85;
+    reasons.push(`Misma zona geográfica: a ${distanceKm.toFixed(1)} km`);
+  } else if (distanceKm <= 6.0) {
+    geoScore = 60;
+    reasons.push(`Distancia moderada (${distanceKm.toFixed(1)} km)`);
+  } else if (distanceKm <= 12.0) {
+    geoScore = 35;
+    reasons.push(`Misma ciudad (${distanceKm.toFixed(1)} km)`);
+  } else {
+    geoScore = 15;
+  }
+
+  // 4. PROXIMIDAD TEMPORAL
+  const lostTime = new Date(lostItem.date).getTime();
+  const foundTime = new Date(foundItem.date).getTime();
+  const timeDiffHours = Math.abs(foundTime - lostTime) / (1000 * 60 * 60);
+
+  let timeScore = 50;
+  if (foundTime >= lostTime) {
+    // Encontrado después de perdido (lo ideal)
+    if (timeDiffHours <= 12) {
+      timeScore = 100;
+      reasons.push(`Fechas muy próximas (menos de 12 horas de diferencia)`);
+    } else if (timeDiffHours <= 48) {
+      timeScore = 85;
+      reasons.push(`Encontrado dentro de las 48 horas de la pérdida`);
+    } else if (timeDiffHours <= 168) {
+      timeScore = 60;
+      reasons.push(`Encontrado la misma semana`);
+    } else {
+      timeScore = 30;
+    }
+  } else {
+    // Encontrado antes de reportar la pérdida (a menudo la gente reporta horas después)
+    if (timeDiffHours <= 24) {
+      timeScore = 75;
+      reasons.push(`Fechas cercanas compatibles`);
+    } else {
+      timeScore = 20;
+    }
+  }
+
+  // PONDERACIÓN DEL PUNTAJE TOTAL:
+  // - Texto y palabras clave: 50%
+  // - Proximidad geográfica: 35%
+  // - Proximidad temporal: 15%
+  const totalScore = Math.round((textScore * 0.50) + (geoScore * 0.35) + (timeScore * 0.15));
+
+  // Umbral mínimo de coincidencia para sugerir (mínimo 45%)
+  if (totalScore < 40) {
+    return null;
+  }
+
+  let confidence: 'muy_alta' | 'alta' | 'media' = 'media';
+  if (totalScore >= 75) {
+    confidence = 'muy_alta';
+  } else if (totalScore >= 55) {
+    confidence = 'alta';
+  }
+
+  return {
+    id: `match_${lostItem.id}_${foundItem.id}`,
+    lostItem,
+    foundItem,
+    score: totalScore,
+    confidence,
+    reasons,
+    distanceKm,
+    matchedKeywords: matchedWords
+  };
+}
+
+/**
+ * Busca todas las coincidencias para un objeto específico.
+ * Si es 'perdido', lo compara con todos los 'encontrados'.
+ * Si es 'encontrado', lo compara con todos los 'perdidos'.
+ */
+export function findMatchesForSingleItem(targetItem: Item, allItems: Item[]): MatchResult[] {
+  if (targetItem.status === 'recuperado') return [];
+
+  const results: MatchResult[] = [];
+
+  if (targetItem.status === 'perdido') {
+    const foundItems = allItems.filter(i => i.status === 'encontrado' && i.category === targetItem.category);
+    for (const found of foundItems) {
+      const match = compareTwoItems(targetItem, found);
+      if (match) results.push(match);
+    }
+  } else if (targetItem.status === 'encontrado') {
+    const lostItems = allItems.filter(i => i.status === 'perdido' && i.category === targetItem.category);
+    for (const lost of lostItems) {
+      const match = compareTwoItems(lost, targetItem);
+      if (match) results.push(match);
+    }
+  }
+
+  // Ordenamos de mayor a menor coincidencia
+  return results.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Evalúa toda la base de datos de publicaciones y devuelve todos los pares compatibles.
+ */
+export function findAllMatches(allItems: Item[]): MatchResult[] {
+  const lostItems = allItems.filter(i => i.status === 'perdido');
+  const foundItems = allItems.filter(i => i.status === 'encontrado');
+
+  const matches: MatchResult[] = [];
+
+  for (const lost of lostItems) {
+    for (const found of foundItems) {
+      // Comparación por categoría
+      if (lost.category === found.category) {
+        const result = compareTwoItems(lost, found);
+        if (result) {
+          matches.push(result);
+        }
+      }
+    }
+  }
+
+  // Ordena por puntuación descendente
+  return matches.sort((a, b) => b.score - a.score);
+}

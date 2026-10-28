@@ -161,6 +161,68 @@ export const INITIAL_ITEMS: Item[] = [
     user: CURRENT_USER,
     createdAt: new Date(Date.now() - 1000 * 60 * 3600).toISOString(),
     contactCount: 5
+  },
+  {
+    id: 'item_8',
+    title: 'Mochila Jansport Negra con Cuadernos',
+    description: 'Olvidé mi mochila negra Jansport con útiles universitarios en las bancas de Plaza Italia / Jardín Botánico. Tiene un cierre lateral plateado.',
+    category: 'Mochilas y Bolsos',
+    status: 'perdido',
+    locationName: 'Plaza Italia / Botánico, Palermo',
+    lat: -34.5819,
+    lng: -58.4205,
+    date: new Date(Date.now() - 1000 * 60 * 50).toISOString(), // 50 mins ago
+    imageUrl: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=80',
+    user: CURRENT_USER,
+    createdAt: new Date(Date.now() - 1000 * 60 * 50).toISOString(),
+    reward: '$8.000 Recompensa',
+    contactCount: 2
+  },
+  {
+    id: 'item_9',
+    title: 'iPhone 13 Azul encontrado con protector',
+    description: 'Encontrado en los escalones del Puente de la Mujer en Puerto Madero. Tiene pantalla con foto de mascota y funda protectora transparente.',
+    category: 'Electrónicos',
+    status: 'encontrado',
+    locationName: 'Puente de la Mujer, Puerto Madero',
+    lat: -34.6080,
+    lng: -58.3650,
+    date: new Date(Date.now() - 1000 * 60 * 1100).toISOString(), // ~18 hrs ago
+    imageUrl: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&auto=format&fit=crop&q=80',
+    user: DEMO_USERS[2],
+    createdAt: new Date(Date.now() - 1000 * 60 * 1100).toISOString(),
+    contactCount: 3
+  },
+  {
+    id: 'item_10',
+    title: 'Perro Caniche Blanco rescatado en la calle',
+    description: 'Encontramos un perrito caniche blanco en Av. Cabildo, cerca de Juramento. Estaba perdido y asustado. Lo cuidamos mientras aparece su dueño.',
+    category: 'Mascotas',
+    status: 'encontrado',
+    locationName: 'Av. Cabildo 2200, Belgrano',
+    lat: -34.5620,
+    lng: -58.4565,
+    date: new Date(Date.now() - 1000 * 60 * 150).toISOString(), // 2.5 hrs ago
+    imageUrl: 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800&auto=format&fit=crop&q=80',
+    user: DEMO_USERS[1],
+    createdAt: new Date(Date.now() - 1000 * 60 * 150).toISOString(),
+    contactCount: 4
+  },
+  {
+    id: 'item_11',
+    title: 'Billetera Marrón de Cuero extraviada',
+    description: 'Se me cayó mi billetera marrón de cuero en Plaza Serrano. Contiene DNI a nombre de Martín Pérez y tarjeta SUBE. Muy importante recuperar los documentos.',
+    category: 'Documentos y Billeteras',
+    status: 'perdido',
+    locationName: 'Plaza Serrano, Palermo Soho',
+    lat: -34.5891,
+    lng: -58.4310,
+    date: new Date(Date.now() - 1000 * 60 * 650).toISOString(), // ~11 hrs ago
+    imageUrl: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=800&auto=format&fit=crop&q=80',
+    user: DEMO_USERS[3],
+    createdAt: new Date(Date.now() - 1000 * 60 * 650).toISOString(),
+    reward: '$5.000 Recompensa',
+    contactCount: 1
   }
 ];
 
@@ -194,6 +256,15 @@ export const INITIAL_MESSAGES: Message[] = [
 ];
 
 export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: 'notif_match_1',
+    title: '✨ ¡Coincidencia del 94% detectada!',
+    message: 'El sistema automático detectó que "Mochila Urbana Negra Jansport" encontrada en Plaza Italia coincide con tu reporte de pérdida.',
+    date: new Date(Date.now() - 1000 * 60 * 40).toISOString(),
+    type: 'match',
+    read: false,
+    relatedItemId: 'item_8'
+  },
   {
     id: 'notif_1',
     title: 'Nuevo mensaje recibido 💬',

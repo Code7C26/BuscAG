@@ -1,28 +1,34 @@
 import React, { useState } from 'react';
 import { User, Item } from '../types';
-import { ShieldCheck, CheckCircle2, Package, Settings, LogOut, Users, Trash2, Edit3, Plus, ChevronRight } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, Package, LogOut, Trash2, Plus, ChevronRight, Sparkles } from 'lucide-react';
 import { ItemCard } from './ItemCard';
 
 interface ProfileViewProps {
   currentUser: User;
-  allUsers: User[];
   userItems: Item[];
-  onSwitchUser: (user: User) => void;
+  onSignOut: () => void;
   onViewItem: (item: Item) => void;
   onOpenPublish: () => void;
   onMarkAsRecovered: (itemId: string) => void;
   onDeleteItem: (itemId: string) => void;
+  onGoToMatches?: () => void;
+  userMatchesCount?: number;
+  pushEnabled: boolean;
+  onTogglePush: (enabled: boolean) => void;
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   currentUser,
-  allUsers,
   userItems,
-  onSwitchUser,
+  onSignOut,
   onViewItem,
   onOpenPublish,
   onMarkAsRecovered,
-  onDeleteItem
+  onDeleteItem,
+  onGoToMatches,
+  userMatchesCount = 0,
+  pushEnabled,
+  onTogglePush
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'published' | 'recovered' | 'settings'>('published');
 
@@ -69,7 +75,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <div className="border-r border-slate-200 h-6" />
               <div>
                 <span className="font-extrabold text-emerald-600 text-base block leading-none">
-                  {currentUser.totalRecovered}
+                  {userItems.filter(item => item.status === 'recuperado').length}
                 </span>
                 <span className="text-[11px] text-slate-500 font-medium">Recuperados</span>
               </div>
@@ -83,32 +89,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Demo Profile Switcher Pill */}
-      <div className="bg-blue-50 border border-blue-200/80 rounded-2xl p-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-blue-600 shrink-0" />
-          <div>
-            <span className="text-xs font-bold text-slate-800 block">Probar como otro usuario (Demo):</span>
-            <span className="text-[11px] text-slate-500">Cambia de perfil para simular conversaciones</span>
-          </div>
-        </div>
-
-        <select
-          value={currentUser.id}
-          onChange={(e) => {
-            const selected = allUsers.find(u => u.id === e.target.value);
-            if (selected) onSwitchUser(selected);
-          }}
-          className="px-3 py-1.5 bg-white border border-blue-300 rounded-xl text-xs font-bold text-blue-700 outline-none cursor-pointer"
-        >
-          {allUsers.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Sub-tabs Navigation */}
@@ -150,6 +130,31 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Published Items Tab */}
       {activeSubTab === 'published' && (
         <div className="space-y-4">
+          {/* Alerta de coincidencias para el usuario */}
+          {userMatchesCount > 0 && onGoToMatches && (
+            <div className="p-4 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between gap-3 shadow-md shadow-blue-500/15">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold leading-tight">
+                    ¡Tienes {userMatchesCount} posible{userMatchesCount > 1 ? 's' : ''} coincidencia{userMatchesCount > 1 ? 's' : ''} detectada{userMatchesCount > 1 ? 's' : ''}!
+                  </p>
+                  <p className="text-[11px] text-blue-100 mt-0.5">
+                    El sistema detectó objetos de tu misma categoría con alta similitud.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onGoToMatches}
+                className="px-3 py-1.5 rounded-xl bg-white text-blue-700 text-xs font-black shrink-0 hover:bg-blue-50 transition cursor-pointer shadow-xs"
+              >
+                Ver matches
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
             <h3 className="font-extrabold text-slate-900 text-sm">Tus objetos activos</h3>
             <button
@@ -231,32 +236,29 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       {/* Settings Tab */}
       {activeSubTab === 'settings' && (
         <div className="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
-          <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
+          <label className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
             <div>
               <span className="font-bold text-slate-800 text-sm block">Notificaciones push</span>
-              <span className="text-xs text-slate-500">Avisos de objetos cercanos y mensajes</span>
+              <span className="text-xs text-slate-500">Mensajes, coincidencias y recuperaciones, incluso con la app cerrada</span>
             </div>
-            <input type="checkbox" defaultChecked className="w-4 h-4 text-blue-600 rounded cursor-pointer" />
-          </div>
+            <input
+              type="checkbox"
+              checked={pushEnabled}
+              onChange={event => onTogglePush(event.target.checked)}
+              className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+              aria-label="Activar notificaciones push"
+            />
+          </label>
 
-          <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
+          <div className="p-4 flex items-center justify-between">
             <div>
-              <span className="font-bold text-slate-800 text-sm block">Radio de alerta de ubicación</span>
-              <span className="text-xs text-slate-500">Recibir avisos hasta 5 km a la redonda</span>
+              <span className="font-bold text-slate-800 text-sm block">Ubicación del mapa</span>
+              <span className="text-xs text-slate-500">El GPS se solicita al usar “Cerca de mí” y no se guarda en tu perfil</span>
             </div>
-            <span className="text-xs font-bold text-blue-600">5 km</span>
-          </div>
-
-          <div className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
-            <div>
-              <span className="font-bold text-slate-800 text-sm block">Verificación de identidad</span>
-              <span className="text-xs text-slate-500">Aumenta la confianza de la comunidad</span>
-            </div>
-            <span className="text-xs font-bold text-emerald-600">Verificado ✓</span>
           </div>
 
           <button 
-            onClick={() => alert('Sesión cerrada correctamente (Modo demo)')}
+            onClick={onSignOut}
             className="w-full p-4 flex items-center justify-between text-red-600 hover:bg-red-50 transition cursor-pointer font-bold text-sm"
           >
             <span className="flex items-center gap-2">

@@ -1,18 +1,21 @@
 import React from 'react';
-import { Home, Map, Plus, Bell, User } from 'lucide-react';
+import { Home, Map, Plus, Bell, User, Sparkles } from 'lucide-react';
+import { TabType } from '../types';
 
 interface BottomNavProps {
-  activeTab: 'home' | 'map' | 'publish' | 'notifications' | 'profile';
-  onSelectTab: (tab: 'home' | 'map' | 'publish' | 'notifications' | 'profile') => void;
+  activeTab: TabType;
+  onSelectTab: (tab: TabType) => void;
   onOpenPublish: () => void;
   unreadNotificationsCount: number;
+  matchesCount?: number;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   activeTab,
   onSelectTab,
   onOpenPublish,
-  unreadNotificationsCount
+  unreadNotificationsCount,
+  matchesCount = 0
 }) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-lg px-2 py-1.5 sm:py-2">
@@ -51,22 +54,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           </button>
         </div>
 
-        {/* 🔔 Notificaciones */}
+        {/* ✨ Coincidencias / Matches */}
         <button
-          onClick={() => onSelectTab('notifications')}
+          onClick={() => onSelectTab('matches')}
           className={`relative flex flex-col items-center justify-center w-14 py-1 rounded-xl transition cursor-pointer ${
-            activeTab === 'notifications' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800'
+            activeTab === 'matches' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800'
           }`}
         >
           <div className="relative">
-            <Bell className={`w-5 h-5 ${activeTab === 'notifications' ? 'stroke-[2.5px]' : 'stroke-2'}`} />
-            {unreadNotificationsCount > 0 && (
-              <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 bg-red-500 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center">
-                {unreadNotificationsCount}
+            <Sparkles className={`w-5 h-5 ${activeTab === 'matches' ? 'stroke-[2.5px] text-blue-600 fill-blue-100' : 'stroke-2'}`} />
+            {matchesCount > 0 && (
+              <span className="absolute -top-1 -right-2 px-1 min-w-3.5 h-3.5 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center shadow-xs">
+                {matchesCount}
               </span>
             )}
           </div>
-          <span className="text-[11px] mt-0.5">Alertas</span>
+          <span className="text-[11px] mt-0.5">Matches</span>
         </button>
 
         {/* 👤 Perfil */}
@@ -83,3 +86,4 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     </nav>
   );
 };
+

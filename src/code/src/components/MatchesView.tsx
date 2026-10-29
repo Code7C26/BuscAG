@@ -72,22 +72,19 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
   ).length;
 
   return (
-    <div className="px-4 py-5 space-y-5">
+    <div className="matches-view px-4 py-5 space-y-5">
       
       {/* Banner Informativo del Sistema de Match Automático */}
-      <div className="bg-linear-to-r from-blue-700 via-indigo-700 to-blue-800 rounded-3xl p-5 sm:p-6 text-white shadow-xl relative overflow-hidden">
+      <div className="matches-hero p-5 sm:p-6 text-white relative overflow-hidden">
         {/* Decoración de fondo */}
-        <div className="absolute top-0 right-0 -mt-6 -mr-6 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-8 w-32 h-32 bg-amber-400/15 rounded-full blur-xl pointer-events-none" />
-
         <div className="relative z-10 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-xs font-extrabold border border-white/20 text-amber-300">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-medium border border-white/15 text-blue-100">
             <Sparkles className="w-3.5 h-3.5 fill-current" />
             Sistema Inteligente de Coincidencias
           </div>
 
           <div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
               Sugerencias Automáticas de Match
             </h1>
             <p className="text-xs sm:text-sm text-blue-100 max-w-2xl mt-1 leading-relaxed">
@@ -97,15 +94,15 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
 
           {/* Estadísticas clave */}
           <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-2">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-2.5 sm:p-3 border border-white/10 text-center">
+            <div className="matches-hero__stat p-2.5 sm:p-3 border text-center">
               <span className="block text-lg sm:text-2xl font-black text-white">{matches.length}</span>
               <span className="text-[10px] sm:text-xs text-blue-200 font-medium">Matches Totales</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-2.5 sm:p-3 border border-white/10 text-center">
+            <div className="matches-hero__stat p-2.5 sm:p-3 border text-center">
               <span className="block text-lg sm:text-2xl font-black text-emerald-300">{highConfidenceCount}</span>
               <span className="text-[10px] sm:text-xs text-blue-200 font-medium">Probabilidad Alta</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-2.5 sm:p-3 border border-white/10 text-center">
+            <div className="matches-hero__stat p-2.5 sm:p-3 border text-center">
               <span className="block text-lg sm:text-2xl font-black text-amber-300">{myMatchesCount}</span>
               <span className="text-[10px] sm:text-xs text-blue-200 font-medium">En tus Reportes</span>
             </div>

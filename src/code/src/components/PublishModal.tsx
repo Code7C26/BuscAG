@@ -215,10 +215,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+    <div className="publish-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="publish-dialog w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         {/* Cabecera de la ventana modal */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="publish-dialog__header p-4 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="font-extrabold text-slate-900 text-lg leading-tight flex items-center gap-2">
               ➕ Publicar Objeto
@@ -235,7 +235,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
         </div>
 
         {/* Formulario scrolleable */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="publish-form p-4 space-y-4 overflow-y-auto flex-1">
           {submitError && (
             <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-3 text-sm text-red-700">
               {submitError}

@@ -635,7 +635,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-800">
+    <div className="app-shell min-h-screen flex flex-col font-sans text-slate-800">
       {/* Mensaje flotante de alerta (Toast) */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-2xl border border-slate-700 flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
@@ -656,7 +656,7 @@ export default function App() {
       />
 
       {/* Área de contenido principal */}
-      <main className="flex-1 max-w-5xl w-full mx-auto pb-20">
+      <main className="app-main flex-1 w-full mx-auto pb-20">
         {dataLoadError && (
           <div role="alert" className="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {dataLoadError}
@@ -670,16 +670,16 @@ export default function App() {
             1. VISTA DE INICIO (HOME)
            ========================================== */}
         {activeTab === 'home' && (
-          <div className="px-4 py-5 space-y-5">
+          <div className="home-view flex flex-col px-4 pb-5">
             {/* Alerta de coincidencias para el usuario actual */}
             {userMatchesCount > 0 && (
-              <div className="bg-linear-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-2xl p-3.5 text-white flex items-center justify-between gap-3 shadow-md shadow-blue-600/15">
+              <div className="rounded-xl bg-[#1b3557] p-3.5 text-white flex items-center justify-between gap-3 border border-white/10">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
                     <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
                   </div>
                   <div>
-                    <span className="text-xs font-black block leading-snug">
+                    <span className="text-xs font-semibold block leading-snug">
                       ¡Detectamos {userMatchesCount} posible{userMatchesCount > 1 ? 's' : ''} coincidencia{userMatchesCount > 1 ? 's' : ''} en tus reportes!
                     </span>
                     <span className="text-[11px] text-blue-100 block">
@@ -689,7 +689,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setActiveTab('matches')}
-                  className="px-3 py-1.5 rounded-xl bg-white text-blue-700 text-xs font-black shrink-0 hover:bg-blue-50 transition cursor-pointer shadow-xs"
+                  className="px-3 py-1.5 rounded-lg bg-white text-slate-800 text-xs font-semibold shrink-0 hover:bg-slate-100 transition cursor-pointer"
                 >
                   Ver matches
                 </button>
@@ -698,7 +698,7 @@ export default function App() {
 
             {/* Barra de búsqueda por texto */}
             <div className="relative">
-              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-xs p-2 flex items-center gap-3">
+              <div className="home-search border p-2 flex items-center gap-3">
                 <Search className="w-5 h-5 text-slate-400 ml-2 shrink-0" />
                 <input
                   type="text"
@@ -721,12 +721,12 @@ export default function App() {
 
             {/* Botones de filtro rápido: Todos, Encontrados, Perdidos, Cerca de mí */}
             <div>
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <div className="home-status-filters flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                 <button
                   onClick={() => setActiveFilter('todos')}
                   className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer border ${
                     activeFilter === 'todos'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
+                      ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -737,7 +737,7 @@ export default function App() {
                   onClick={() => setActiveFilter('encontrados')}
                   className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer border flex items-center gap-1.5 ${
                     activeFilter === 'encontrados'
-                      ? 'bg-green-600 text-white border-green-600 shadow-md shadow-green-600/20'
+                      ? 'bg-green-600 text-white border-green-600'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -749,7 +749,7 @@ export default function App() {
                   onClick={() => setActiveFilter('perdidos')}
                   className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer border flex items-center gap-1.5 ${
                     activeFilter === 'perdidos'
-                      ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-600/20'
+                      ? 'bg-red-600 text-white border-red-600'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -761,7 +761,7 @@ export default function App() {
                   onClick={handleNearMeFilter}
                   className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer border flex items-center gap-1.5 ${
                     activeFilter === 'cerca'
-                      ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20'
+                      ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                   }`}
                 >
@@ -772,7 +772,7 @@ export default function App() {
             </div>
 
             {/* Chips de filtro por categorías */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            <div className="category-filters flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
               {categoriesList.map((cat) => (
                 <button
                   key={cat}
@@ -791,7 +791,7 @@ export default function App() {
             {/* Cuadrícula o lista de publicaciones filtradas */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h2 className="font-extrabold text-slate-900 text-base">
+                <h2 className="home-section-title text-base">
                   Publicaciones Recientes
                 </h2>
                 <span className="text-xs text-slate-500 font-medium">

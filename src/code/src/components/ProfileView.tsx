@@ -36,10 +36,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   const recoveredItems = userItems.filter(i => i.status === 'recuperado');
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 pb-24 space-y-6">
+    <div className="profile-view max-w-2xl mx-auto px-4 py-6 pb-24 space-y-6">
       {/* Profile Header Card */}
       <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs relative overflow-hidden">
-        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-90" />
+        <div className="profile-view__hero-strip absolute top-0 inset-x-0 h-16" />
         
         <div className="relative pt-4 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
           {/* Avatar */}
@@ -47,7 +47,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
-              className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md bg-white"
+              className="profile-view__avatar w-20 h-20 rounded-full object-cover border-4 border-white bg-white"
             />
             {currentUser.verified && (
               <div className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full border-2 border-white shadow-xs">
@@ -58,7 +58,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
           {/* User Details */}
           <div className="flex-1 min-w-0">
-            <h2 className="font-extrabold text-slate-900 text-xl flex items-center justify-center sm:justify-start gap-1.5">
+            <h2 className="font-semibold text-slate-900 text-xl flex items-center justify-center sm:justify-start gap-1.5">
               {currentUser.name}
             </h2>
             <p className="text-xs text-slate-500 font-medium">{currentUser.email}</p>
@@ -132,13 +132,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="space-y-4">
           {/* Alerta de coincidencias para el usuario */}
           {userMatchesCount > 0 && onGoToMatches && (
-            <div className="p-4 rounded-2xl bg-linear-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-between gap-3 shadow-md shadow-blue-500/15">
+            <div className="p-4 rounded-xl bg-[#1b3557] text-white flex items-center justify-between gap-3 border border-white/10">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
                   <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold leading-tight">
+                  <p className="text-xs font-semibold leading-tight">
                     ¡Tienes {userMatchesCount} posible{userMatchesCount > 1 ? 's' : ''} coincidencia{userMatchesCount > 1 ? 's' : ''} detectada{userMatchesCount > 1 ? 's' : ''}!
                   </p>
                   <p className="text-[11px] text-blue-100 mt-0.5">
@@ -148,7 +148,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               </div>
               <button
                 onClick={onGoToMatches}
-                className="px-3 py-1.5 rounded-xl bg-white text-blue-700 text-xs font-black shrink-0 hover:bg-blue-50 transition cursor-pointer shadow-xs"
+                className="px-3 py-1.5 rounded-lg bg-white text-slate-800 text-xs font-semibold shrink-0 hover:bg-slate-100 transition cursor-pointer"
               >
                 Ver matches
               </button>

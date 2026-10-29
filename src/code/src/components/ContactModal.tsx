@@ -87,10 +87,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col h-[85vh] max-h-[650px] animate-in zoom-in-95 duration-200">
+    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="modal-dialog w-full max-w-lg overflow-hidden flex flex-col h-[85vh] max-h-[650px] animate-in zoom-in-95 duration-200">
         {/* Cabecera del Chat con datos del publicador */}
-        <div className="p-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+        <div className="modal-header p-3.5 border-b border-slate-200 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <img
               src={participantAvatar}
@@ -165,7 +165,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   <div
                     className={`max-w-[80%] p-3 rounded-2xl text-xs sm:text-sm font-medium shadow-xs ${
                       isMe
-                        ? 'bg-blue-600 text-white rounded-br-none'
+                        ? 'bg-slate-800 text-white rounded-br-none'
                         : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
                     }`}
                   >

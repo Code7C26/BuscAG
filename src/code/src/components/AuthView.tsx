@@ -57,14 +57,14 @@ export const AuthView: React.FC = () => {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-10">
-      <section className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-7 sm:p-9">
+    <main className="auth-view min-h-screen flex items-center justify-center px-4 py-10">
+      <section className="auth-card w-full max-w-md border p-7 sm:p-9">
         <div className="flex flex-col items-center text-center mb-7">
-          <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-lg shadow-blue-600/20 mb-4">
-            <Compass className="w-8 h-8" />
+          <div className="auth-brand-mark w-14 h-14 rounded-2xl text-white flex items-center justify-center mb-4">
+            <Compass className="w-7 h-7" />
           </div>
-          <h1 className="font-extrabold text-2xl text-slate-900">
-            Objetos<span className="text-blue-600">Perdidos</span>
+          <h1 className="font-semibold text-2xl text-slate-900">
+            Objetos <span className="text-blue-800">Perdidos</span>
           </h1>
           <p className="text-sm text-slate-500 mt-2">
             {mode === 'signin' ? 'Inicia sesión para continuar' : 'Crea tu cuenta comunitaria'}
@@ -81,7 +81,7 @@ export const AuthView: React.FC = () => {
                   autoComplete="name"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-normal outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
                 />
               </label>
               <label className="block text-sm font-semibold text-slate-700">
@@ -91,7 +91,7 @@ export const AuthView: React.FC = () => {
                   autoComplete="tel"
                   value={phone}
                   onChange={(event) => setPhone(event.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-normal outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
                 />
               </label>
               <label className="block text-sm font-semibold text-slate-700">
@@ -100,7 +100,7 @@ export const AuthView: React.FC = () => {
                   autoComplete="address-level2"
                   value={location}
                   onChange={(event) => setLocation(event.target.value)}
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-normal outline-none focus:ring-2 focus:ring-blue-500"
+                  className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
                 />
               </label>
             </>
@@ -113,7 +113,7 @@ export const AuthView: React.FC = () => {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-normal outline-none focus:ring-2 focus:ring-blue-500"
+              className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
             />
           </label>
           <label className="block text-sm font-semibold text-slate-700">
@@ -125,7 +125,7 @@ export const AuthView: React.FC = () => {
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-normal outline-none focus:ring-2 focus:ring-blue-500"
+              className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
             />
           </label>
 
@@ -143,7 +143,7 @@ export const AuthView: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full rounded-xl bg-slate-800 py-3 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {isSubmitting && <LoaderCircle className="w-4 h-4 animate-spin" />}
             {mode === 'signin' ? 'Iniciar sesión' : 'Crear cuenta'}

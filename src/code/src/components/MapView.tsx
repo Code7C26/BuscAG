@@ -254,11 +254,11 @@ export const MapView: React.FC<MapViewProps> = ({
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-4rem-4rem)] min-h-[500px] overflow-hidden bg-slate-100 flex flex-col">
+    <div className="map-view relative w-full h-[calc(100vh-4rem-4rem)] min-h-[500px] overflow-hidden flex flex-col">
       {/* Barra superior flotante de búsqueda y filtros rápidos */}
       <div className="absolute top-3 left-3 right-3 z-20 max-w-xl mx-auto space-y-2">
         {/* Campo de búsqueda sobre el mapa */}
-        <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200 p-2 flex items-center gap-2">
+        <div className="map-view__search relative bg-white/90 border p-2 flex items-center gap-2">
           <Search className="w-5 h-5 text-slate-400 ml-2 shrink-0" />
           <input
             type="text"
@@ -348,7 +348,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {/* Tarjeta flotante con vista previa del objeto seleccionado al hacer clic en un pin */}
       {selectedMapItem && (
-        <div className="absolute bottom-4 left-4 right-16 z-20 max-w-sm mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-3.5 animate-in slide-in-from-bottom-5 duration-200">
+        <div className="map-view__preview absolute bottom-4 left-4 right-16 z-20 max-w-sm mx-auto bg-white border p-3.5 animate-in slide-in-from-bottom-5 duration-200">
           <div className="flex gap-3 items-center">
             {/* Foto en miniatura del objeto */}
             <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
@@ -368,7 +368,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${
                   selectedMapItem.status === 'perdido' ? 'text-red-600' : 'text-green-600'
                 }`}>
-                  {selectedMapItem.status === 'perdido' ? '🔴 Perdido' : '🟢 Encontrado'}
+                  {selectedMapItem.status === 'perdido' ? 'Perdido' : 'Encontrado'}
                 </span>
                 <button
                   onClick={() => setSelectedMapItem(null)}

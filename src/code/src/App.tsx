@@ -30,6 +30,7 @@ import { ProfileView } from './components/ProfileView';
 import { NotificationsView } from './components/NotificationsView';
 import { MatchesView } from './components/MatchesView';
 import { MatchComparisonModal } from './components/MatchComparisonModal';
+import { FaqChat } from './components/FaqChat';
 
 export default function App() {
   // ESTADOS PRINCIPALES DE LA APLICACIÓN
@@ -969,6 +970,7 @@ export default function App() {
         }}
         currentUser={currentUser}
       />
+      <FaqChat />
     </div>
   );
 }

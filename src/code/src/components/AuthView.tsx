@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Compass, LoaderCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { FaqChat } from './FaqChat';
 
 export const AuthView: React.FC = () => {
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
@@ -164,6 +165,7 @@ export const AuthView: React.FC = () => {
           </button>
         </p>
       </section>
+      <FaqChat />
     </main>
   );
 };

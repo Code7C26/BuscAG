@@ -7,7 +7,7 @@
  * - Botón de llamada telefónica directa (si el publicador compartió su número)
  * - Indicadores visuales de confirmación de envío (doble tilde azul)
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Send, Phone, MessageSquare, Check, CheckCheck, ShieldCheck, Image as ImageIcon } from 'lucide-react';
 import { Item, Message, User } from '../types';
 
@@ -18,7 +18,9 @@ interface ContactModalProps {
   onClose: () => void;                                  // Cierra la ventana de chat
   currentUser: User;                                    // Usuario actual que envía los mensajes
   messages: Message[];                                  // Todos los mensajes almacenados
-  onSendMessage: (itemId: string, text: string) => void;// Función para despachar un nuevo mensaje
+  participantId: string | null;
+  onMarkThreadRead: (itemId: string, senderId: string) => void;
+  onSendMessage: (itemId: string, text: string, recipientId: string) => void;
 }
 
 // Opciones de mensajes rápidos para iniciar conversación en un solo clic
@@ -35,16 +37,34 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   currentUser,
   messages,
+  participantId,
+  onMarkThreadRead,
   onSendMessage
 }) => {
+  const [inputMessage, setInputMessage] = useState('');
+  useEffect(() => {
+    setInputMessage('');
+    if (isOpen && item && participantId) onMarkThreadRead(item.id, participantId);
+  }, [item?.id, participantId, isOpen, onMarkThreadRead]);
+
   // Si no está abierto o no hay objeto, no renderiza nada
   if (!isOpen || !item) return null;
 
-  // Estado del texto que el usuario está escribiendo en el input
-  const [inputMessage, setInputMessage] = useState('');
-
-  // Filtramos únicamente los mensajes correspondientes a esta publicación específica
-  const itemMessages = messages.filter(m => m.itemId === item.id);
+  const participantMessage = participantId
+    ? messages.find(message => message.itemId === item.id && message.senderId === participantId)
+    : undefined;
+  const participantName = item.user.id === currentUser.id
+    ? participantMessage?.senderName ?? 'Usuario'
+    : item.user.name;
+  const participantAvatar = item.user.id === currentUser.id
+    ? participantMessage?.senderAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(participantName)}`
+    : item.user.avatar;
+  const itemMessages = messages.filter(message =>
+    message.itemId === item.id &&
+    participantId !== null &&
+    ((message.senderId === currentUser.id && message.receiverId === participantId) ||
+      (message.receiverId === currentUser.id && message.senderId === participantId))
+  );
 
   /**
    * Manejador del envío de mensaje escrito manualmente
@@ -52,9 +72,10 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   const handleSend = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!inputMessage.trim()) return;
+    if (!participantId) return;
 
     // Emite el mensaje al componente principal App.tsx
-    onSendMessage(item.id, inputMessage.trim());
+    onSendMessage(item.id, inputMessage.trim(), participantId);
     setInputMessage('');
   };
 
@@ -62,24 +83,24 @@ export const ContactModal: React.FC<ContactModalProps> = ({
    * Manejador para enviar una respuesta predeterminada directamente con un toque
    */
   const handlePresetClick = (presetText: string) => {
-    onSendMessage(item.id, presetText);
+    if (participantId) onSendMessage(item.id, presetText, participantId);
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col h-[85vh] max-h-[650px] animate-in zoom-in-95 duration-200">
+    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="modal-dialog w-full max-w-lg overflow-hidden flex flex-col h-[85vh] max-h-[650px] animate-in zoom-in-95 duration-200">
         {/* Cabecera del Chat con datos del publicador */}
-        <div className="p-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-3">
+        <div className="modal-header p-3.5 border-b border-slate-200 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <img
-              src={item.user.avatar}
-              alt={item.user.name}
+              src={participantAvatar}
+              alt={participantName}
               className="w-10 h-10 rounded-full object-cover border border-slate-200"
             />
             <div className="min-w-0">
               <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5 truncate">
-                {item.user.name}
-                {item.user.verified && <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" title="Verificado" />}
+                {participantName}
+                {item.user.id !== currentUser.id && item.user.verified && <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" aria-label="Verificado" />}
               </h3>
               <p className="text-xs text-slate-500 truncate">
                 Publicación: <span className="font-semibold text-slate-700">{item.title}</span>
@@ -89,7 +110,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
           <div className="flex items-center gap-1">
             {/* Opción de llamada telefónica directa */}
-            {item.user.phone && (
+            {participantId === item.user.id && item.user.phone && (
               <a
                 href={`tel:${item.user.phone}`}
                 className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition"
@@ -144,7 +165,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   <div
                     className={`max-w-[80%] p-3 rounded-2xl text-xs sm:text-sm font-medium shadow-xs ${
                       isMe
-                        ? 'bg-blue-600 text-white rounded-br-none'
+                        ? 'bg-slate-800 text-white rounded-br-none'
                         : 'bg-white text-slate-800 border border-slate-200 rounded-bl-none'
                     }`}
                   >
@@ -152,7 +173,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-1 px-1">
                     <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    {isMe && <CheckCheck className="w-3 h-3 text-blue-500" />}
+                    {isMe && <CheckCheck className={`w-3 h-3 ${msg.isRead ? 'text-blue-500' : 'text-slate-400'}`} />}
                   </div>
                 </div>
               );
@@ -201,4 +222,3 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     </div>
   );
 };
-

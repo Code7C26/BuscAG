@@ -37,9 +37,6 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   allItems = [],
   onOpenMatchComparison
 }) => {
-  // Si no hay ningún objeto seleccionado, no renderizamos el modal
-  if (!item) return null;
-
   // Referencias para el mini-mapa dentro del modal
   const miniMapRef = useRef<HTMLDivElement>(null);
   const leafletMiniMapRef = useRef<L.Map | null>(null);
@@ -48,21 +45,21 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   const [showRecoveredConfetti, setShowRecoveredConfetti] = useState(false);
 
   // Verificaciones de permisos y estado del objeto
-  const isOwner = currentUser.id === item.user.id;
-  const isLost = item.status === 'perdido';
-  const isRecovered = item.status === 'recuperado';
+  const isOwner = Boolean(item && currentUser.id === item.user.id);
+  const isLost = item?.status === 'perdido';
+  const isRecovered = item?.status === 'recuperado';
 
   // Calcula automáticamente las coincidencias para este objeto específico
   const suggestedMatches = useMemo(() => {
-    if (!allItems.length || isRecovered) return [];
+    if (!item || !allItems.length || item.status === 'recuperado') return [];
     return findMatchesForSingleItem(item, allItems);
-  }, [item, allItems, isRecovered]);
+  }, [item, allItems]);
 
   /**
    * EFECTO: Inicializa el mini-mapa Leaflet enfocado exactamente en la lat/lng del objeto
    */
   useEffect(() => {
-    if (!miniMapRef.current || leafletMiniMapRef.current) return;
+    if (!item || !miniMapRef.current || leafletMiniMapRef.current) return;
 
     // Instanciamos el mapa centrado en el objeto
     const map = L.map(miniMapRef.current, {
@@ -104,10 +101,19 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     leafletMiniMapRef.current = map;
 
     // Recalcula dimensiones para evitar desfasajes en modales
-    setTimeout(() => {
+    const invalidateTimer = window.setTimeout(() => {
       map.invalidateSize();
     }, 200);
+
+    return () => {
+      window.clearTimeout(invalidateTimer);
+      map.remove();
+      if (leafletMiniMapRef.current === map) leafletMiniMapRef.current = null;
+    };
   }, [item]);
+
+  // Si no hay ningún objeto seleccionado, no renderizamos el modal
+  if (!item) return null;
 
   /**
    * Manejador para marcar el objeto como recuperado con animación de celebración
@@ -123,8 +129,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
+    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="modal-dialog w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
         
         {/* Banner animado de felicitaciones al recuperar el objeto */}
         {showRecoveredConfetti && (
@@ -322,7 +328,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-slate-900 text-sm">{item.user.name}</span>
                   {item.user.verified && (
-                    <ShieldCheck className="w-4 h-4 text-blue-600" title="Usuario Verificado" />
+                    <ShieldCheck className="w-4 h-4 text-blue-600" aria-label="Usuario verificado" />
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
@@ -394,4 +400,3 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     </div>
   );
 };
-

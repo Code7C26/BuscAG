@@ -29,10 +29,10 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
   return (
     <div 
       onClick={() => onViewMore(item)}
-      className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-md transition-all duration-200 flex flex-col group cursor-pointer"
+      className="item-card overflow-hidden border flex flex-col group cursor-pointer"
     >
       {/* Contenedor de la Imagen con relación de aspecto 4:3 */}
-      <div className="relative aspect-4/3 w-full bg-slate-100 overflow-hidden">
+      <div className="item-card__image relative aspect-4/3 w-full overflow-hidden">
         <img
           src={item.imageUrl}
           alt={item.title}
@@ -43,17 +43,17 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
         {/* Insignias de Estado superiores: 🔴 Perdido / 🟢 Encontrado / 🟢 Recuperado */}
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
           {isLost ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-600 text-white shadow-md shadow-red-600/20">
+            <span className="status-pill status-pill--lost inline-flex items-center text-white">
               <AlertCircle className="w-3.5 h-3.5" />
               Perdido
             </span>
           ) : isRecovered ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
+            <span className="status-pill status-pill--recovered inline-flex items-center text-white">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Recuperado
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-green-600 text-white shadow-md shadow-green-600/20">
+            <span className="status-pill status-pill--found inline-flex items-center text-white">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Encontrado
             </span>
@@ -61,7 +61,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
 
           {/* Etiqueta de recompensa si el usuario ofreció una */}
           {item.reward && isLost && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-sm">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-600/90 text-white shadow-sm backdrop-blur-sm">
               🎁 {item.reward}
             </span>
           )}
@@ -69,7 +69,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
 
         {/* Píldora de Categoría en la esquina superior derecha */}
         <div className="absolute top-3 right-3">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-900/75 backdrop-blur-md text-white">
+          <span className="item-card__category inline-flex items-center gap-1 px-2.5 py-1 text-[11px] text-white">
             <Tag className="w-3 h-3" />
             {item.category}
           </span>
@@ -77,15 +77,15 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
       </div>
 
       {/* Cuerpo de la tarjeta con título, descripción y metadatos */}
-      <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+      <div className="item-card__content flex-1 flex flex-col justify-between gap-3">
         <div>
           {/* Nombre / Título del objeto */}
-          <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-1 group-hover:text-blue-600 transition-colors">
+          <h3 className="item-card__title text-base leading-snug line-clamp-1 group-hover:text-blue-700 transition-colors">
             {item.title}
           </h3>
 
           {/* Fragmento de la descripción (truncado a 2 líneas para mantener uniformidad) */}
-          <p className="text-slate-600 text-xs mt-1 line-clamp-2 leading-relaxed">
+          <p className="item-card__description mt-1 line-clamp-2 leading-relaxed">
             {item.description}
           </p>
 
@@ -111,7 +111,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
         </div>
 
         {/* Pie de la tarjeta: Información del publicador y botón 'Ver más' */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+        <div className="item-card__footer pt-3 border-t flex items-center justify-between gap-2">
           {/* Datos del usuario publicador */}
           <div className="flex items-center gap-2 min-w-0">
             <img
@@ -123,7 +123,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
               <span className="text-xs font-semibold text-slate-800 truncate block leading-tight flex items-center gap-1">
                 {item.user.name}
                 {item.user.verified && (
-                  <ShieldCheck className="w-3 h-3 text-blue-500 inline shrink-0" title="Usuario verificado" />
+                  <ShieldCheck className="w-3 h-3 text-blue-500 inline shrink-0" aria-label="Usuario verificado" />
                 )}
               </span>
               <span className="text-[10px] text-slate-500 block leading-tight">
@@ -138,7 +138,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
               e.stopPropagation(); // Evita doble disparo con el contenedor padre
               onViewMore(item);
             }}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white transition cursor-pointer shrink-0"
+            className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0"
           >
             Ver más
             <ChevronRight className="w-3.5 h-3.5" />
@@ -148,4 +148,3 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
     </div>
   );
 };
-

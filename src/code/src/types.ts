@@ -22,8 +22,7 @@ export type Category =
 export type FilterType = 'todos' | 'encontrados' | 'perdidos' | 'cerca';
 
 // Pestañas de navegación de la aplicación
-export type TabType = 'home' | 'map' | 'matches' | 'notifications' | 'profile';
-
+export type TabType = 'home' | 'map' | 'matches' | 'notifications' | 'profile' | 'publish';
 /**
  * Representa al usuario de la plataforma (quien publica o busca)
  */
@@ -89,6 +88,7 @@ export interface NotificationItem {
   type: 'message' | 'match' | 'system' | 'recovered';  // Tipo para determinar color e icono
   read: boolean;                                       // Estado de lectura
   relatedItemId?: string;                              // ID del objeto asociado (si aplica)
+  relatedUserId?: string;                              // Otro participante cuando la notificación abre un chat
 }
 
 /**
@@ -104,5 +104,4 @@ export interface MatchResult {
   distanceKm: number;                                  // Distancia en km entre ambos reportes
   matchedKeywords: string[];                           // Palabras clave coincidentes
 }
-
 

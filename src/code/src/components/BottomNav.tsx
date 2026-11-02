@@ -18,8 +18,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   matchesCount = 0
 }) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 shadow-lg px-2 py-1.5 sm:py-2">
-      <div className="max-w-md mx-auto flex items-center justify-around relative">
+    <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t px-2 py-1.5 sm:py-2">
+      <div className="bottom-nav__content mx-auto flex items-center justify-around relative">
         {/* 🏠 Inicio */}
         <button
           onClick={() => onSelectTab('home')}
@@ -46,7 +46,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <div className="relative -top-4 flex items-center justify-center">
           <button
             onClick={onOpenPublish}
-            className="w-13 h-13 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-blue-600/35 border-4 border-white transition cursor-pointer group"
+            className="bottom-nav__create w-13 h-13 rounded-full active:scale-95 text-white flex items-center justify-center transition cursor-pointer group"
             title="Publicar objeto"
             aria-label="Publicar objeto"
           >

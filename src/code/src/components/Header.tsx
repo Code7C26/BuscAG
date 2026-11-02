@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, MapPin, Bell, User as UserIcon, Compass, Sparkles } from 'lucide-react';
+import { Bell, Compass, Sparkles } from 'lucide-react';
 import { User, TabType } from '../types';
 
 interface HeaderProps {
@@ -22,21 +22,21 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-slate-200/80 shadow-xs">
-      <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+    <header className="app-header sticky top-0 z-30 border-b">
+      <div className="app-header__inner mx-auto px-4 flex items-center justify-between gap-3">
         {/* Logo & App Title */}
         <button 
           onClick={() => onSelectTab('home')}
           className="flex items-center gap-2.5 text-left group transition cursor-pointer"
         >
-          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 group-hover:bg-blue-700 transition">
-            <Compass className="w-6 h-6 animate-pulse" />
+          <div className="app-brand-mark w-10 h-10 rounded-xl flex items-center justify-center text-white transition group-hover:bg-slate-800">
+            <Compass className="w-5 h-5" />
           </div>
           <div>
-            <span className="font-extrabold text-lg tracking-tight text-slate-900 block leading-none">
-              Objetos<span className="text-blue-600">Perdidos</span>
+            <span className="font-semibold text-lg tracking-tight text-slate-900 block leading-none">
+              Objetos <span className="text-blue-800">Perdidos</span>
             </span>
-            <span className="text-xs text-slate-500 font-medium">Red Comunitaria</span>
+            <span className="text-[11px] text-slate-500 font-medium tracking-wide">Red comunitaria</span>
           </div>
         </button>
 
@@ -47,8 +47,8 @@ export const Header: React.FC<HeaderProps> = ({
             onClick={() => onSelectTab('matches')}
             className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
               activeTab === 'matches'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                ? 'bg-slate-800 text-white'
+                : 'bg-slate-100/80 hover:bg-slate-200 text-slate-700'
             }`}
             title="Ver coincidencias automáticas"
           >
@@ -76,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Bell className="w-5 h-5" />
             {unreadNotificationsCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white animate-bounce">
+              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-white text-[10px] font-semibold rounded-full flex items-center justify-center border-2 border-white">
                 {unreadNotificationsCount}
               </span>
             )}

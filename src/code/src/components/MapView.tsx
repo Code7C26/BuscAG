@@ -5,7 +5,7 @@
  * personalizados (pines de mapa con miniatura de la foto del objeto), filtrarlos en tiempo real
  * y centrar el mapa en la ubicación GPS actual del usuario.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 // Librería Leaflet para renderizado y control de mapas web
 import L from 'leaflet';
 // Iconos de interfaz
@@ -19,13 +19,15 @@ interface MapViewProps {
   onSelectPublication: (item: Item) => void;  // Callback cuando el usuario toca 'Ver publicación'
   userLat?: number;                            // Latitud de referencia inicial
   userLng?: number;                            // Longitud de referencia inicial
+  onLocateMe: () => Promise<{ lat: number; lng: number }>;
 }
 
 export const MapView: React.FC<MapViewProps> = ({
   items,
   onSelectPublication,
-  userLat = DEFAULT_CENTER.lat,
-  userLng = DEFAULT_CENTER.lng
+  userLat,
+  userLng,
+  onLocateMe
 }) => {
   // Referencia al elemento <div> contenedor del mapa en el DOM
   const mapRef = useRef<HTMLDivElement>(null);
@@ -43,12 +45,13 @@ export const MapView: React.FC<MapViewProps> = ({
   const [selectedMapItem, setSelectedMapItem] = useState<Item | null>(null);
   
   // Posición actual del usuario
-  const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(
-    userLat && userLng ? { lat: userLat, lng: userLng } : null
-  );
+  const currentLocation = useMemo(() => userLat !== undefined && userLng !== undefined
+    ? { lat: userLat, lng: userLng }
+    : null, [userLat, userLng]);
   
   // Indicador de carga mientras se consulta el GPS del navegador
   const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   // Lista de categorías para el filtro
   const categories: (Category | 'Todas')[] = [
@@ -73,7 +76,7 @@ export const MapView: React.FC<MapViewProps> = ({
     if (!leafletMapRef.current) {
       // 1. Instanciamos el mapa Leaflet centrado en las coordenadas iniciales con zoom 13
       const map = L.map(mapRef.current, {
-        center: [userLat, userLng],
+        center: [userLat ?? DEFAULT_CENTER.lat, userLng ?? DEFAULT_CENTER.lng],
         zoom: 13,
         zoomControl: false // Desactivamos el control por defecto para ubicarlo a medida
       });
@@ -93,14 +96,23 @@ export const MapView: React.FC<MapViewProps> = ({
     }
 
     // Invalida el tamaño para asegurar que Leaflet calcule bien las dimensiones del contenedor
-    setTimeout(() => {
+    const invalidateTimer = window.setTimeout(() => {
       leafletMapRef.current?.invalidateSize();
     }, 200);
 
     return () => {
-      // En React, no destruimos el mapa inmediatamente para evitar parpadeos visuales
+      window.clearTimeout(invalidateTimer);
+      leafletMapRef.current?.remove();
+      leafletMapRef.current = null;
+      markersGroupRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (userLat !== undefined && userLng !== undefined) {
+      leafletMapRef.current?.setView([userLat, userLng], 15, { animate: true });
+    }
+  }, [userLat, userLng]);
 
   /**
    * EFECTO 2: Actualización de Marcadores (Pins)
@@ -155,7 +167,13 @@ export const MapView: React.FC<MapViewProps> = ({
             justify-content: center;
             overflow: hidden;
           ">
-            <img src="${item.imageUrl}" style="width: 100%; height: 100%; object-fit: cover;" />
+            <img src="${item.imageUrl.replace(/[&<>"']/g, character => ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              '"': '&quot;',
+              "'": '&#39;'
+            })[character] ?? character)}" style="width: 100%; height: 100%; object-fit: cover;" />
           </div>
           <div style="
             position: absolute;
@@ -221,36 +239,26 @@ export const MapView: React.FC<MapViewProps> = ({
    * Manejador del botón "Mi Ubicación":
    * Obtiene la posición GPS del navegador y vuela la cámara del mapa hacia ella.
    */
-  const handleLocateMe = () => {
+  const handleLocateMe = async () => {
     setLocating(true);
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const newLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setCurrentLocation(newLoc);
-          // Centra el mapa en las coordenadas del usuario con animación suave
-          leafletMapRef.current?.setView([newLoc.lat, newLoc.lng], 15, { animate: true });
-          setLocating(false);
-        },
-        () => {
-          // Si el usuario no otorga permisos, se utiliza el centro predeterminado
-          setCurrentLocation({ lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng });
-          leafletMapRef.current?.setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], 14, { animate: true });
-          setLocating(false);
-        },
-        { timeout: 8000 }
-      );
-    } else {
+    setLocationError(null);
+    try {
+      const location = await onLocateMe();
+      leafletMapRef.current?.setView([location.lat, location.lng], 15, { animate: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'No se pudo obtener la ubicación actual.';
+      setLocationError(message);
+    } finally {
       setLocating(false);
     }
   };
 
   return (
-    <div className="relative w-full h-[calc(100vh-4rem-4rem)] min-h-[500px] overflow-hidden bg-slate-100 flex flex-col">
+    <div className="map-view relative w-full h-[calc(100vh-4rem-4rem)] min-h-[500px] overflow-hidden flex flex-col">
       {/* Barra superior flotante de búsqueda y filtros rápidos */}
       <div className="absolute top-3 left-3 right-3 z-20 max-w-xl mx-auto space-y-2">
         {/* Campo de búsqueda sobre el mapa */}
-        <div className="relative bg-white/95 backdrop-blur-md rounded-2xl shadow-lg border border-slate-200 p-2 flex items-center gap-2">
+        <div className="map-view__search relative bg-white/90 border p-2 flex items-center gap-2">
           <Search className="w-5 h-5 text-slate-400 ml-2 shrink-0" />
           <input
             type="text"
@@ -305,7 +313,7 @@ export const MapView: React.FC<MapViewProps> = ({
           <button
             onClick={() => {
               setActiveFilter('cerca');
-              handleLocateMe();
+              void handleLocateMe();
             }}
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition cursor-pointer ${
               activeFilter === 'cerca'
@@ -317,6 +325,12 @@ export const MapView: React.FC<MapViewProps> = ({
           </button>
         </div>
       </div>
+
+      {locationError && (
+        <div role="alert" className="absolute top-28 left-3 right-3 z-20 mx-auto max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 shadow">
+          {locationError}
+        </div>
+      )}
 
       {/* Contenedor del mapa Leaflet (manejado vía mapRef) */}
       <div ref={mapRef} className="w-full h-full z-0" />
@@ -334,7 +348,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
       {/* Tarjeta flotante con vista previa del objeto seleccionado al hacer clic en un pin */}
       {selectedMapItem && (
-        <div className="absolute bottom-4 left-4 right-16 z-20 max-w-sm mx-auto bg-white rounded-2xl shadow-xl border border-slate-200 p-3.5 animate-in slide-in-from-bottom-5 duration-200">
+        <div className="map-view__preview absolute bottom-4 left-4 right-16 z-20 max-w-sm mx-auto bg-white border p-3.5 animate-in slide-in-from-bottom-5 duration-200">
           <div className="flex gap-3 items-center">
             {/* Foto en miniatura del objeto */}
             <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
@@ -354,7 +368,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${
                   selectedMapItem.status === 'perdido' ? 'text-red-600' : 'text-green-600'
                 }`}>
-                  {selectedMapItem.status === 'perdido' ? '🔴 Perdido' : '🟢 Encontrado'}
+                  {selectedMapItem.status === 'perdido' ? 'Perdido' : 'Encontrado'}
                 </span>
                 <button
                   onClick={() => setSelectedMapItem(null)}
@@ -387,4 +401,3 @@ export const MapView: React.FC<MapViewProps> = ({
     </div>
   );
 };
-

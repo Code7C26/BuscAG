@@ -15,11 +15,11 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
   onSelectNotification
 }) => {
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 pb-24 space-y-4">
+    <div className="notifications-view max-w-2xl mx-auto px-4 py-6 pb-24 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-extrabold text-slate-900 text-xl flex items-center gap-2">
-            🔔 Notificaciones y Alertar
+          <h2 className="font-semibold text-slate-900 text-xl flex items-center gap-2">
+            Notificaciones y alertas
           </h2>
           <p className="text-xs text-slate-500">Avisos en tiempo real sobre tus objetos y búsquedas</p>
         </div>

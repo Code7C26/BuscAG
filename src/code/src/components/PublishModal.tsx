@@ -17,7 +17,7 @@ import { DEFAULT_CENTER } from '../utils/geo';
 interface PublishModalProps {
   isOpen: boolean;        // Determina si el modal está visible en pantalla
   onClose: () => void;    // Función para cerrar la ventana modal
-  onSubmit: (newItem: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => void; // Emite los datos validados
+  onSubmit: (newItem: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => void | Promise<void>; // Emite los datos validados
   currentUser: User;      // Usuario que está publicando
 }
 
@@ -31,15 +31,17 @@ const PRESET_PHOTOS = [
   { label: 'Lentes', url: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&auto=format&fit=crop&q=80' }
 ];
 
+const toDateTimeLocal = (date: Date) => {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+};
+
 export const PublishModal: React.FC<PublishModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
   currentUser
 }) => {
-  // Si el modal está cerrado, no renderiza nada en el DOM
-  if (!isOpen) return null;
-
   // ==========================================
   // ESTADOS DEL FORMULARIO
   // ==========================================
@@ -47,13 +49,14 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   const [title, setTitle] = useState('');                             // Título del objeto
   const [description, setDescription] = useState('');                 // Descripción detallada
   const [category, setCategory] = useState<Category>('Electrónicos'); // Categoría seleccionada
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 16)); // Fecha y hora local
+  const [date, setDate] = useState(toDateTimeLocal(new Date())); // Fecha y hora local
   const [locationName, setLocationName] = useState('Plaza Italia, Palermo'); // Nombre legible del lugar
   const [lat, setLat] = useState(DEFAULT_CENTER.lat);                 // Coordenada latitud
   const [lng, setLng] = useState(DEFAULT_CENTER.lng);                 // Coordenada longitud
   const [imageUrl, setImageUrl] = useState(PRESET_PHOTOS[0].url);     // Foto del objeto (URL o Base64)
   const [reward, setReward] = useState('');                           // Recompensa voluntaria
   const [isSubmitting, setIsSubmitting] = useState(false);             // Estado de carga al enviar
+  const [submitError, setSubmitError] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
 
   // Referencias para el input de archivo y el mapa selector
@@ -77,7 +80,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
    * EFECTO: Inicializa el mini-mapa interactivo para escoger la ubicación exacta
    */
   useEffect(() => {
-    if (!mapPickerRef.current || leafletPickerRef.current) return;
+    if (!isOpen || !mapPickerRef.current || leafletPickerRef.current) return;
 
     // Crea el mapa dentro del contenedor mapPickerRef
     const map = L.map(mapPickerRef.current, {
@@ -112,10 +115,17 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     leafletPickerRef.current = map;
 
     // Invalida tamaño para asegurar renderizado correcto dentro de la ventana modal
-    setTimeout(() => {
+    const invalidateTimer = window.setTimeout(() => {
       map.invalidateSize();
     }, 200);
-  }, []);
+
+    return () => {
+      window.clearTimeout(invalidateTimer);
+      map.remove();
+      if (leafletPickerRef.current === map) leafletPickerRef.current = null;
+      pickerMarkerRef.current = null;
+    };
+  }, [isOpen]);
 
   /**
    * Manejador para cargar una foto propia del usuario desde su dispositivo
@@ -123,13 +133,25 @@ export const PublishModal: React.FC<PublishModalProps> = ({
    */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImageUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setSubmitError('La foto debe estar en formato JPG, PNG o WebP.');
+      e.target.value = '';
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setSubmitError('La foto no puede superar los 5 MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setSubmitError('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') setImageUrl(reader.result);
+    };
+    reader.onerror = () => setSubmitError('No se pudo leer la foto seleccionada.');
+    reader.readAsDataURL(file);
   };
 
   /**
@@ -157,7 +179,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   /**
    * Valida los datos y ejecuta el callback onSubmit para agregar la publicación
    */
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
       alert('Por favor completa el título y la descripción.');
@@ -165,10 +187,9 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     }
 
     setIsSubmitting(true);
-
-    // Breve temporizador para dar retroalimentación visual al usuario
-    setTimeout(() => {
-      onSubmit({
+    setSubmitError('');
+    try {
+      await onSubmit({
         title,
         description,
         category,
@@ -181,16 +202,23 @@ export const PublishModal: React.FC<PublishModalProps> = ({
         user: currentUser,
         reward: reward.trim() ? reward : undefined
       });
-      setIsSubmitting(false);
       onClose();
-    }, 400);
+    } catch (error) {
+      console.error('No se pudo publicar el objeto:', error);
+      setSubmitError(error instanceof Error ? error.message : 'No se pudo publicar el objeto.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  // Si el modal está cerrado, no renderiza nada en el DOM
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+    <div className="publish-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="publish-dialog w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         {/* Cabecera de la ventana modal */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="publish-dialog__header p-4 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="font-extrabold text-slate-900 text-lg leading-tight flex items-center gap-2">
               ➕ Publicar Objeto
@@ -207,7 +235,12 @@ export const PublishModal: React.FC<PublishModalProps> = ({
         </div>
 
         {/* Formulario scrolleable */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4 overflow-y-auto flex-1">
+        <form onSubmit={handleSubmit} className="publish-form p-4 space-y-4 overflow-y-auto flex-1">
+          {submitError && (
+            <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-3 text-sm text-red-700">
+              {submitError}
+            </p>
+          )}
           {/* Selector de estado: Encontrado (verde) / Perdido (rojo) */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
@@ -440,4 +473,3 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     </div>
   );
 };
-

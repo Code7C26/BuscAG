@@ -85,7 +85,7 @@ function resetMock() {
     rpc(){ return {single:async()=>({data:null,error:{code:'PGRST202'}})}; },
     auth:{onAuthStateChange(cb){ mock.listeners.push(cb);return {data:{subscription:{unsubscribe(){mock.listeners=mock.listeners.filter(x=>x!==cb);}}}};},
       getSession:()=>startup.promise,signOut:async()=>{ mock.emit(null);return {error:null}; }},
-    channel(){ const c={handlers:[],on(_type,filter,cb){this.handlers.push({filter,cb});return this;},subscribe(){return this;}};mock.channels.push(c);return c;},
+    channel(){ const c={handlers:[],on(_type,filter,cb){this.handlers.push({filter,cb});return this;},subscribe(cb){this.status=cb;return this;}};mock.channels.push(c);return c;},
     removeChannel:async()=>{mock.removed++;},
     from(table){ const query={table,filters:[]}; mock.queries.push(query);
       const q={insert(payload){query.operation='insert';query.payload=payload;return q;},
@@ -429,4 +429,30 @@ test('dropping a file validates it and reads a real selected image without navig
   const drop=async file=>act(async()=>{const event=new window.Event('drop',{bubbles:true,cancelable:true});Object.defineProperty(event,'dataTransfer',{value:{files:[file]}});target.dispatchEvent(event);await new Promise(resolve=>setTimeout(resolve,10));assert.equal(event.defaultPrevented,true);});
   await drop(new window.File(['not-image'],'bad.txt',{type:'text/plain'}));assert.match(host.textContent,/JPG, PNG o WebP/);assert.equal(host.querySelector('img'),null);
   await drop(new window.File(['synthetic-image'],'photo.png',{type:'image/png'}));assert.match(host.querySelector('img').src,/^data:image\/png/);
+});
+
+
+test('reconnect and resume reconcile missed messages and notices; old channels cannot reload another account',async()=>{
+  let loads=0;mock.data.loadMessages=async()=>{loads++;return [];};
+  await mount(App);await emit('a');const first=mock.channels.at(-1);const before=loads;
+  await act(async()=>first.status('SUBSCRIBED'));assert.ok(loads>before);
+  const reconnected=loads;
+  await act(async()=>window.dispatchEvent(new window.Event('focus')));assert.equal(loads,reconnected);
+  await emit('b');const afterSwitch=loads;
+  await act(async()=>first.status('SUBSCRIBED'));assert.equal(loads,afterSwitch);
+  const second=mock.channels.at(-1);
+  await act(async()=>second.status('SUBSCRIBED'));assert.ok(loads>afterSwitch);
+});
+
+test('recovery requires ownership and confirmation and concurrent clicks share one server mutation',async()=>{
+  await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+  const recover=mock.views.ProfileView.onMarkAsRecovered;
+  assert.equal(await recover('not-owned'),false);
+  assert.equal(await recover('item-a'),false);assert.equal(mock.queries.length,0);
+  window.confirm=()=>true;const pending=defer();mock.result=()=>pending.promise;
+  let first,second;
+  await act(async()=>{first=recover('item-a');second=recover('item-a');});
+  assert.equal(first,second);assert.equal(mock.queries.length,1);
+  await act(async()=>pending.resolve({data:{id:'item-a'},error:null}));assert.equal(await first,true);
+  assert.ok(mock.queries[0].filters.some(([column,value])=>column==='owner_id'&&value==='a'));
 });

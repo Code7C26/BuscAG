@@ -19,6 +19,7 @@ import { disablePushNotifications, enablePushNotifications, getPushNotificationS
 import { getDistanceKm, isValidCoordinates, NEARBY_RADIUS_KM } from './utils/geo';
 import { needsLegacyMatchNotice } from '../lib/matchDelivery';
 import { createMessageIntents, deliverMessage } from '../lib/messageDelivery';
+import { createReconnectSync } from './utils/reconnectSync';
 import { createRefreshQueue } from './utils/refreshQueue';
 import { authCallbackError, cleanAuthCallback } from '../lib/authFlow';
 import { createSessionGuard, type SessionGuard } from './utils/sessionGuard';
@@ -120,6 +121,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pushRevision = useRef(0);
   const messageIntents = useRef(createMessageIntents());
+  const recoveryRequests = useRef(new Map<string,Promise<boolean>>());
   const messageRequests = useRef(new Map<string, Promise<void>>());
   const captureOperation = useCallback(() => {
     const sessionCurrent = sessionGuard.capture();
@@ -218,6 +220,25 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
       if (loadedNotifications) setNotifications(loadedNotifications);
     });
 
+    const syncError = 'No se pudieron resincronizar los datos. Se reintentará al recuperar la conexión.';
+    const connectionError = 'Se perdió la conexión en tiempo real. Se intentará resincronizar al reconectar.';
+    const reconcile = createReconnectSync(async () => {
+      await refresh.request('items','messages','notifications');
+      if (active && current()) setDataLoadError(previous =>
+        previous === syncError || previous === connectionError ? null : previous);
+    },()=>active && current());
+    const catchUp = (force=false) => {
+      if (!active || !current() || navigator.onLine === false || document.visibilityState === 'hidden') return;
+      void reconcile(force).catch(error=>{
+        reportError('No se pudieron resincronizar los datos:',error);
+        if (active && current()) setDataLoadError(syncError);
+      });
+    };
+    const onResume = () => catchUp();
+    window.addEventListener('online',onResume);
+    window.addEventListener('focus',onResume);
+    document.addEventListener('visibilitychange',onResume);
+
     const channel = supabase
       .channel(`app-data-${authUser.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
@@ -239,9 +260,10 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
         });
       })
       .subscribe(status => {
+        if (status === 'SUBSCRIBED') catchUp(true);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error('No se pudo establecer la conexión en tiempo real:', status);
-          if (active && current()) setDataLoadError('Se perdió la conexión en tiempo real. Recarga para volver a sincronizar.');
+          if (active && current()) setDataLoadError(connectionError);
         }
       });
 
@@ -261,6 +283,9 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
 
     return () => {
       active = false;
+      window.removeEventListener('online',onResume);
+      window.removeEventListener('focus',onResume);
+      document.removeEventListener('visibilitychange',onResume);
       void supabase.removeChannel(channel);
     };
   }, [authUser.id, captureOperation]);
@@ -473,23 +498,32 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
   /**
    * Cambia el estado de un objeto a 'recuperado' y genera una notificación
    */
-  const handleMarkAsRecovered = async (itemId: string): Promise<boolean> => {
-    if (!currentUser || !supabase) return false;
+  const handleMarkAsRecovered = (itemId: string): Promise<boolean> => {
+    const pending = recoveryRequests.current.get(itemId);
+    if (pending) return pending;
+    const target = items.find(item=>item.id===itemId && item.user.id===currentUser?.id);
+    if (!currentUser || !supabase || !target) return Promise.resolve(false);
+    if (target.status==='recuperado') return Promise.resolve(true);
     const current = captureOperation();
-    if (!current()) return false;
-    try {
-      const {data,error} = await supabase.from('items').update({status:'recuperado'})
-        .eq('id',itemId).eq('owner_id',currentUser.id).select('*').maybeSingle();
-      if (!current()) return false;
-      if (error) throw error;
-      if (!data) throw new Error('No tienes permiso para cambiar esta publicación.');
-      setItems(prev=>prev.map(item=>item.id===itemId?{...item,status:'recuperado'}:item));
-      triggerToast('🎉 ¡Excelente! Objeto marcado como RECUPERADO.');
-      return true;
-    } catch {
-      if (current()) triggerToast('No se pudo actualizar la publicación.');
-      return false;
-    }
+    if (!current() || !window.confirm('¿Confirmas que este objeto fue recuperado?')) return Promise.resolve(false);
+    const request = Promise.resolve().then(async()=>{
+      try {
+        if (!current()) return false;
+        const {data,error} = await supabase.from('items').update({status:'recuperado'})
+          .eq('id',itemId).eq('owner_id',currentUser.id).select('*').maybeSingle();
+        if (!current()) return false;
+        if (error) throw error;
+        if (!data) throw new Error('No tienes permiso para cambiar esta publicación.');
+        setItems(prev=>prev.map(item=>item.id===itemId?{...item,status:'recuperado'}:item));
+        triggerToast('🎉 ¡Excelente! Objeto marcado como RECUPERADO.');
+        return true;
+      } catch {
+        if (current()) triggerToast('No se pudo actualizar la publicación.');
+        return false;
+      } finally { recoveryRequests.current.delete(itemId); }
+    });
+    recoveryRequests.current.set(itemId,request);
+    return request;
   };
 
   /**

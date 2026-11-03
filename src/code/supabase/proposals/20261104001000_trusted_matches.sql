@@ -1,7 +1,28 @@
 -- CANDIDATE: requires reviewed security baseline, message receipts and a scheduled worker.
 -- No existing data/backfill or conversation-retention policy is changed.
 begin;
-do $$ begin
+do $$
+declare r record;actual_type text;
+begin
+  for r in select * from (values
+    ('items','id','uuid'),('items','owner_id','uuid'),('items','title','text'),('items','description','text'),
+    ('items','category','text'),('items','status','text'),('items','lat','double precision'),('items','lng','double precision'),
+    ('items','date','timestamp with time zone'),('notifications','id','uuid'),('notifications','user_id','uuid'),
+    ('notifications','title','text'),('notifications','message','text'),('notifications','type','text'),
+    ('notifications','related_item_id','uuid'),('notifications','related_user_id','uuid')
+  ) expected(t,c,ty) loop
+    select pg_catalog.format_type(a.atttypid,a.atttypmod) into actual_type from pg_catalog.pg_attribute a
+      where a.attrelid=to_regclass('public.'||r.t) and a.attname=r.c and a.attnum>0 and not a.attisdropped;
+    if actual_type is distinct from r.ty then raise exception 'Preflight: %.% needs %, found %',r.t,r.c,r.ty,actual_type;end if;
+  end loop;
+  if not (select relrowsecurity from pg_catalog.pg_class where oid='public.notifications'::regclass) then
+    raise exception 'RLS must be enabled on notifications';
+  end if;
+  if exists(select from pg_catalog.pg_attribute where attrelid='public.notifications'::regclass
+    and attnum>0 and not attisdropped and attnotnull and not atthasdef and attidentity=''
+    and attgenerated='' and attname<>all(array['user_id','title','message','type','related_item_id','related_user_id'])) then
+    raise exception 'Unexpected required notification columns; review actual diagnostic';
+  end if;
   if to_regclass('buscag_private.message_receipts') is null
     or to_regclass('public.public_profiles') is null then
     raise exception 'Reviewed security baseline and message receipts are required';
@@ -53,7 +74,7 @@ language plpgsql immutable set search_path='' as $$
 declare shared integer; distance_km numeric; geo integer; timing integer; hours double precision;
   hav double precision;
 begin
-  if l.status<>'perdido' or f.status<>'encontrado' or l.category is distinct from f.category
+  if l.status is distinct from 'perdido' or f.status is distinct from 'encontrado' or l.category is distinct from f.category
     or l.owner_id is null or f.owner_id is null or l.owner_id=f.owner_id
     or l.lat is null or l.lng is null or f.lat is null or f.lng is null
     or not(l.lat between -90 and 90 and f.lat between -90 and 90 and l.lng between -180 and 180 and f.lng between -180 and 180)
@@ -99,7 +120,7 @@ begin
   for job in select * from buscag_private.match_jobs order by queued_at,item_id for update skip locked limit p_limit loop
     claimed:=claimed+1; inspected:=0; cursor_id:=job.after_id;
     select * into target from public.items where id=job.item_id;
-    if not found or target.owner_id is null or target.status not in ('perdido','encontrado') then
+    if not found or target.owner_id is null or target.status is null or target.status not in ('perdido','encontrado') then
       delete from buscag_private.match_jobs where item_id=job.item_id; continue;
     end if;
     for other in select * from public.items where category=target.category

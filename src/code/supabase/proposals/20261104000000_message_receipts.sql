@@ -5,7 +5,9 @@ do $$
 declare r record; actual_type text;
 begin
   for r in select * from (values
-    ('profiles','id','uuid'),('items','id','uuid'),('items','owner_id','uuid'),
+    ('profiles','id','uuid'),('profiles','full_name','text'),('profiles','avatar_url','text'),
+    ('items','id','uuid'),('items','owner_id','uuid'),('items','title','text'),('items','image_url','text'),
+    ('messages','sender_name','text'),('messages','sender_avatar','text'),('messages','item_title','text'),('messages','item_image','text'),
     ('messages','id','uuid'),('messages','item_id','uuid'),('messages','sender_id','uuid'),
     ('messages','recipient_id','uuid'),('messages','text','text'),('messages','created_at','timestamp with time zone')
   ) as expected(t,c,ty)
@@ -17,6 +19,14 @@ begin
       raise exception 'Preflight: %.% needs %, found %; review actual diagnostic',r.t,r.c,r.ty,actual_type;
     end if;
   end loop;
+  if exists(select from pg_catalog.pg_class where oid in ('public.items'::regclass,'public.messages'::regclass,'public.profiles'::regclass) and not relrowsecurity) then
+    raise exception 'RLS must be enabled on items, messages and profiles';
+  end if;
+  if exists(select from pg_catalog.pg_attribute where attrelid='public.messages'::regclass
+    and attnum>0 and not attisdropped and attnotnull and not atthasdef and attidentity=''
+    and attgenerated='' and attname<>all(array['item_id','sender_id','recipient_id','sender_name','sender_avatar','item_title','item_image','text'])) then
+    raise exception 'Unexpected required message columns; review actual diagnostic';
+  end if;
   if to_regprocedure('public.can_send_item_message(uuid,uuid)') is null
     or to_regclass('public.public_profiles') is null then
     raise exception 'Apply/reconcile the reviewed security baseline first';

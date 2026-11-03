@@ -232,6 +232,16 @@ try {
     assert.equal((await as('authenticated', ids.a, 'delete from public.push_subscriptions returning id')).rows.length, 1);
     assert.equal((await as('service_role', null, 'select endpoint,p256dh,auth from public.push_subscriptions')).rows.length, 1);
   })();
+  await check('candidate preflight fails closed for disabled RLS or unknown mandatory columns',async()=>{
+    for(const [drift,expected] of [
+      ['alter table public.messages disable row level security',/RLS must be enabled/],
+      ["alter table public.messages add column unexpected_required text not null default 'synthetic';alter table public.messages alter column unexpected_required drop default",/Unexpected required message columns/]
+    ]) {
+      await db.exec('begin');
+      try {await db.exec(drift);await assert.rejects(db.exec(await read('../supabase/proposals/20261104000000_message_receipts.sql')),expected);}
+      finally {await db.exec('rollback');}
+    }
+  })();
   const beforeReceipts = await snapshot();
   await db.exec(await read('../supabase/proposals/20261104000000_message_receipts.sql'));
   await check('message RPC installation preserves all existing application rows',async()=>{

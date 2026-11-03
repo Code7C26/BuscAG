@@ -137,7 +137,12 @@ export interface Database {
         }
       >
     }
-    Views: Record<string, never>
+    Views: {
+      public_profiles: {
+        Row: Database['public']['Tables']['profiles']['Row']
+        Relationships: []
+      }
+    }
     Functions: Record<string, never>
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

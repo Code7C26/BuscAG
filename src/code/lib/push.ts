@@ -24,6 +24,8 @@ export async function getPushNotificationStatus(userId: string): Promise<boolean
     .select('endpoint')
     .eq('user_id', userId);
 
+  // A missing optional push table must not interrupt the account's normal use.
+  if (error?.code === 'PGRST205' || error?.code === '42P01') return false;
   if (error) throw error;
   if (!data.length) return false;
 

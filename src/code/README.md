@@ -8,6 +8,12 @@ Aplicación comunitaria de objetos perdidos y encontrados. La app usa Supabase p
 
 ## Preparar Supabase
 
+Antes de aplicar la corrección de seguridad de noviembre, revisa
+[SECURITY_ROLLOUT.md](./SECURITY_ROLLOUT.md). Incluye el orden de despliegue,
+las cuatro migraciones nuevas, pruebas locales y reversión. En proyectos existentes,
+compara primero el esquema y el historial; no vuelvas a ejecutar migraciones antiguas
+sin revisar sus políticas.
+
 1. Crea un proyecto en Supabase.
 2. En **SQL Editor**, ejecuta en orden los archivos de `supabase/migrations`: [`20261014000000_dynamic_database.sql`](./supabase/migrations/20261014000000_dynamic_database.sql), [`20261015000000_push_notifications.sql`](./supabase/migrations/20261015000000_push_notifications.sql) y [`20261016000000_notification_permissions.sql`](./supabase/migrations/20261016000000_notification_permissions.sql).
 3. En **Authentication > URL Configuration**, agrega la URL exacta de la app a **Redirect URLs** (por ejemplo, `http://localhost:3000/**` para pruebas locales y `https://tu-dominio/**` para producción). Configura también el **Site URL** con el dominio principal publicado.

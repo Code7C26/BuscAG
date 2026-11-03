@@ -106,14 +106,28 @@ export async function loadProfile(authUser: AuthUser): Promise<User> {
   };
 }
 
+async function loadPublicProfiles(): Promise<ProfileRow[]> {
+  const supabaseClient = client();
+  const { data, error } = await supabaseClient.from('public_profiles').select('*');
+  if (!error) return data;
+  if (error.code !== 'PGRST205' && error.code !== '42P01') throw error;
+
+  // Permit deploying this client before the directory migration. Never fall
+  // back to downloading private fields, even on the older permissive schema.
+  const { data: profiles, error: fallbackError } = await supabaseClient
+    .from('profiles')
+    .select('id, full_name, avatar_url, rating, created_at');
+  if (fallbackError) throw fallbackError;
+  return profiles.map(profile => ({ ...profile, phone: '', location: '' }));
+}
+
 export async function loadItems(): Promise<Item[]> {
   const supabaseClient = client();
-  const [{ data: rows, error: itemsError }, { data: profiles, error: profilesError }] = await Promise.all([
+  const [{ data: rows, error: itemsError }, profiles] = await Promise.all([
     supabaseClient.from('items').select('*').order('created_at', { ascending: false }),
-    supabaseClient.from('profiles').select('*')
+    loadPublicProfiles()
   ]);
   if (itemsError) throw itemsError;
-  if (profilesError) throw profilesError;
 
   const users = new Map(profiles.map(profile => [profile.id, mapProfile(profile)]));
   return rows.map(row => {

@@ -28,6 +28,12 @@ const send = (sender, recipient, item) => `insert into public.messages
   (item_id,sender_id,recipient_id,sender_name,item_title,text)
   values ('${item}','${sender}','${recipient}','FORGED','FORGED','Synthetic message') returning *`;
 try {
+  await check('single-query production diagnostic tolerates a missing application schema/history', async () => {
+    const rows = await db.query(await read('../supabase/audit/production_diagnostic.sql'));
+    const report = JSON.parse(rows.rows[0].diagnostic);
+    assert.equal(report['01_context'].migration_history_exists, false);
+    assert.ok(report['02_inventory'].every(x => !x.exists_in_public));
+  })();
   await db.exec(`
     create role anon; create role authenticated; create role service_role bypassrls;
     create schema auth; create schema storage;
@@ -209,6 +215,7 @@ try {
   })();
   await check('preflight metadata queries are valid', async () => {
     await db.exec(await read('../supabase/audit/security_preflight.sql'));
+    await db.query(await read('../supabase/audit/production_diagnostic.sql'));
   })();
   await check('push owner can read/upsert/delete; other users cannot read or hijack the endpoint', async () => {
     assert.equal((await as('authenticated', ids.a, 'select * from public.push_subscriptions')).rows.length, 1);

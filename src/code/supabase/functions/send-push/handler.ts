@@ -1,3 +1,4 @@
+import {sameServerSecret,usableServerSecret} from '../_shared/serverSecret.ts';
 export type Subscription = { endpoint: string; p256dh: string; auth: string };
 type Notice = { id: string; user_id: string; title: string; message: string };
 export type PushDependencies = {
@@ -46,9 +47,9 @@ export function createPushHandler(deps: PushDependencies) {
     if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
     const values = ['PUSH_WEBHOOK_SECRET','SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY',
       'PUSH_VAPID_PUBLIC_KEY','PUSH_VAPID_PRIVATE_KEY','PUSH_VAPID_SUBJECT'].map(deps.env);
-    if (values.some(value => !value)) return json({ error: 'Push delivery is not configured.' }, 503);
+    if (values.some(value => !value)||!usableServerSecret(values[0])) return json({ error: 'Push delivery is not configured.' }, 503);
     const [secret,url,key,publicKey,privateKey,subject] = values as string[];
-    if (request.headers.get('x-push-webhook-secret') !== secret) return json({ error: 'Unauthorized.' }, 401);
+    if (!(await sameServerSecret(request.headers.get('x-push-webhook-secret')||'',secret))) return json({ error: 'Unauthorized.' }, 401);
     let payload: { type?: string; table?: string; schema?: string; record?: { id?: string | number } };
     try { payload = await boundedPayload(request) as typeof payload; }
     catch (error) { return json({ error: 'Invalid webhook payload.' }, (error as Error).message === 'too_large' ? 413 : 400); }

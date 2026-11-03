@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
-    "test": "tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs",
+    "test": "tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "check:diagnostic": "node scripts/check-supabase-diagnostic.mjs",
+    "test:backend": "node scripts/test-backend-matrix.mjs pglite",
+    "test:backend:postgres": "node scripts/test-backend-matrix.mjs postgres"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
@@ -19,18 +22,20 @@
     "react-dom": "^19.0.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
     "jsdom": "^26.1.0",
+    "pg": "8.16.3",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
-    "vite": "^6.4.5",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
-    "@types/leaflet": "^1.9.22"
+    "vite": "^6.4.5"
   }
 }

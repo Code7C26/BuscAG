@@ -1,4 +1,5 @@
--- CANDIDATE: requires reviewed security baseline, message receipts and a scheduled worker.
+-- CANDIDATE: requires reviewed security baseline and message receipts.
+-- Installs DISABLED; enable separately only after verifying the scheduled worker.
 -- No existing data/backfill or conversation-retention policy is changed.
 begin;
 do $$
@@ -19,6 +20,18 @@ begin
   if not (select relrowsecurity from pg_catalog.pg_class where oid='public.notifications'::regclass) then
     raise exception 'RLS must be enabled on notifications';
   end if;
+  if has_any_column_privilege('anon','public.notifications','SELECT')
+    or has_any_column_privilege('anon','public.notifications','INSERT')
+    or has_any_column_privilege('anon','public.notifications','UPDATE')
+    or has_table_privilege('anon','public.notifications','DELETE')
+    or has_table_privilege('authenticated','public.notifications','DELETE') then
+    raise exception 'Unexpected notification ACL; reconcile security baseline first';
+  end if;
+  if exists(select from pg_catalog.pg_attribute where attrelid='public.notifications'::regclass and attnum>0 and not attisdropped
+    and ((attname<>'is_read' and has_column_privilege('authenticated',attrelid,attnum,'UPDATE'))
+      or (attname<>all(array['user_id','title','message','type','related_item_id']) and has_column_privilege('authenticated',attrelid,attnum,'INSERT')))) then
+    raise exception 'Unexpected notification column ACL; reconcile security baseline first';
+  end if;
   if exists(select from pg_catalog.pg_attribute where attrelid='public.notifications'::regclass
     and attnum>0 and not attisdropped and attnotnull and not atthasdef and attidentity=''
     and attgenerated='' and attname<>all(array['user_id','title','message','type','related_item_id','related_user_id'])) then
@@ -29,6 +42,31 @@ begin
     raise exception 'Reviewed security baseline and message receipts are required';
   end if;
 end; $$;
+create table buscag_private.match_control (
+  singleton boolean primary key default true check(singleton),
+  enabled boolean not null default false,
+  worker_last_seen timestamptz,
+  changed_at timestamptz not null default now()
+);
+insert into buscag_private.match_control default values;
+alter table buscag_private.match_control enable row level security;
+revoke all on buscag_private.match_control from public,anon,authenticated,service_role;
+create function public.match_backend_enabled() returns boolean
+language sql stable security definer set search_path='' as $$
+  select coalesce((select enabled from buscag_private.match_control where singleton),false)
+$$;
+revoke all on function public.match_backend_enabled() from public,anon,authenticated,service_role;
+grant execute on function public.match_backend_enabled() to authenticated;
+-- Keep the reviewed legacy own-match grant until activation. This RESTRICTIVE
+-- policy adds an AND, so an older permissive policy cannot bypass backend mode.
+create policy notifications_match_delivery_mode on public.notifications as restrictive
+  for insert to authenticated with check(user_id=(select auth.uid()) and type='match'
+    and not (select public.match_backend_enabled()));
+create policy notifications_delivery_read_self on public.notifications as restrictive
+  for select to authenticated using(user_id=(select auth.uid()));
+create policy notifications_delivery_update_self on public.notifications as restrictive
+  for update to authenticated using(user_id=(select auth.uid())) with check(user_id=(select auth.uid()));
+
 create table buscag_private.match_jobs (
   item_id uuid primary key references public.items(id) on delete cascade,
   after_id uuid,
@@ -100,6 +138,7 @@ end; $$;
 create function buscag_private.enqueue_match() returns trigger
 language plpgsql security definer set search_path='' as $$
 begin
+  if not public.match_backend_enabled() then return new;end if;
   insert into buscag_private.match_jobs(item_id) values(new.id)
     on conflict(item_id) do update set after_id=null,attempts=0,last_error_code=null,next_attempt_at=now(),queued_at=now();
   return new;
@@ -122,7 +161,12 @@ begin
   if p_limit is null or p_limit<1 or p_limit>20 then raise exception 'Invalid batch limit' using errcode='22023'; end if;
   -- One bounded worker transaction at a time avoids pair-ledger lock cycles.
   if not pg_try_advisory_xact_lock(hashtextextended('buscag:match-worker',0)) then
-    return jsonb_build_object('batches',0,'notifications',0,'failures',0,'busy',true);
+    return jsonb_build_object('batches',0,'notifications',0,'failures',0,'busy',true,'enabled',public.match_backend_enabled());
+  end if;
+  update buscag_private.match_control set worker_last_seen=clock_timestamp() where singleton;
+  if not found then raise exception 'Match control is missing';end if;
+  if not public.match_backend_enabled() then
+    return jsonb_build_object('batches',0,'notifications',0,'failures',0,'busy',false,'enabled',false);
   end if;
   for job in select * from buscag_private.match_jobs where next_attempt_at<=now()
     order by next_attempt_at,queued_at,item_id for update skip locked limit p_limit loop
@@ -170,20 +214,15 @@ begin
         where item_id=job.item_id;
     end;
   end loop;
-  return jsonb_build_object('batches',claimed,'notifications',delivered,'failures',failures,'busy',false);
+  return jsonb_build_object('batches',claimed,'notifications',delivered,'failures',failures,'busy',false,'enabled',true);
 end; $$;
 revoke all on function public.process_match_jobs(integer) from public,anon,authenticated,service_role;
 grant execute on function public.process_match_jobs(integer) to service_role;
 create function public.buscag_capabilities() returns table(queued_match_notifications boolean)
-language sql stable security invoker set search_path='' as $$ select true $$;
+language sql stable security invoker set search_path='' as $$ select public.match_backend_enabled() $$;
 revoke all on function public.buscag_capabilities() from public,anon,authenticated,service_role;
 grant execute on function public.buscag_capabilities() to authenticated;
--- All alert creation is trusted after this candidate is activated.
-revoke insert on public.notifications from public,anon,authenticated;
-do $$ declare cols text;begin
-  select string_agg(format('%I',attname),',') into cols from pg_catalog.pg_attribute
-    where attrelid='public.notifications'::regclass and attnum>0 and not attisdropped;
-  execute format('revoke insert (%s) on public.notifications from public,anon,authenticated',cols);
-end; $$;
+-- Existing safe own-match INSERT remains available only while disabled.
+-- Activation changes the private flag, never broadens client grants.
 revoke all on all functions in schema buscag_private from public,anon,authenticated,service_role;
 commit;

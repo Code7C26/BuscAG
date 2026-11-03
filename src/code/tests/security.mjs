@@ -1,6 +1,7 @@
 // Offline policy regression tests. All SQL runs in an ephemeral WASM PostgreSQL.
 // No connection string, project URL, real credentials or production rows are used.
 import assert from 'node:assert/strict';
+import {analyzeDiagnostic} from '../scripts/check-supabase-diagnostic.mjs';
 import { readFile } from 'node:fs/promises';
 const { PGlite } = await import(process.env.LOCAL_PG_SOCKET ? './postgresAdapter.mjs' : process.env.PGLITE_MODULE || '@electric-sql/pglite');
 const db = new PGlite();
@@ -44,6 +45,7 @@ try {
     end; $$;
     create schema auth; create schema storage;
     create table auth.users (id uuid primary key, raw_user_meta_data jsonb default '{}');
+    create table auth.identities(id uuid primary key,user_id uuid references auth.users(id));
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema public, auth, storage to anon, authenticated, service_role;
@@ -221,6 +223,8 @@ try {
     assert.equal((await db.query('select count(*)::int as n from public.push_subscriptions')).rows[0].n, 1);
   })();
   await check('preflight metadata queries are valid', async () => {
+    const backup=JSON.parse((await db.query(await read('../supabase/audit/backup_counts.sql'))).rows[0].backup_counts);
+    assert.equal(backup.auth_users,3);assert.equal(backup.auth_identities,0);
     await db.exec(await read('../supabase/audit/security_preflight.sql'));
     await db.query(await read('../supabase/audit/production_diagnostic.sql'));
   })();
@@ -305,11 +309,37 @@ try {
       await assert.rejects(db.exec(await read('../supabase/proposals/20261104001000_trusted_matches.sql')),/items.date needs/);
     }finally {await db.exec('rollback');}
   })();
+  await check('match install rejects anonymous or protected-column notification grants before changing anything',async()=>{
+    for(const grant of ['grant select on public.notifications to anon','grant update(title) on public.notifications to authenticated']){
+      await db.exec('begin');
+      try {await db.exec(grant);await assert.rejects(db.exec(await read('../supabase/proposals/20261104001000_trusted_matches.sql')),/Unexpected notification/);}
+      finally {await db.exec('rollback');}
+    }
+  })();
+  // A stray permissive policy must not widen access in either delivery mode.
+  await db.exec("create policy synthetic_wide_notices on public.notifications for all to authenticated using(true) with check(true)");
   const beforeMatches=await snapshot();
   await db.exec(await read('../supabase/proposals/20261104001000_trusted_matches.sql'));
   await check('match installation preserves data and does not backfill or enqueue old publications',async()=>{
     assert.deepEqual(await snapshot(),beforeMatches);
     assert.equal((await db.query('select count(*)::int n from buscag_private.match_jobs')).rows[0].n,0);
+  })();
+  await check('staged install preserves legacy notices and activation refuses an unverified worker',async()=>{
+    assert.equal((await as('authenticated',ids.a,'select * from public.buscag_capabilities()')).rows[0].queued_match_notifications,false);
+    await as('authenticated',ids.a,`insert into public.notifications(user_id,title,message,type) values('${ids.a}','Synthetic','Synthetic','match')`);
+    await denied('authenticated',ids.a,`insert into public.notifications(user_id,title,message,type) values('${ids.b}','Synthetic','Synthetic','match')`);
+    await denied('authenticated',ids.a,`insert into public.notifications(user_id,title,message,type) values('${ids.a}','Synthetic','Synthetic','system')`);
+    assert.equal((await as('authenticated',ids.c,'select * from public.notifications')).rows.length,0);
+    assert.equal((await as('authenticated',ids.c,'update public.notifications set is_read=true returning id')).rows.length,0);
+    await db.exec('begin');
+    try {await assert.rejects(db.exec(await read('../supabase/activation/enable_trusted_matches.sql')),/Worker heartbeat/);}
+    finally {await db.exec('rollback');}
+    await denied('authenticated',ids.a,'update buscag_private.match_control set enabled=true');
+    const health=(await as('service_role',null,'select public.process_match_jobs(5) result')).rows[0].result;
+    assert.equal(health.enabled,false);assert.equal(health.batches,0);
+    // as() rolls back. Persist only this synthetic heartbeat to test activation.
+    await db.query('select public.process_match_jobs(5)');
+    await db.exec(await read('../supabase/activation/enable_trusted_matches.sql'));
   })();
   await check('only backend can process matches; clients cannot forge match notices or access private queue',async()=>{
     await denied('authenticated',ids.a,'select public.process_match_jobs(5)');
@@ -498,12 +528,68 @@ try {
   await check('read-only diagnostic reports publication RPC and denies direct receipt access to every API role',async()=>{
     const report=JSON.parse((await db.query(await read('../supabase/audit/production_diagnostic.sql'))).rows[0].diagnostic);
     assert.equal(report['17_optional_workflow_inventory'].find(row=>row.name==='publication_receipts').exists,true);
+    assert.deepEqual(analyzeDiagnostic(report).errors,[]);
+    assert.equal(analyzeDiagnostic(report).production_approved,false);
     const permissions=report['18_rpc_permissions'].filter(row=>row.proname==='publish_item_once');
     assert.equal(permissions.find(row=>row.rolname==='authenticated').can_execute,true);
     assert.equal(permissions.find(row=>row.rolname==='anon').can_execute,false);
     for(const row of report['19_private_workflow_permissions'].filter(row=>row.relname==='publication_receipts')){
       assert.equal(row.can_select,false);assert.equal(row.can_insert,false);assert.equal(row.can_update,false);assert.equal(row.can_delete,false);
     }
+  })();
+  await check('integrated workflow: two publishers, retries, both matches, reciprocal messages, privacy and recovery',async()=>{
+    await db.exec('begin');
+    const act=async(uid,sql,args=[])=>{
+      await db.exec('set local role authenticated');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[uid]);
+      const result=await db.query(sql,args);await db.exec('reset role');return result;
+    };
+    try {
+      const base={...publication,title:'Bolso violeta delta',description:'Bolso violeta delta',date:'2026-11-03T12:00-03:00'};
+      const keys=['a0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000002'];
+      const create=async(uid,key,status)=> (await act(uid,'select * from public.publish_item_once($1,$2::jsonb)',[key,JSON.stringify({...base,status})])).rows[0];
+      const loss=await create(ids.a,keys[0],'perdido');
+      const discovery=await create(ids.b,keys[1],'encontrado');
+      assert.equal((await create(ids.a,keys[0],'perdido')).id,loss.id);
+      assert.equal((await create(ids.b,keys[1],'encontrado')).id,discovery.id);
+      await db.exec('set local role service_role');
+      const batch=(await db.query('select public.process_match_jobs(20) result')).rows[0].result;
+      await db.exec('reset role');assert.equal(batch.notifications,2);
+      assert.equal((await db.query('select public.process_match_jobs(20) result')).rows[0].result.notifications,0);
+      for(const uid of [ids.a,ids.b]) assert.equal((await act(uid,"select * from public.notifications where type='match' and related_item_id in ($1,$2)",[loss.id,discovery.id])).rows.length,1);
+      assert.equal((await act(ids.c,'select * from public.notifications where related_item_id in ($1,$2)',[loss.id,discovery.id])).rows.length,0);
+      assert.equal((await act(ids.a,'select phone from public.public_profiles where id=$1',[ids.b])).rows[0].phone,'');
+      const request=(key,recipient,text)=>act(recipient===ids.b?ids.a:ids.b,'select * from public.send_message_once($1,$2,$3,$4)',[key,discovery.id,recipient,text]);
+      const sent=(await request(keys[0],ids.b,'Synthetic first contact')).rows[0];
+      assert.equal((await request(keys[0],ids.b,'Synthetic first contact')).rows[0].id,sent.id);
+      assert.equal((await act(ids.a,'select phone from public.public_profiles where id=$1',[ids.b])).rows[0].phone,'');
+      const reply=(await request(keys[1],ids.a,'Synthetic owner reply')).rows[0];
+      assert.equal((await request(keys[1],ids.a,'Synthetic owner reply')).rows[0].id,reply.id);
+      assert.equal((await act(ids.a,'select phone from public.public_profiles where id=$1',[ids.b])).rows[0].phone,'private-b');
+      assert.equal((await act(ids.c,'select phone from public.public_profiles where id=$1',[ids.b])).rows[0].phone,'');
+      assert.equal((await act(ids.c,'select id from public.messages where item_id=$1',[discovery.id])).rows.length,0);
+      assert.equal((await db.query('select contact_count from public.items where id=$1',[discovery.id])).rows[0].contact_count,2);
+      assert.equal((await db.query("select count(*)::int n from public.notifications where type='message' and related_item_id=$1",[discovery.id])).rows[0].n,2);
+      assert.equal((await act(ids.a,'update public.messages set is_read=true where id=$1 returning id',[reply.id])).rows.length,1);
+      await act(ids.a,"update public.notifications set is_read=true where type='match' and related_item_id=$1 returning id",[discovery.id]);
+      await act(ids.b,"update public.items set status='recuperado' where id=$1 returning id",[discovery.id]);
+      assert.equal((await db.query('select count(*)::int n from public.messages where item_id=$1',[discovery.id])).rows[0].n,2);
+      assert.equal((await db.query("select count(*)::int n from public.notifications where type='recovered' and related_item_id=$1",[discovery.id])).rows[0].n,1);
+      assert.equal((await db.query('select public.process_match_jobs(20) result')).rows[0].result.notifications,0);
+    }finally {await db.exec('rollback');}
+  })();
+  await check('pausing preserves jobs and ledger, blocks processing and restores only own legacy notices',async()=>{
+    await db.exec('begin');
+    try {
+      const counts=async()=> (await db.query('select (select count(*)::int from buscag_private.match_jobs) jobs,(select count(*)::int from buscag_private.match_notices) notices')).rows[0];
+      const before=await counts();
+      await db.query(await read('../supabase/audit/backend_readiness.sql'));
+      await db.exec((await read('../supabase/activation/pause_trusted_matches.sql')).replace(/^begin;$/gm,'').replace(/^commit;$/gm,''));
+      assert.equal((await db.query('select public.process_match_jobs(5) result')).rows[0].result.enabled,false);
+      assert.deepEqual(await counts(),before);
+      await db.exec('set local role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+      await db.query(`insert into public.notifications(user_id,title,message,type) values('${ids.a}','Synthetic','Synthetic','match')`);
+    }finally {await db.exec('rollback');}
   })();
   console.log(`PASS: ${passed} offline PostgreSQL security checks (${itemDateType})`);
 } catch (error) {

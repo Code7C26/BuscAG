@@ -131,6 +131,7 @@ Desde src/code, con Node y las dependencias normales del proyecto instaladas:
 
 ```sh
 npm run lint
+npm test
 npm run build
 node tests/client-security.mjs
 npm install --prefix /tmp/buscag-security-tests --no-save --package-lock=false --no-audit --no-fund @electric-sql/pglite@0.5.15
@@ -149,7 +150,7 @@ Push. Las pruebas de esos servicios quedan explícitamente en staging antes de a
 
 - `npm run lint`: correcto (TypeScript sin emitir archivos).
 - `npm run build`: correcto; Vite advierte un bundle mayor de 500 kB, sin error.
-- `node tests/client-security.mjs`: 7 comprobaciones correctas con cliente simulado.
+- `node tests/client-security.mjs`: 9 comprobaciones correctas con cliente simulado.
 - PostgreSQL embebido 18.6 / PGlite 0.5.15: 26 comprobaciones correctas.
 - `git diff --check`: correcto; ningún archivo de componentes/estilos cambió.
 
@@ -157,3 +158,20 @@ El modelo de la política original de mensajes también produjo recursión RLS d
 INSERT. La función de comprobación nueva evita autoexpandir esa política, además de
 corregir las referencias de objeto y destinatario. Es evidencia local del SQL del
 repositorio, no una prueba de escritura sobre la configuración remota.
+
+## Integración sobre Alexis
+
+La rama de revisión `security/alexis-rls-hardening` parte de `Alexis` y aplica mediante
+cherry-pick el commit a839a64 del PR #22. Conserva el historial previo completo,
+incluidos los cambios de matcheo y sus pruebas. El único conflicto ocurrió en
+lib/database.ts: se mantiene la carga secuencial de items de Alexis, la consulta de
+perfiles limitada a los ownerIds únicos y los retornos tempranos para listas vacías
+o publicaciones antiguas sin dueño. Esa consulta ahora usa public_profiles, y el
+fallback previo a la migración también filtra ownerIds sin solicitar campos privados.
+
+Validación adicional: las 5 pruebas originales de matcheo de Alexis pasan. Las pruebas
+del cliente comprueban el filtro de propietarios, el caso vacío y el caso sin dueño.
+No hay diferencias respecto de Alexis en componentes, estilos, matcher ni package.json.
+La integración se entrega mediante PR hacia Alexis; no modifica main ni aplica SQL
+remoto. Las restricciones de privacidad y el plan de staging de este documento siguen
+vigentes.

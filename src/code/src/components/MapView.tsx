@@ -11,7 +11,7 @@ import L from 'leaflet';
 // Iconos de interfaz
 import { Search, Navigation, Filter, AlertCircle, CheckCircle2, ChevronRight, X, Sparkles } from 'lucide-react';
 import { Item, FilterType, Category } from '../types';
-import { getDistanceKm, DEFAULT_CENTER } from '../utils/geo';
+import { getDistanceKm, DEFAULT_CENTER, isValidCoordinates } from '../utils/geo';
 
 // Propiedades que recibe el componente MapView
 interface MapViewProps {
@@ -45,8 +45,8 @@ export const MapView: React.FC<MapViewProps> = ({
   const [selectedMapItem, setSelectedMapItem] = useState<Item | null>(null);
   
   // Posición actual del usuario
-  const currentLocation = useMemo(() => userLat !== undefined && userLng !== undefined
-    ? { lat: userLat, lng: userLng }
+  const currentLocation = useMemo(() => isValidCoordinates(userLat, userLng)
+    ? { lat: userLat!, lng: userLng! }
     : null, [userLat, userLng]);
   
   // Indicador de carga mientras se consulta el GPS del navegador
@@ -76,7 +76,7 @@ export const MapView: React.FC<MapViewProps> = ({
     if (!leafletMapRef.current) {
       // 1. Instanciamos el mapa Leaflet centrado en las coordenadas iniciales con zoom 13
       const map = L.map(mapRef.current, {
-        center: [userLat ?? DEFAULT_CENTER.lat, userLng ?? DEFAULT_CENTER.lng],
+        center: isValidCoordinates(userLat, userLng) ? [userLat!, userLng!] : [DEFAULT_CENTER.lat, DEFAULT_CENTER.lng],
         zoom: 13,
         zoomControl: false // Desactivamos el control por defecto para ubicarlo a medida
       });
@@ -109,8 +109,8 @@ export const MapView: React.FC<MapViewProps> = ({
   }, []);
 
   useEffect(() => {
-    if (userLat !== undefined && userLng !== undefined) {
-      leafletMapRef.current?.setView([userLat, userLng], 15, { animate: true });
+    if (isValidCoordinates(userLat, userLng)) {
+      leafletMapRef.current?.setView([userLat!, userLng!], 15, { animate: true });
     }
   }, [userLat, userLng]);
 
@@ -126,6 +126,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
     // Filtramos los objetos según los criterios de búsqueda, estado y categoría
     const filteredItems = items.filter(item => {
+      if (!isValidCoordinates(item.lat, item.lng)) return false;
       const matchesSearch = searchQuery === '' || 
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||

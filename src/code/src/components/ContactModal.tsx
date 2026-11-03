@@ -7,7 +7,7 @@
  * - Botón de llamada telefónica directa (si el publicador compartió su número)
  * - Indicadores visuales de confirmación de envío (doble tilde azul)
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { X, Send, Phone, MessageSquare, Check, CheckCheck, ShieldCheck, Image as ImageIcon } from 'lucide-react';
 import { Item, Message, User } from '../types';
 
@@ -20,7 +20,7 @@ interface ContactModalProps {
   messages: Message[];                                  // Todos los mensajes almacenados
   participantId: string | null;
   onMarkThreadRead: (itemId: string, senderId: string) => void;
-  onSendMessage: (itemId: string, text: string, recipientId: string) => void;
+  onSendMessage: (itemId: string, text: string, recipientId: string) => Promise<void>;
 }
 
 // Opciones de mensajes rápidos para iniciar conversación en un solo clic
@@ -42,10 +42,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onSendMessage
 }) => {
   const [inputMessage, setInputMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const sendLock = useRef(false);
+  const threadVersion = useRef(0);
   useEffect(() => {
+    threadVersion.current += 1;
+    sendLock.current = false;
+    setIsSending(false);
     setInputMessage('');
     if (isOpen && item && participantId) onMarkThreadRead(item.id, participantId);
-  }, [item?.id, participantId, isOpen, onMarkThreadRead]);
+    return () => { threadVersion.current += 1; };
+  }, [item?.id, participantId, isOpen, currentUser.id, onMarkThreadRead]);
 
   // Si no está abierto o no hay objeto, no renderiza nada
   if (!isOpen || !item) return null;
@@ -69,22 +76,30 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   /**
    * Manejador del envío de mensaje escrito manualmente
    */
+  const send = async (text: string, clearDraft: boolean) => {
+    if (!text.trim() || !participantId || sendLock.current) return;
+    sendLock.current = true; // Synchronous: also covers two events before a render.
+    setIsSending(true);
+    const version = threadVersion.current;
+    try {
+      await onSendMessage(item.id, text.trim(), participantId);
+      if (version === threadVersion.current && clearDraft) {
+        setInputMessage(previous => previous === text ? '' : previous);
+      }
+    } catch {
+      // App reports the failure; retain the draft for an explicit retry.
+    } finally {
+      if (version === threadVersion.current) {
+        sendLock.current = false;
+        setIsSending(false);
+      }
+    }
+  };
   const handleSend = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!inputMessage.trim()) return;
-    if (!participantId) return;
-
-    // Emite el mensaje al componente principal App.tsx
-    onSendMessage(item.id, inputMessage.trim(), participantId);
-    setInputMessage('');
+    e?.preventDefault();
+    void send(inputMessage, true);
   };
-
-  /**
-   * Manejador para enviar una respuesta predeterminada directamente con un toque
-   */
-  const handlePresetClick = (presetText: string) => {
-    if (participantId) onSendMessage(item.id, presetText, participantId);
-  };
+  const handlePresetClick = (presetText: string) => { void send(presetText, false); };
 
   return (
     <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -191,6 +206,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               <button
                 key={idx}
                 onClick={() => handlePresetClick(prompt)}
+                disabled={isSending}
                 className="px-2.5 py-1 rounded-full text-xs bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-700 font-medium whitespace-nowrap transition border border-slate-200/80 cursor-pointer"
               >
                 {prompt}
@@ -204,6 +220,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
           <input
             type="text"
             value={inputMessage}
+            maxLength={4000}
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Escribe un mensaje..."
             className="flex-1 px-4 py-2.5 rounded-2xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-medium"
@@ -211,7 +228,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
           <button
             type="submit"
-            disabled={!inputMessage.trim()}
+            disabled={isSending || !inputMessage.trim()}
             className="w-10 h-10 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white flex items-center justify-center transition cursor-pointer shrink-0 shadow-md shadow-blue-600/20"
             title="Enviar mensaje"
           >

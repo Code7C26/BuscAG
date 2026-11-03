@@ -12,7 +12,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { X, MapPin, Clock, Tag, ShieldCheck, MessageCircle, Phone, Share2, CheckCircle2, AlertCircle, Trash2, PartyPopper, Sparkles, ChevronRight } from 'lucide-react';
 import L from 'leaflet';
 import { Item, User, MatchResult } from '../types';
-import { formatTimeAgo } from '../utils/geo';
+import { formatTimeAgo, isValidCoordinates } from '../utils/geo';
 import { findMatchesForSingleItem } from '../utils/matcher';
 
 // Propiedades que recibe el modal de detalle
@@ -22,7 +22,7 @@ interface ItemDetailModalProps {
   onContact: (item: Item) => void;               // Inicia el contacto con el publicador
   currentUser: User;                             // Usuario que está utilizando la app actualmente
   onMarkAsRecovered?: (itemId: string) => void;  // Cambia el estado a 'recuperado'
-  onDeleteItem?: (itemId: string) => void;       // Elimina la publicación de la lista
+  onDeleteItem?: (itemId: string) => Promise<boolean>;       // Elimina la publicación de la lista
   allItems?: Item[];                             // Catálogo completo de publicaciones para calcular matches
   onOpenMatchComparison?: (match: MatchResult) => void; // Abre la vista de comparación lado a lado
 }
@@ -59,7 +59,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
    * EFECTO: Inicializa el mini-mapa Leaflet enfocado exactamente en la lat/lng del objeto
    */
   useEffect(() => {
-    if (!item || !miniMapRef.current || leafletMiniMapRef.current) return;
+    if (!item || !isValidCoordinates(item.lat, item.lng) || !miniMapRef.current || leafletMiniMapRef.current) return;
 
     // Instanciamos el mapa centrado en el objeto
     const map = L.map(miniMapRef.current, {
@@ -370,10 +370,9 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               {onDeleteItem && (
                 <button
                   onClick={() => {
-                    if (confirm('¿Estás seguro de eliminar esta publicación?')) {
-                      onDeleteItem(item.id);
-                      onClose();
-                    }
+                    void onDeleteItem(item.id).then(deleted => {
+                      if (deleted) onClose();
+                    });
                   }}
                   className="px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
                 >

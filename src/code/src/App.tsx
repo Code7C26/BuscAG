@@ -4,7 +4,7 @@
  * filtros, geolocalización y mensajes), maneja la navegación por pestañas y renderiza las
  * vistas principales y modales.
  */
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 // Iconos de Lucide para la interfaz visual
 import { supabase } from '../lib/supabase';
 import type { User as AuthUser } from '@supabase/supabase-js';
@@ -15,7 +15,8 @@ import { AuthView } from './components/AuthView';
 import { loadItems, loadMessages, loadNotifications, loadProfile, mapItem, mapMessage, mapNotification, uploadItemImage } from '../lib/database';
 import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus } from '../lib/push';
 // Utilidades de cálculo geográfico (Haversine)
-import { getDistanceKm } from './utils/geo';
+import { getDistanceKm, isValidCoordinates } from './utils/geo';
+import { createSessionGuard, type SessionGuard } from './utils/sessionGuard';
 // Motor de coincidencia automática (Lost & Found Matcher)
 import { findAllMatches, findMatchesForSingleItem } from './utils/matcher';
 // Componentes modulares de la aplicación
@@ -33,6 +34,82 @@ import { MatchComparisonModal } from './components/MatchComparisonModal';
 import { FaqChat } from './components/FaqChat';
 
 export default function App() {
+  const [identity, setIdentity] = useState<{ user: AuthUser; guard: SessionGuard; key: number } | null>(null);
+  const identityRef = useRef<typeof identity>(null);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const sequence = useRef(0);
+
+  useEffect(() => {
+    if (!supabase) { setIsLoadingSession(false); return; }
+    let active = true;
+    let receivedAuthEvent = false;
+    const acceptUser = (user: AuthUser | null) => {
+      if (!active) return;
+      const previous = identityRef.current;
+      if (previous && user && previous.user.id === user.id) {
+        const refreshed = { ...previous, user };
+        identityRef.current = refreshed;
+        setIdentity(refreshed);
+        return;
+      }
+      if (!previous && !user) return;
+      previous?.guard.close(); // Before React renders the next account.
+      const next = user ? { user, guard: createSessionGuard(), key: ++sequence.current } : null;
+      identityRef.current = next;
+      setIdentity(next);
+    };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      receivedAuthEvent = true;
+      acceptUser(session?.user ?? null);
+      if (active) setIsLoadingSession(false);
+    });
+    void supabase.auth.getSession().then(({ data, error }) => {
+      // An older startup read must never replace a newer sign-in/sign-out event.
+      if (!active || receivedAuthEvent) return;
+      if (error) console.error('No se pudo recuperar la sesión:', error);
+      acceptUser(data.session?.user ?? null);
+      setIsLoadingSession(false);
+    }).catch(error => {
+      if (!active || receivedAuthEvent) return;
+      console.error('No se pudo recuperar la sesión:', error);
+      setIsLoadingSession(false);
+    });
+    return () => { active = false; subscription.unsubscribe(); };
+  }, []);
+
+  if (isLoadingSession) {
+    return <div className="min-h-screen flex items-center justify-center text-sm font-semibold text-slate-500">Verificando sesión...</div>;
+  }
+  if (!supabase) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+        <section className="max-w-lg rounded-2xl bg-white p-6 shadow border border-slate-200">
+          <h1 className="font-bold text-lg text-slate-900">Falta configurar Supabase</h1>
+          <p className="text-sm text-slate-600 mt-2">
+            Define <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> en <code>.env.local</code>, reinicia el servidor y vuelve a cargar la app.
+          </p>
+        </section>
+      </main>
+    );
+  }
+  if (!identity) return <AuthView />;
+  // Unmounting also discards child drafts, selections, filters, GPS and timers.
+  return <AccountApp key={identity.key} authUser={identity.user} sessionGuard={identity.guard} />;
+}
+
+function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGuard: SessionGuard }) {
+  const lifetime = useRef(createSessionGuard());
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageRequests = useRef(new Map<string, Promise<void>>());
+  const captureOperation = useCallback(() => {
+    const sessionCurrent = sessionGuard.capture();
+    const mounted = lifetime.current.capture();
+    return () => sessionCurrent() && mounted();
+  }, [sessionGuard]);
+  useEffect(() => () => {
+    lifetime.current.invalidate();
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+  }, []);
   // ESTADOS PRINCIPALES DE LA APLICACIÓN
   // ==========================================
   // ESTADOS PRINCIPALES DE LA APLICACIÓN
@@ -50,8 +127,6 @@ export default function App() {
   // messages: Historial de mensajes del chat de contacto interno
   const [messages, setMessages] = useState<Message[]>([]);
 
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [dataLoadError, setDataLoadError] = useState<string | null>(null);
 
@@ -97,33 +172,6 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) {
-      setIsLoadingSession(false);
-      return;
-    }
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthUser(session?.user ?? null);
-      setIsLoadingSession(false);
-    });
-
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.error('No se pudo recuperar la sesión:', error);
-        setDataLoadError('No se pudo verificar la sesión. Recarga la página e inténtalo nuevamente.');
-      }
-      setAuthUser(data.session?.user ?? null);
-      setIsLoadingSession(false);
-    }).catch(error => {
-      console.error('No se pudo recuperar la sesión:', error);
-      setDataLoadError('No se pudo verificar la sesión. Recarga la página e inténtalo nuevamente.');
-      setIsLoadingSession(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     if (!supabase || !authUser) {
       setCurrentUser(null);
       setItems([]);
@@ -134,14 +182,16 @@ export default function App() {
       return;
     }
 
+    const current = captureOperation();
     let active = true;
     const refreshData = async () => {
+      if (!active || !current()) return;
       const [loadedItems, loadedMessages, loadedNotifications] = await Promise.all([
         loadItems(),
         loadMessages(authUser.id),
         loadNotifications(authUser.id)
       ]);
-      if (!active) return;
+      if (!active || !current()) return;
       setItems(loadedItems);
       setMessages(loadedMessages);
       setNotifications(loadedNotifications);
@@ -152,47 +202,47 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
         void refreshData().catch(error => {
           console.error('No se pudieron actualizar las publicaciones:', error);
-          if (active) setDataLoadError('No se pudieron actualizar las publicaciones.');
+          if (active && current()) setDataLoadError('No se pudieron actualizar las publicaciones.');
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
         void refreshData().catch(error => {
           console.error('No se pudieron actualizar los mensajes:', error);
-          if (active) setDataLoadError('No se pudieron actualizar los mensajes.');
+          if (active && current()) setDataLoadError('No se pudieron actualizar los mensajes.');
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
         void refreshData().catch(error => {
           console.error('No se pudieron actualizar las notificaciones:', error);
-          if (active) setDataLoadError('No se pudieron actualizar las notificaciones.');
+          if (active && current()) setDataLoadError('No se pudieron actualizar las notificaciones.');
         });
       })
       .subscribe(status => {
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           console.error('No se pudo establecer la conexión en tiempo real:', status);
-          if (active) setDataLoadError('Se perdió la conexión en tiempo real. Recarga para volver a sincronizar.');
+          if (active && current()) setDataLoadError('Se perdió la conexión en tiempo real. Recarga para volver a sincronizar.');
         }
       });
 
     setIsLoadingData(true);
     setDataLoadError(null);
-    Promise.all([loadProfile(authUser), refreshData()])
+    Promise.all([loadProfile(authUser, current), refreshData()])
       .then(([profile]) => {
-        if (active) setCurrentUser(profile);
+        if (active && current()) setCurrentUser(profile);
       })
       .catch(error => {
         console.error('No se pudieron cargar los datos de la cuenta:', error);
-        if (active) setDataLoadError('No se pudieron cargar los datos. Verifica que hayas aplicado la migración de Supabase.');
+        if (active && current()) setDataLoadError('No se pudieron cargar los datos. Verifica que hayas aplicado la migración de Supabase.');
       })
       .finally(() => {
-        if (active) setIsLoadingData(false);
+        if (active && current()) setIsLoadingData(false);
       });
 
     return () => {
       active = false;
       void supabase.removeChannel(channel);
     };
-  }, [authUser]);
+  }, [authUser, captureOperation]);
 
   // Cuenta la cantidad de notificaciones que el usuario todavía no ha leído
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
@@ -202,17 +252,17 @@ export default function App() {
    */
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage(null);
-    }, 3500);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => { setToastMessage(null); }, 3500);
   };
 
   useEffect(() => {
     if (!authUser) return;
+    const current = captureOperation();
     let active = true;
     void getPushNotificationStatus(authUser.id)
       .then(enabled => {
-        if (active) setPushEnabled(enabled);
+        if (active && current()) setPushEnabled(enabled);
       })
       .catch(error => {
         console.error('No se pudo verificar la suscripción a notificaciones:', error);
@@ -220,7 +270,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [authUser]);
+  }, [authUser, captureOperation]);
 
   // Lista de categorías para generar los botones de filtro rápido
   const categoriesList: (Category | 'Todos')[] = [
@@ -243,7 +293,7 @@ export default function App() {
       if (userLocation) {
         // Ejecuta la fórmula de Haversine entre usuario e ítem
         const distance = getDistanceKm(userLocation.lat, userLocation.lng, item.lat, item.lng);
-        return { ...item, distanceKm: distance };
+        if (Number.isFinite(distance)) return { ...item, distanceKm: distance };
       }
       return item;
     });
@@ -303,7 +353,12 @@ export default function App() {
    */
   const handlePublishSubmit = async (newItemData: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => {
     if (!currentUser || !supabase) throw new Error('Inicia sesión para publicar.');
-    const imageUrl = await uploadItemImage(newItemData.imageUrl, currentUser.id);
+    const current = captureOperation();
+    if (!current()) throw new Error('La sesión cambió.');
+    if (!isValidCoordinates(newItemData.lat, newItemData.lng)) throw new Error('Selecciona una ubicación válida.');
+    const date = new Date(newItemData.date).toISOString();
+    const imageUrl = await uploadItemImage(newItemData.imageUrl, currentUser.id, current);
+    if (!current()) throw new Error('La sesión cambió.');
     const { data, error } = await supabase
       .from('items')
       .insert({
@@ -315,13 +370,14 @@ export default function App() {
         location_name: newItemData.locationName,
         lat: newItemData.lat,
         lng: newItemData.lng,
-        date: new Date(newItemData.date).toISOString(),
+        date,
         image_url: imageUrl,
         reward: newItemData.reward
       })
       .select('*')
       .single();
 
+    if (!current()) throw new Error('La sesión cambió.');
     if (error) {
       console.error('No se pudo guardar la publicación:', error);
       throw new Error('No se pudo guardar la publicación.');
@@ -348,12 +404,13 @@ export default function App() {
         );
       } catch (error) {
         console.error('La publicación se guardó, pero no se pudo guardar la notificación del match:', error);
-        triggerToast('La publicación se guardó, pero no se pudo guardar la notificación.');
+        if (current()) triggerToast('La publicación se guardó, pero no se pudo guardar la notificación.');
       }
     } else {
       triggerToast('¡Objeto publicado con éxito! 🎉');
     }
 
+    if (!current()) return;
     setActiveTab('home'); // Regresa a la vista principal
   };
 
@@ -362,6 +419,8 @@ export default function App() {
    */
   const handleMarkAsRecovered = (itemId: string) => {
     if (!currentUser || !supabase) return;
+    const current = captureOperation();
+    if (!current()) return;
     void (async () => {
       try {
         const { data, error } = await supabase
@@ -371,13 +430,14 @@ export default function App() {
           .eq('owner_id', currentUser.id)
           .select('*')
           .maybeSingle();
+        if (!current()) return;
         if (error) throw error;
         if (!data) throw new Error('No tienes permiso para cambiar esta publicación.');
         setItems(prev => prev.map(item => item.id === itemId ? { ...item, status: 'recuperado' } : item));
         triggerToast('🎉 ¡Excelente! Objeto marcado como RECUPERADO.');
       } catch (error) {
         console.error('No se pudo actualizar el estado de la publicación:', error);
-        triggerToast('No se pudo actualizar la publicación.');
+        if (current()) triggerToast('No se pudo actualizar la publicación.');
       }
     })();
   };
@@ -385,65 +445,68 @@ export default function App() {
   /**
    * Elimina una publicación de la lista por su ID
    */
-  const handleDeleteItem = (itemId: string) => {
-    if (!currentUser || !supabase) return;
-    void (async () => {
-      try {
-        const { data, error } = await supabase
-          .from('items')
-          .delete()
-          .eq('id', itemId)
-          .eq('owner_id', currentUser.id)
-          .select('id')
-          .maybeSingle();
-        if (error) throw error;
-        if (!data) throw new Error('No tienes permiso para eliminar esta publicación.');
-        setItems(prev => prev.filter(item => item.id !== itemId));
-        triggerToast('Publicación eliminada');
-      } catch (error) {
-        console.error('No se pudo eliminar la publicación:', error);
-        triggerToast('No se pudo eliminar la publicación.');
-      }
-    })();
+  const handleDeleteItem = async (itemId: string): Promise<boolean> => {
+    if (!currentUser || !supabase || !items.some(item => item.id === itemId && item.user.id === currentUser.id)) return false;
+    const current = captureOperation();
+    if (!window.confirm('¿Estás seguro de eliminar esta publicación?')) return false;
+    if (!current()) return false;
+    try {
+      const { data, error } = await supabase.from('items').delete()
+        .eq('id', itemId).eq('owner_id', currentUser.id).select('id').maybeSingle();
+      if (!current()) return false;
+      if (error) throw error;
+      if (!data) throw new Error('No tienes permiso para eliminar esta publicación.');
+      setItems(prev => prev.filter(item => item.id !== itemId));
+      triggerToast('Publicación eliminada');
+      return true;
+    } catch (error) {
+      console.error('No se pudo eliminar la publicación:', error);
+      if (current()) triggerToast('No se pudo eliminar la publicación.');
+      return false;
+    }
   };
 
   /**
    * Guarda el mensaje y la base notifica al destinatario.
    */
-  const handleSendMessage = (itemId: string, text: string, recipientId: string) => {
-    if (!currentUser || !supabase) return;
+  const handleSendMessage = (itemId: string, text: string, recipientId: string): Promise<void> => {
+    if (!currentUser || !supabase) return Promise.reject(new Error('Inicia sesión para enviar mensajes.'));
     const item = items.find(i => i.id === itemId);
-    if (!item || recipientId === currentUser.id) return;
-
-    void (async () => {
+    const body = text.trim();
+    if (!item || recipientId === currentUser.id || !body || body.length > 4000) {
+      return Promise.reject(new Error('El mensaje o el destinatario no son válidos.'));
+    }
+    const current = captureOperation();
+    if (!current()) return Promise.reject(new Error('La sesión cambió.'));
+    const key = JSON.stringify([itemId, recipientId, body]);
+    const pending = messageRequests.current.get(key);
+    if (pending) return pending;
+    const request = Promise.resolve().then(async () => {
       try {
-        const { data, error } = await supabase
-          .from('messages')
-          .insert({
-        item_id: item.id,
-        sender_id: currentUser.id,
-        recipient_id: recipientId,
-        sender_name: currentUser.name,
-        sender_avatar: currentUser.avatar,
-        item_title: item.title,
-        item_image: item.imageUrl,
-        text: text.trim()
-      })
-      .select('*')
-          .single();
+        if (!current()) throw new Error('La sesión cambió.');
+        const { data, error } = await supabase.from('messages').insert({
+          item_id: item.id, sender_id: currentUser.id, recipient_id: recipientId,
+          sender_name: currentUser.name, sender_avatar: currentUser.avatar,
+          item_title: item.title, item_image: item.imageUrl, text: body
+        }).select('*').single();
+        if (!current()) throw new Error('La sesión cambió.');
         if (error) throw error;
         const newMessage = mapMessage(data);
         setMessages(prev => prev.some(message => message.id === newMessage.id) ? prev : [...prev, newMessage]);
       } catch (error) {
-        console.error('No se pudo enviar el mensaje:', error);
-        triggerToast('No se pudo enviar el mensaje.');
-      }
-    })();
+        if (current()) triggerToast('No se pudo enviar el mensaje.');
+        throw error;
+      } finally { messageRequests.current.delete(key); }
+    });
+    messageRequests.current.set(key, request);
+    return request;
   };
 
   const handleMarkThreadRead = useCallback((itemId: string, senderId: string) => {
     const userId = currentUser?.id;
     if (!userId || !supabase) return;
+    const current = captureOperation();
+    if (!current()) return;
     void (async () => {
       try {
         const { error } = await supabase
@@ -453,6 +516,7 @@ export default function App() {
           .eq('sender_id', senderId)
           .eq('recipient_id', userId)
           .eq('is_read', false);
+        if (!current()) return;
         if (error) throw error;
         setMessages(prev => prev.map(message =>
           message.itemId === itemId &&
@@ -463,10 +527,10 @@ export default function App() {
         ));
       } catch (error) {
         console.error('No se pudo actualizar el estado de lectura de los mensajes:', error);
-        setDataLoadError('No se pudo actualizar el estado de lectura de los mensajes.');
+        if (current()) setDataLoadError('No se pudo actualizar el estado de lectura de los mensajes.');
       }
     })();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, captureOperation]);
 
   const createNotification = async (
     title: string,
@@ -475,6 +539,8 @@ export default function App() {
     relatedItemId?: string
   ) => {
     if (!currentUser || !supabase) throw new Error('Inicia sesión para crear una notificación.');
+    const current = captureOperation();
+    if (!current()) throw new Error('La sesión cambió.');
     const { data, error } = await supabase
       .from('notifications')
       .insert({
@@ -487,6 +553,7 @@ export default function App() {
       .select('*')
       .single();
     if (error) throw error;
+    if (!current()) return;
     const notification = mapNotification(data);
     setNotifications(prev => prev.some(existing => existing.id === notification.id) ? prev : [notification, ...prev]);
   };
@@ -494,7 +561,10 @@ export default function App() {
   /**
    * Solicita la posición real del dispositivo usando la API de Geolocalización del navegador
    */
-  const requestUserLocation = () => new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+  const requestUserLocation = () => {
+    const current = captureOperation();
+    return new Promise<{ lat: number; lng: number }>((resolve, reject) => {
+    if (!current()) { reject(new Error('La sesión cambió.')); return; }
     if (!navigator.geolocation) {
       reject(new Error('Este navegador no permite acceder a la ubicación.'));
       return;
@@ -502,7 +572,9 @@ export default function App() {
 
     navigator.geolocation.getCurrentPosition(
       position => {
+        if (!current()) { reject(new Error('La sesión cambió.')); return; }
         const location = { lat: position.coords.latitude, lng: position.coords.longitude };
+        if (!isValidCoordinates(location.lat, location.lng)) { reject(new Error('La ubicación recibida no es válida.')); return; }
         setUserLocation(location);
         resolve(location);
       },
@@ -516,43 +588,50 @@ export default function App() {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
-  });
+    });
+  };
 
   const handleNearMeFilter = async () => {
+    const current = captureOperation();
     setActiveFilter('cerca');
     try {
       await requestUserLocation();
+      if (!current()) return;
       triggerToast('📍 Ubicación actualizada para búsqueda cercana.');
     } catch (error) {
       console.error('No se pudo obtener la ubicación actual:', error);
-      triggerToast(error instanceof Error ? error.message : 'No se pudo obtener la ubicación actual.');
+      if (current()) triggerToast(error instanceof Error ? error.message : 'No se pudo obtener la ubicación actual.');
     }
   };
 
   const handleTogglePushNotifications = async (enabled: boolean) => {
     if (!currentUser) return;
+    const current = captureOperation();
     try {
       if (enabled) {
-        await enablePushNotifications(currentUser.id);
+        await enablePushNotifications(currentUser.id, current);
+        if (!current()) return;
         setPushEnabled(true);
         triggerToast('Notificaciones activadas en este dispositivo.');
       } else {
-        await disablePushNotifications(currentUser.id);
+        await disablePushNotifications(currentUser.id, current);
+        if (!current()) return;
         setPushEnabled(false);
         triggerToast('Notificaciones desactivadas en este dispositivo.');
       }
     } catch (error) {
       console.error('No se pudo actualizar la configuración de notificaciones:', error);
-      triggerToast(error instanceof Error ? error.message : 'No se pudo actualizar la configuración de notificaciones.');
+      if (current()) triggerToast(error instanceof Error ? error.message : 'No se pudo actualizar la configuración de notificaciones.');
     }
   };
 
   const handleSignOut = async () => {
     if (!supabase) return;
+    const current = captureOperation();
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error('No se pudo cerrar la sesión:', error);
-      triggerToast('No se pudo cerrar la sesión.');
+      if (current()) triggerToast('No se pudo cerrar la sesión.');
     }
   };
 
@@ -564,6 +643,7 @@ export default function App() {
 
   const handleSelectNotification = async (notification: NotificationItem) => {
     if (!supabase || !currentUser) return;
+    const current = captureOperation();
 
     if (!notification.read) {
       try {
@@ -574,6 +654,7 @@ export default function App() {
           .eq('user_id', currentUser.id)
           .select('id')
           .maybeSingle();
+        if (!current()) return;
         if (error) throw error;
         if (!data) throw new Error('No se pudo encontrar la notificación.');
         setNotifications(previous => previous.map(existing =>
@@ -581,11 +662,11 @@ export default function App() {
         ));
       } catch (error) {
         console.error('No se pudo marcar la notificación como leída:', error);
-        triggerToast('No se pudo actualizar la notificación.');
+        if (current()) triggerToast('No se pudo actualizar la notificación.');
       }
     }
 
-    if (!notification.relatedItemId) return;
+    if (!current() || !notification.relatedItemId) return;
     const item = items.find(candidate => candidate.id === notification.relatedItemId);
     if (!item) return;
 
@@ -599,25 +680,6 @@ export default function App() {
       setSelectedDetailItem(item);
     }
   };
-
-  if (isLoadingSession) {
-    return <div className="min-h-screen flex items-center justify-center text-sm font-semibold text-slate-500">Verificando sesión...</div>;
-  }
-
-  if (!supabase) {
-    return (
-      <main className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
-        <section className="max-w-lg rounded-2xl bg-white p-6 shadow border border-slate-200">
-          <h1 className="font-bold text-lg text-slate-900">Falta configurar Supabase</h1>
-          <p className="text-sm text-slate-600 mt-2">
-            Define <code>VITE_SUPABASE_URL</code> y <code>VITE_SUPABASE_PUBLISHABLE_KEY</code> en <code>.env.local</code>, reinicia el servidor y vuelve a cargar la app.
-          </p>
-        </section>
-      </main>
-    );
-  }
-
-  if (!authUser) return <AuthView />;
 
   if (!currentUser) {
     return (
@@ -864,12 +926,14 @@ export default function App() {
           <NotificationsView
             notifications={notifications}
             onMarkAllRead={() => {
+              const current = captureOperation();
               void supabase
                 .from('notifications')
                 .update({ is_read: true })
                 .eq('user_id', currentUser.id)
                 .eq('is_read', false)
                 .then(({ error }) => {
+                  if (!current()) return;
                   if (error) {
                     console.error('No se pudieron marcar las notificaciones como leídas:', error);
                     triggerToast('No se pudieron actualizar las notificaciones.');

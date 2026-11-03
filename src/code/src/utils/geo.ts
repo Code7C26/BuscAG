@@ -4,6 +4,13 @@
  * y formateadores amigables de tiempo transcurrido para la interfaz de usuario.
  */
 
+/** Reject malformed legacy coordinates without deleting their publications. */
+export function isValidCoordinates(lat: unknown, lng: unknown): boolean {
+  return typeof lat === 'number' && typeof lng === 'number'
+    && Number.isFinite(lat) && Number.isFinite(lng)
+    && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+}
+
 /**
  * Calcula la distancia en kilómetros entre dos pares de coordenadas (latitud/longitud)
  * utilizando la fórmula del Haversine, que considera la curvatura esférica de la Tierra.
@@ -15,6 +22,7 @@
  * @returns Distancia en kilómetros redondeada a 1 decimal
  */
 export function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  if (!isValidCoordinates(lat1, lon1) || !isValidCoordinates(lat2, lon2)) return NaN;
   const R = 6371; // Radio medio de la Tierra en kilómetros
 
   // Convertimos las diferencias de grados a radianes
@@ -27,7 +35,7 @@ export function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: nu
     Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
   
   // Cálculo del ángulo central en radianes
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
 
   // Multiplicamos el ángulo por el radio terrestre para obtener la distancia
   const d = R * c;

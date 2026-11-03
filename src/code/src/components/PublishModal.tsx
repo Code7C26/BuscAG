@@ -11,7 +11,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Camera, Upload, MapPin, Tag, Calendar, AlertCircle, CheckCircle2, Sparkles, Navigation } from 'lucide-react';
 import L from 'leaflet';
 import { Category, ItemStatus, Item, User } from '../types';
-import { DEFAULT_CENTER } from '../utils/geo';
+import { DEFAULT_CENTER, isValidCoordinates } from '../utils/geo';
 
 // Propiedades que recibe el modal de publicación
 interface PublishModalProps {
@@ -50,7 +50,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   const [description, setDescription] = useState('');                 // Descripción detallada
   const [category, setCategory] = useState<Category>('Electrónicos'); // Categoría seleccionada
   const [date, setDate] = useState(toDateTimeLocal(new Date())); // Fecha y hora local
-  const [locationName, setLocationName] = useState('Plaza Italia, Palermo'); // Nombre legible del lugar
+  const [locationName, setLocationName] = useState(''); // Nombre legible del lugar
   const [lat, setLat] = useState(DEFAULT_CENTER.lat);                 // Coordenada latitud
   const [lng, setLng] = useState(DEFAULT_CENTER.lng);                 // Coordenada longitud
   const [imageUrl, setImageUrl] = useState(PRESET_PHOTOS[0].url);     // Foto del objeto (URL o Base64)
@@ -58,6 +58,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);             // Estado de carga al enviar
   const [submitError, setSubmitError] = useState('');
   const [cameraActive, setCameraActive] = useState(false);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const submitting = useRef(false);
+  const lifecycle = useRef(0);
+  useEffect(() => () => { lifecycle.current += 1; }, [isOpen]);
 
   // Referencias para el input de archivo y el mapa selector
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -99,6 +103,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     // Evento al terminar de arrastrar el pin: actualiza coordenadas
     marker.on('dragend', () => {
       const pos = marker.getLatLng();
+      if (!isValidCoordinates(pos.lat, pos.lng)) { setLocationConfirmed(false); return; }
+      setLocationConfirmed(true);
       setLat(pos.lat);
       setLng(pos.lng);
       setLocationName(`Ubicación seleccionada (${pos.lat.toFixed(3)}, ${pos.lng.toFixed(3)})`);
@@ -106,6 +112,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
     // Evento al hacer clic en cualquier parte del mapa: mueve el pin allí
     map.on('click', (e) => {
+      if (!isValidCoordinates(e.latlng.lat, e.latlng.lng)) { setLocationConfirmed(false); return; }
+      setLocationConfirmed(true);
       marker.setLatLng(e.latlng);
       setLat(e.latlng.lat);
       setLng(e.latlng.lng);
@@ -146,11 +154,12 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     }
 
     setSubmitError('');
+    const version = lifecycle.current;
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === 'string') setImageUrl(reader.result);
+      if (version === lifecycle.current && typeof reader.result === 'string') setImageUrl(reader.result);
     };
-    reader.onerror = () => setSubmitError('No se pudo leer la foto seleccionada.');
+    reader.onerror = () => { if (version === lifecycle.current) setSubmitError('No se pudo leer la foto seleccionada.'); };
     reader.readAsDataURL(file);
   };
 
@@ -158,11 +167,18 @@ export const PublishModal: React.FC<PublishModalProps> = ({
    * Manejador para obtener la posición GPS actual del usuario y mover el pin en el mapa
    */
   const handleUseGPS = () => {
+    const version = lifecycle.current;
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
+          if (version !== lifecycle.current) return;
           const newLat = pos.coords.latitude;
           const newLng = pos.coords.longitude;
+          if (!isValidCoordinates(newLat, newLng)) {
+            setSubmitError('La ubicación recibida no es válida. Selecciona un punto en el mapa.');
+            return;
+          }
+          setLocationConfirmed(true);
           setLat(newLat);
           setLng(newLng);
           setLocationName('Mi ubicación actual (GPS)');
@@ -170,7 +186,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           pickerMarkerRef.current?.setLatLng([newLat, newLng]);
         },
         () => {
-          alert('No se pudo acceder a la geolocalización. Selecciona la ubicación en el mapa.');
+          if (version === lifecycle.current) setSubmitError('No se pudo acceder a la geolocalización. Selecciona la ubicación en el mapa.');
         }
       );
     }
@@ -181,11 +197,22 @@ export const PublishModal: React.FC<PublishModalProps> = ({
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     if (!title.trim() || !description.trim()) {
       alert('Por favor completa el título y la descripción.');
       return;
     }
 
+    if (!locationConfirmed || !isValidCoordinates(lat, lng) || !locationName.trim()) {
+      setSubmitError('Confirma una ubicación válida tocando el mapa, moviendo el pin o usando tu GPS.');
+      return;
+    }
+    if (!Number.isFinite(new Date(date).getTime())) {
+      setSubmitError('Selecciona una fecha válida.');
+      return;
+    }
+    submitting.current = true;
+    const version = lifecycle.current;
     setIsSubmitting(true);
     setSubmitError('');
     try {
@@ -202,12 +229,29 @@ export const PublishModal: React.FC<PublishModalProps> = ({
         user: currentUser,
         reward: reward.trim() ? reward : undefined
       });
+      if (version !== lifecycle.current) return;
+      setStatus('encontrado');
+      setTitle('');
+      setDescription('');
+      setCategory('Electrónicos');
+      setDate(toDateTimeLocal(new Date()));
+      setLocationName('');
+      setLat(DEFAULT_CENTER.lat);
+      setLng(DEFAULT_CENTER.lng);
+      setLocationConfirmed(false);
+      setImageUrl(PRESET_PHOTOS[0].url);
+      setReward('');
+      setCameraActive(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      leafletPickerRef.current?.setView([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng], 14);
+      pickerMarkerRef.current?.setLatLng([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng]);
       onClose();
     } catch (error) {
       console.error('No se pudo publicar el objeto:', error);
-      setSubmitError(error instanceof Error ? error.message : 'No se pudo publicar el objeto.');
+      if (version === lifecycle.current) setSubmitError(error instanceof Error ? error.message : 'No se pudo publicar el objeto.');
     } finally {
-      setIsSubmitting(false);
+      submitting.current = false;
+      if (version === lifecycle.current) setIsSubmitting(false);
     }
   };
 
@@ -227,6 +271,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           </div>
           <button
             onClick={onClose}
+            disabled={isSubmitting}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-full transition cursor-pointer"
             title="Cerrar modal"
           >

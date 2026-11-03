@@ -80,8 +80,40 @@ WITH expected(name, kind) AS (
   FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
   WHERE (n.nspname='public' AND p.proname IN
     ('can_send_item_message','canonicalize_message_display','handle_new_auth_user',
-     'notify_message_recipient','notify_item_recovered'))
+     'notify_message_recipient','notify_item_recovered','send_message_once',
+     'process_match_jobs','buscag_capabilities'))
     OR (n.nspname='auth' AND p.proname='uid')
+), rpc_permissions AS (
+  SELECT n.nspname,p.proname,pg_catalog.oidvectortypes(p.proargtypes) AS argument_types,r.rolname,
+    has_schema_privilege(r.oid,n.oid,'USAGE') AS schema_usage,
+    has_function_privilege(r.oid,p.oid,'EXECUTE') AS can_execute
+  FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
+  CROSS JOIN client_roles r
+  WHERE n.nspname='public' AND p.proname IN ('can_send_item_message','send_message_once','process_match_jobs','buscag_capabilities')
+), foreign_key_edges AS (
+  SELECT cn.nspname AS child_schema,child.relname AS child_table,
+    pn.nspname AS parent_schema,parent.relname AS parent_table,c.conname,c.convalidated,
+    CASE c.confdeltype WHEN 'c' THEN 'CASCADE' WHEN 'n' THEN 'SET NULL'
+      WHEN 'd' THEN 'SET DEFAULT' WHEN 'r' THEN 'RESTRICT' ELSE 'NO ACTION' END AS on_delete,
+    pg_catalog.pg_get_constraintdef(c.oid) AS definition
+  FROM pg_catalog.pg_constraint c
+  JOIN pg_catalog.pg_class child ON child.oid=c.conrelid
+  JOIN pg_catalog.pg_namespace cn ON cn.oid=child.relnamespace
+  JOIN pg_catalog.pg_class parent ON parent.oid=c.confrelid
+  JOIN pg_catalog.pg_namespace pn ON pn.oid=parent.relnamespace
+  WHERE c.contype='f' AND (c.conrelid IN (SELECT oid FROM targets) OR c.confrelid IN (SELECT oid FROM targets))
+), private_workflows AS (
+  SELECT name,to_regclass('buscag_private.'||name) IS NOT NULL AS exists
+  FROM (VALUES ('message_receipts'),('match_jobs'),('match_notices')) x(name)
+), private_permissions AS (
+  SELECT c.relname,r.rolname,c.relrowsecurity,
+    has_schema_privilege(r.oid,n.oid,'USAGE') AS schema_usage,
+    has_table_privilege(r.oid,c.oid,'SELECT') AS can_select,
+    has_table_privilege(r.oid,c.oid,'INSERT') AS can_insert,
+    has_table_privilege(r.oid,c.oid,'UPDATE') AS can_update,
+    has_table_privilege(r.oid,c.oid,'DELETE') AS can_delete
+  FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+  CROSS JOIN client_roles r WHERE n.nspname='buscag_private' AND c.relkind='r'
 ), inherited_roles AS (
   SELECT r.rolname AS client_role,p.rolname AS member_of,p.rolsuper,p.rolbypassrls,
     pg_has_role(r.oid,p.oid,'USAGE') AS immediately_available
@@ -118,6 +150,10 @@ SELECT jsonb_pretty(jsonb_build_object(
   '12_triggers_without_arguments',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM triggers x),'[]'),
   '13_function_metadata_not_bodies',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM functions x),'[]'),
   '14_dependent_views',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM dependent_views x),'[]'),
+  '16_foreign_key_delete_graph',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM foreign_key_edges x),'[]'),
+  '17_optional_workflow_inventory',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM private_workflows x),'[]'),
+  '18_rpc_permissions',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM rpc_permissions x),'[]'),
+  '19_private_workflow_permissions',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM private_permissions x),'[]'),
   '15_realtime',COALESCE((SELECT jsonb_agg(jsonb_build_object('publication',pubname,'schema',schemaname,'table',tablename))
     FROM pg_catalog.pg_publication_tables WHERE schemaname='public' AND tablename IN (SELECT name FROM expected)),'[]')
 )) AS diagnostic;

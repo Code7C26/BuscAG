@@ -1,5 +1,7 @@
 # BuscAG: preparación autónoma para producción
 
+Continuación sobre esta rama: [avances funcionales y plan de operación](NEXT_FUNCTIONAL_ADVANCES.md).
+
 Base: Alexis, con PR #23 y #24 fusionados (1ec807d). Rama de revisión derivada;
 ningún cambio se aplica al backend o al hosting por preparar/compilar este código.
 Las funcionalidades del PR #24 se conservan y sus regresiones siguen en la suite.

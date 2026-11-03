@@ -1,3 +1,4 @@
+import { parseItemDate } from './itemDate';
 /**
  * UTILIDADES GEOGRÁFICAS Y DE FORMATEO DE TIEMPO
  * Contiene funciones matemáticas para calcular distancias entre coordenadas GPS
@@ -60,7 +61,7 @@ function deg2rad(deg: number): number {
  */
 export function formatTimeAgo(dateString: string): string {
   try {
-    const date = new Date(dateString);
+    const date = parseItemDate(dateString);
     const now = new Date();
     const diffInMs = now.getTime() - date.getTime(); // Diferencia en milisegundos
     

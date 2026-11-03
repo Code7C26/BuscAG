@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 const { PGlite } = await import(process.env.LOCAL_PG_SOCKET ? './postgresAdapter.mjs' : process.env.PGLITE_MODULE || '@electric-sql/pglite');
 const db = new PGlite();
 let passed = 0;
+const itemDateType=process.env.TEST_ITEM_DATE_TYPE||'timestamptz';
+if(!['date','timestamptz'].includes(itemDateType)) throw new Error('Unsupported fixture date type');
 const ids = Object.fromEntries(['a', 'b', 'c', 'd'].map((key, i) =>
   [key, `00000000-0000-4000-8000-00000000000${i + 1}`]));
 const itemB = '10000000-0000-4000-8000-000000000001';
@@ -55,7 +57,8 @@ try {
   for (const file of ['20261014000000_dynamic_database.sql', '20261015000000_push_notifications.sql', '20261016000000_notification_permissions.sql']) {
     // PGlite has built-in gen_random_uuid(); its pgcrypto extension is not needed.
     await db.exec((await read(`../supabase/migrations/${file}`))
-      .replace('create extension if not exists pgcrypto;', ''));
+      .replace('create extension if not exists pgcrypto;', '')
+      .replace('date timestamptz not null default now()',`date ${itemDateType} not null default now()`));
   }
   // Model Supabase default grants plus observed drift and old column ACLs.
   await db.exec(`
@@ -295,6 +298,13 @@ try {
       await assert.rejects(db.query(rpc('30000000-0000-4000-8000-000000000002')),e=>e.message==='message_rate_limited');
     }finally {await db.exec('rollback');}
   })();
+  await check('match candidate rejects an unsupported date type without touching existing data',async()=>{
+    await db.exec('begin');
+    try {
+      await db.exec('alter table public.items alter column date drop default;alter table public.items alter column date type text using date::text');
+      await assert.rejects(db.exec(await read('../supabase/proposals/20261104001000_trusted_matches.sql')),/items.date needs/);
+    }finally {await db.exec('rollback');}
+  })();
   const beforeMatches=await snapshot();
   await db.exec(await read('../supabase/proposals/20261104001000_trusted_matches.sql'));
   await check('match installation preserves data and does not backfill or enqueue old publications',async()=>{
@@ -335,6 +345,14 @@ try {
       jsonb_populate_record(null::public.items,(select to_jsonb(i) from public.items i where id='${foundItem}')||$1::jsonb)) score`,[JSON.stringify(extra)])).rows[0].score;
     assert.equal(await score({}),100);
     for(const extra of [{lat:91},{lng:181},{lat:null},{owner_id:ids.a},{owner_id:null},{title:'Keys',description:'Different'},{date:'2026-10-29T00:00:00Z'}]) assert.equal(await score(extra),null);
+  })();
+  await check('publication date values retain the selected calendar day without changing the column type',async()=>{
+    const column=(await db.query("select format_type(atttypid,atttypmod) type from pg_attribute where attrelid='public.items'::regclass and attname='date'")).rows[0].type;
+    assert.equal(column,itemDateType==='date'?'date':'timestamp with time zone');
+    if(itemDateType==='date') {
+      assert.equal((await db.query("select '2026-11-03T23:30-03:00'::date::text as chosen_day")).rows[0].chosen_day,'2026-11-03');
+      assert.equal((await db.query("select '2026-11-03T00:30+13:00'::date::text as chosen_day")).rows[0].chosen_day,'2026-11-03');
+    }
   })();
   await check('keywords normalize accents and repeated words without inflating scores',async()=>{
     const row=(await db.query("select buscag_private.match_words('Mochíla AZÚL azul en la calle') words")).rows[0];
@@ -410,7 +428,7 @@ try {
       assert.equal((await db.query("select count(*)::int n from buscag_private.match_notices where lost_id='80000000-0000-4000-8000-000000000001'")).rows[0].n,2);
     }finally {await Promise.all(clients.map(client=>client.end()));}
   })();
-  console.log(`PASS: ${passed} offline PostgreSQL security checks`);
+  console.log(`PASS: ${passed} offline PostgreSQL security checks (${itemDateType})`);
 } catch (error) {
   console.error('FAIL', error.code || error.name, error.message);
   if (error.query) console.error(error.query);

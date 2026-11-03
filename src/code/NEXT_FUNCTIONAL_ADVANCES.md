@@ -1,5 +1,7 @@
 # Avances sobre PR #25: candidatos y operación segura
 
+**Organización vigente:** desarrollo directo en [Alexis](ALEXIS_DEVELOPMENT.md). Las referencias a ramas/PR inferiores son históricas.
+
 Base exacta: `production/auth-data-readiness` en `e70a0c3`. Rama derivada:
 `production/next-functional-advances`. El PR de esta rama apunta a la primera,
 no a Alexis. No se ejecutaron SQL remotos, despliegues ni cambios en datos reales.

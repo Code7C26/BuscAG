@@ -11,6 +11,7 @@
  */
 
 import { Item, MatchResult } from '../types';
+import { itemDateTime } from './itemDate';
 import { getDistanceKm } from './geo';
 
 // Palabras vacías en español a ignorar en la tokenización para enfocar en palabras distintivas
@@ -93,8 +94,8 @@ export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | 
     return null;
   }
 
-  const lostTime = new Date(lostItem.date).getTime();
-  const foundTime = new Date(foundItem.date).getTime();
+  const lostTime = itemDateTime(lostItem.date);
+  const foundTime = itemDateTime(foundItem.date);
   if (!Number.isFinite(lostTime) || !Number.isFinite(foundTime)) return null;
 
   const timeDiffHours = Math.abs(foundTime - lostTime) / (1000 * 60 * 60);

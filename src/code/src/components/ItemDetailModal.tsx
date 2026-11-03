@@ -1,3 +1,4 @@
+import { formatItemDate } from '../utils/itemDate';
 import { useDialogFocus } from '../utils/useDialogFocus';
 /**
  * MODAL DE DETALLE DE PUBLICACIÓN (ItemDetailModal.tsx)
@@ -242,7 +243,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               <div>
                 <span className="text-[11px] font-bold text-slate-500 block uppercase">Fecha de reporte</span>
                 <span className="text-xs font-semibold text-slate-800 block">
-                  {formatTimeAgo(item.date)} ({new Date(item.date).toLocaleDateString('es-ES')})
+                  {formatTimeAgo(item.date)} ({formatItemDate(item.date)})
                 </span>
               </div>
             </div>

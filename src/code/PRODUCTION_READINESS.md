@@ -1,5 +1,7 @@
 # BuscAG: preparación autónoma para producción
 
+**Organización vigente:** desarrollo directo en [Alexis](ALEXIS_DEVELOPMENT.md). Las referencias a ramas/PR inferiores son históricas.
+
 Continuación sobre esta rama: [avances funcionales y plan de operación](NEXT_FUNCTIONAL_ADVANCES.md).
 
 Base: Alexis, con PR #23 y #24 fusionados (1ec807d). Rama de revisión derivada;

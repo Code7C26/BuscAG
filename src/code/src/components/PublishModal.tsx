@@ -1,3 +1,4 @@
+import { itemDateInput, parseItemDate } from '../utils/itemDate';
 import { reportError } from '../../lib/reportError';
 import { useDialogFocus } from '../utils/useDialogFocus';
 /**
@@ -84,8 +85,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     const valid = isValidCoordinates(initialItem.lat, initialItem.lng);
     setLat(valid ? initialItem.lat : DEFAULT_CENTER.lat); setLng(valid ? initialItem.lng : DEFAULT_CENTER.lng);
     setLocationConfirmed(valid); setImageUrl(initialItem.imageUrl); setReward(initialItem.reward ?? '');
-    const parsed = new Date(initialItem.date);
-    setDate(Number.isFinite(parsed.getTime()) ? toDateTimeLocal(parsed) : '');
+    setDate(itemDateInput(initialItem.date));
     setSubmitError('');
   }, [initialItem?.id]);
 
@@ -221,7 +221,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
       setSubmitError('Confirma una ubicación válida tocando el mapa, moviendo el pin o usando tu GPS.');
       return;
     }
-    if (!Number.isFinite(new Date(date).getTime())) {
+    if (!parseItemDate(date)) {
       setSubmitError('Selecciona una fecha válida.');
       return;
     }

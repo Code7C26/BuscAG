@@ -17,6 +17,7 @@ import { loadItems, loadMessages, loadNotifications, loadProfile, mapItem, mapMe
 import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus, disconnectPushDevice } from '../lib/push';
 // Utilidades de cálculo geográfico (Haversine)
 import { getDistanceKm, isValidCoordinates, NEARBY_RADIUS_KM } from './utils/geo';
+import { serializeItemDate, itemDateInput } from './utils/itemDate';
 import { persistReadReceipts } from '../lib/readReceipts';
 import { needsLegacyMatchNotice } from '../lib/matchDelivery';
 import { createMessageIntents, deliverMessage } from '../lib/messageDelivery';
@@ -414,7 +415,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
     const current = captureOperation();
     if (!current()) throw new Error('La sesión cambió.');
     if (!isValidCoordinates(newItemData.lat, newItemData.lng)) throw new Error('Selecciona una ubicación válida.');
-    const date = new Date(newItemData.date).toISOString();
+    const date = serializeItemDate(newItemData.date);
     const imageUrl = await uploadItemImage(newItemData.imageUrl, currentUser.id, current);
     if (!current()) throw new Error('La sesión cambió.');
     const { data, error } = await supabase
@@ -478,7 +479,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
     if (!supabase || !currentUser || !editingItem || editingItem.user.id !== currentUser.id) throw new Error('No tienes permiso para editar esta publicación.');
     if (!isValidCoordinates(changes.lat,changes.lng)) throw new Error('Selecciona una ubicación válida.');
     const current = captureOperation();
-    const date = new Date(changes.date).toISOString();
+    const date = serializeItemDate(changes.date === itemDateInput(editingItem.date) ? editingItem.date : changes.date);
     const imageUrl = changes.imageUrl === editingItem.imageUrl ? editingItem.imageUrl
       : await uploadItemImage(changes.imageUrl,currentUser.id,current);
     if (!current()) throw new Error('La sesión cambió.');

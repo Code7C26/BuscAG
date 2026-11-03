@@ -13,7 +13,8 @@ begin
   ) expected(t,c,ty) loop
     select pg_catalog.format_type(a.atttypid,a.atttypmod) into actual_type from pg_catalog.pg_attribute a
       where a.attrelid=to_regclass('public.'||r.t) and a.attname=r.c and a.attnum>0 and not a.attisdropped;
-    if actual_type is distinct from r.ty then raise exception 'Preflight: %.% needs %, found %',r.t,r.c,r.ty,actual_type;end if;
+    if not(r.t='items' and r.c='date' and coalesce(actual_type in ('date','timestamp with time zone'),false))
+      and actual_type is distinct from r.ty then raise exception 'Preflight: %.% needs %, found %',r.t,r.c,r.ty,actual_type;end if;
   end loop;
   if not (select relrowsecurity from pg_catalog.pg_class where oid='public.notifications'::regclass) then
     raise exception 'RLS must be enabled on notifications';
@@ -73,7 +74,7 @@ $$;
 -- Conservative alert threshold: at least two exact keywords and >=75/100.
 -- UI suggestions keep their broader threshold and partial-word support.
 create function buscag_private.match_score(l public.items,f public.items) returns integer
-language plpgsql immutable set search_path='' as $$
+language plpgsql stable set search_path='' set timezone='UTC' as $$
 declare shared integer; distance_km numeric; geo integer; timing integer; hours double precision;
   hav double precision;
 begin
@@ -89,7 +90,9 @@ begin
   hav:=power(sin(radians(f.lat-l.lat)/2),2)+cos(radians(l.lat))*cos(radians(f.lat))*power(sin(radians(f.lng-l.lng)/2),2);
   distance_km:=round((6371*2*asin(sqrt(least(1,greatest(0,hav)))))::numeric,1);
   geo:=case when distance_km<=1 then 100 when distance_km<=3 then 85 when distance_km<=6 then 60 when distance_km<=12 then 35 else 15 end;
-  hours:=extract(epoch from (f.date-l.date))/3600;
+  -- DATE subtraction returns integer days. Cast operands first; the function's
+  -- UTC setting makes DATE midnight deterministic without changing instants.
+  hours:=extract(epoch from (f.date::timestamptz-l.date::timestamptz))/3600;
   timing:=case when hours<0 then 75 when hours<=12 then 100 when hours<=48 then 85 when hours<=168 then 60 else 30 end;
   return round((case when shared>=3 then 100 else 75 end)*0.5+geo*0.35+timing*0.15)::integer;
 end; $$;

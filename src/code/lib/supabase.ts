@@ -145,6 +145,10 @@ export interface Database {
       }
     }
     Functions: {
+      publish_item_once: {
+        Args:{p_request_key:string;p_payload:Omit<import('./publicationDelivery').PublicationInput,'owner_id'>}
+        Returns:Database['public']['Tables']['items']['Row'][]
+      }
       buscag_capabilities: { Args: Record<string,never>; Returns: {queued_match_notifications:boolean}[] };
       send_message_once: {
         Args: {p_request_key:string;p_item_id:string;p_recipient_id:string;p_text:string}

@@ -188,7 +188,7 @@ export async function loadNotifications(userId: string, isCurrent: () => boolean
   return rows.map(mapNotification);
 }
 
-export async function uploadItemImage(imageUrl: string, userId: string, isCurrent: () => boolean = () => true): Promise<string> {
+export async function uploadItemImage(imageUrl: string, userId: string, isCurrent: () => boolean = () => true, objectId?: string): Promise<string> {
   if (!isCurrent()) throw new Error('La sesión cambió.');
   const supabaseClient = client();
   const supabaseOrigin = new URL(import.meta.env.VITE_SUPABASE_URL).origin;
@@ -221,12 +221,26 @@ export async function uploadItemImage(imageUrl: string, userId: string, isCurren
     throw new Error('La foto no puede superar los 5 MB.');
   }
   const extension = image.type === 'image/jpeg' ? 'jpg' : image.type.split('/')[1];
-  const path = `${userId}/${createStorageObjectId()}.${extension}`;
+  const id=objectId??createStorageObjectId();
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) throw new Error('Identificador de foto inválido.');
+  const path = `${userId}/${id}.${extension}`;
   const { error } = await supabaseClient.storage.from('item-images').upload(path, image, {
     contentType: image.type,
     upsert: false
   });
-  if (error) throw error;
+  if (error) {
+    if (!isCurrent()) throw new Error('La sesión cambió.');
+    const duplicate=(error as {statusCode?:string;error?:string}).statusCode==='409'||(error as {error?:string}).error==='Duplicate';
+    if(!objectId||!duplicate) throw error;
+    // A previous upload might have committed before its response was lost. Never
+    // overwrite it; verify identical bytes before accepting the stable path.
+    const {data:existing,error:downloadError}=await supabaseClient.storage.from('item-images').download(path);
+    if(!isCurrent()) throw new Error('La sesión cambió.');
+    if(downloadError||!existing) throw downloadError??new Error('No se pudo verificar la foto guardada.');
+    const [left,right]=await Promise.all([image.arrayBuffer(),existing.arrayBuffer()]);
+    const a=new Uint8Array(left);const b=new Uint8Array(right);
+    if(a.length!==b.length||a.some((byte,index)=>byte!==b[index])) throw new Error('La foto guardada no coincide con este intento.');
+  }
   if (!isCurrent()) throw new Error('La sesión cambió.');
   return supabaseClient.storage.from('item-images').getPublicUrl(path).data.publicUrl;
 }

@@ -81,7 +81,7 @@ WITH expected(name, kind) AS (
   WHERE (n.nspname='public' AND p.proname IN
     ('can_send_item_message','canonicalize_message_display','handle_new_auth_user',
      'notify_message_recipient','notify_item_recovered','send_message_once',
-     'process_match_jobs','buscag_capabilities'))
+     'process_match_jobs','buscag_capabilities','publish_item_once'))
     OR (n.nspname='auth' AND p.proname='uid')
 ), rpc_permissions AS (
   SELECT n.nspname,p.proname,pg_catalog.oidvectortypes(p.proargtypes) AS argument_types,r.rolname,
@@ -89,7 +89,7 @@ WITH expected(name, kind) AS (
     has_function_privilege(r.oid,p.oid,'EXECUTE') AS can_execute
   FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
   CROSS JOIN client_roles r
-  WHERE n.nspname='public' AND p.proname IN ('can_send_item_message','send_message_once','process_match_jobs','buscag_capabilities')
+  WHERE n.nspname='public' AND p.proname IN ('can_send_item_message','send_message_once','process_match_jobs','buscag_capabilities','publish_item_once')
 ), foreign_key_edges AS (
   SELECT cn.nspname AS child_schema,child.relname AS child_table,
     pn.nspname AS parent_schema,parent.relname AS parent_table,c.conname,c.convalidated,
@@ -104,7 +104,7 @@ WITH expected(name, kind) AS (
   WHERE c.contype='f' AND (c.conrelid IN (SELECT oid FROM targets) OR c.confrelid IN (SELECT oid FROM targets))
 ), private_workflows AS (
   SELECT name,to_regclass('buscag_private.'||name) IS NOT NULL AS exists
-  FROM (VALUES ('message_receipts'),('match_jobs'),('match_notices')) x(name)
+  FROM (VALUES ('message_receipts'),('match_jobs'),('match_notices'),('publication_receipts')) x(name)
 ), private_permissions AS (
   SELECT c.relname,r.rolname,c.relrowsecurity,
     has_schema_privilege(r.oid,n.oid,'USAGE') AS schema_usage,

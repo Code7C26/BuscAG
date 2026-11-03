@@ -34,6 +34,7 @@ async function loadModule(file, responses) {
   };
   const result = await build({
     absWorkingDir: new URL('..', import.meta.url).pathname,
+    define:{'import.meta.env.VITE_SUPABASE_URL':JSON.stringify('https://synthetic.supabase.co')},
     entryPoints: [file], bundle: true, write: false, platform: 'node', format: 'esm',
     plugins: [{ name: 'mock-supabase', setup(plugin) {
       plugin.onResolve({ filter: /^\.\/supabase$/ }, () => ({ path: 'client', namespace: 'mock' }));
@@ -148,6 +149,33 @@ try {
     const { module, calls } = await loadModule('lib/push.ts', {});
     await module.disconnectPushDevice();
     assert.equal(unsubscribed, 1); assert.equal(closed, 1); assert.equal(calls.length, 0);
+  });
+  await check('lost upload responses reuse a stable path and accept only identical stored bytes without overwriting',async()=>{
+    const {module}=await loadModule('lib/database.ts',{});
+    const originalFetch=globalThis.fetch;const bytes=new Uint8Array([1,2,3,4]);const paths=[];let attempt=0,downloads=0;
+    globalThis.fetch=async()=>new Response(bytes,{headers:{'content-type':'image/png'}});
+    globalThis.__securityTestClient.storage={from(bucket){assert.equal(bucket,'item-images');return {
+      async upload(path,_image,options){paths.push(path);assert.equal(options.upsert,false);return {error:++attempt===1?{statusCode:'0'}:{statusCode:'409'}};},
+      async download(){downloads++;return {data:new Blob([bytes]),error:null};},
+      getPublicUrl(path){return {data:{publicUrl:'https://synthetic.supabase.co/storage/v1/object/public/item-images/'+path}};}
+    };}};
+    const key='90000000-0000-4000-8000-000000000001';
+    try {
+      await assert.rejects(module.uploadItemImage('data:image/png;base64,AQIDBA==',profile.id,()=>true,key));
+      const url=await module.uploadItemImage('data:image/png;base64,AQIDBA==',profile.id,()=>true,key);
+      assert.equal(paths[0],paths[1]);assert.equal(downloads,1);assert.ok(url.endsWith(key+'.png'));
+    }finally {globalThis.fetch=originalFetch;}
+  });
+  await check('upload collision with different bytes is rejected without replacing the object',async()=>{
+    const {module}=await loadModule('lib/database.ts',{});const originalFetch=globalThis.fetch;
+    globalThis.fetch=async()=>new Response(new Uint8Array([1]),{headers:{'content-type':'image/png'}});
+    globalThis.__securityTestClient.storage={from(){return {
+      async upload(_path,_image,options){assert.equal(options.upsert,false);return {error:{statusCode:'409'}};},
+      async download(){return {data:new Blob([new Uint8Array([2])]),error:null};},
+      getPublicUrl(){throw Error('must not accept a different image');}
+    };}};
+    try {await assert.rejects(module.uploadItemImage('data:image/png;base64,AQ==',profile.id,()=>true,'90000000-0000-4000-8000-000000000002'),/no coincide/);}
+    finally {globalThis.fetch=originalFetch;}
   });
   console.log(`PASS: ${passed} offline client security checks`);
 } finally {

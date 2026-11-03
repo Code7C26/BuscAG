@@ -479,3 +479,18 @@ test('a changed read callback never erases a conversation draft',async()=>{
   const {host,render}=await mount(ContactModal,props);await change(host.querySelector('input'),'Keep this draft');
   await render({...props,onMarkThreadRead:()=>{}});assert.equal(host.querySelector('input').value,'Keep this draft');
 });
+
+
+test('publication retry after an uncertain RPC response keeps its request key and uploaded image',async()=>{
+  let uploads=0;const keys=[];let fail=true;
+  mock.data.uploadItemImage=async()=>{uploads++;return 'https://images.invalid/saved';};
+  mock.client.rpc=(name,args)=>({single:async()=>{
+    if(name!=='publish_item_once')return {data:null,error:{code:'PGRST202'}};
+    keys.push(args.p_request_key);
+    return fail?{data:null,error:{code:'FETCH_ERROR'}}:{data:{...item('published'),date:args.p_payload.date},error:null};
+  }});
+  await mount(App);await emit('a');const publish=mock.views.PublishModal.onSubmit;const draft=item();
+  await act(async()=>{await assert.rejects(publish(draft));});
+  fail=false;await act(async()=>publish(draft));
+  assert.equal(keys[0],keys[1]);assert.equal(uploads,1);assert.equal(mock.queries.filter(q=>q.operation==='insert').length,0);
+});

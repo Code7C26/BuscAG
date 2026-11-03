@@ -428,6 +428,73 @@ try {
       assert.equal((await db.query("select count(*)::int n from buscag_private.match_notices where lost_id='80000000-0000-4000-8000-000000000001'")).rows[0].n,2);
     }finally {await Promise.all(clients.map(client=>client.end()));}
   })();
+  const beforePublicationRPC=await snapshot();
+  await db.exec(await read('../supabase/proposals/20261104002000_publication_receipts.sql'));
+  const publication={title:'Synthetic wallet',description:'Synthetic publication',category:'Otros',status:'perdido',location_name:'Synthetic',lat:0,lng:0,date:'2026-11-03T23:30-03:00',image_url:'https://images.invalid/synthetic.png'};
+  const publicationKey='90000000-0000-4000-8000-000000000001';
+  const publish=(payload=publication,key=publicationKey)=>`select * from public.publish_item_once('${key}','${JSON.stringify(payload)}'::jsonb)`;
+  await check('publication RPC installation preserves all rows and closes direct INSERT bypass',async()=>{
+    assert.deepEqual(await snapshot(),beforePublicationRPC);
+    await denied('anon',null,publish());
+    await denied('authenticated',ids.a,`insert into public.items(owner_id,title,description,category,location_name,lat,lng) values('${ids.a}','Synthetic','Synthetic','Otros','Synthetic',0,0)`);
+    await denied('authenticated',ids.a,'select * from buscag_private.publication_receipts');
+  })();
+  await check('publication retry returns one owned item and enqueues matching once',async()=>{
+    await db.exec('begin');
+    try {
+      await db.exec('set local role authenticated');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+      const first=(await db.query(publish())).rows[0];const retry=(await db.query(publish())).rows[0];
+      assert.equal(first.id,retry.id);assert.equal(first.owner_id,ids.a);assert.equal(first.contact_count,0);
+      const day=(await db.query('select date::text chosen_date,extract(epoch from date::timestamptz)::double precision instant from public.items where id=$1',[first.id])).rows[0];
+      if(itemDateType==='date')assert.equal(day.chosen_date,'2026-11-03');
+      else assert.equal(day.instant*1000,Date.parse(publication.date));
+      await db.exec('reset role');
+      assert.equal((await db.query('select count(*)::int n from buscag_private.match_jobs where item_id=$1',[first.id])).rows[0].n,1);
+      assert.equal((await db.query('select count(*)::int n from buscag_private.publication_receipts where request_key=$1',[publicationKey])).rows[0].n,1);
+    }finally {await db.exec('rollback');}
+  })();
+  await check('publication RPC rejects forged ownership/counters and invalid coordinates/dates',async()=>{
+    for(const extra of [{owner_id:ids.b},{contact_count:99},{lat:91},{lng:null},{date:'2026-02-30'},{status:'recuperado'},{title:'   '},{image_url:'javascript:synthetic'}]){
+      await assert.rejects(as('authenticated',ids.a,publish({...publication,...extra})),e=>['22023','22008'].includes(e.code));
+    }
+  })();
+  await check('publication request keys reject changed payloads and do not recreate deleted originals',async()=>{
+    await db.exec('begin');
+    try {
+      await db.exec('set local role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+      const first=(await db.query(publish())).rows[0];
+      await db.exec('savepoint collision');
+      await assert.rejects(db.query(publish({...publication,title:'Changed'})),e=>e.code==='22023');
+      await db.exec('rollback to collision');
+      await db.query('delete from public.items where id=$1',[first.id]);
+      await assert.rejects(db.query(publish()),e=>e.message==='Original publication is unavailable');
+    }finally {await db.exec('rollback');}
+  })();
+  await check('publication quota blocks new attempts while permitting successful replay',async()=>{
+    await db.exec('begin');
+    try {
+      await db.exec('set local role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+      const first=(await db.query(publish())).rows[0];await db.exec('reset role');
+      await db.query(`insert into buscag_private.publication_receipts(actor_id,request_key,request_hash,item_id)
+        select '${ids.a}',gen_random_uuid(),'synthetic','${first.id}' from generate_series(1,29)`);
+      await db.exec('set local role authenticated');
+      assert.equal((await db.query(publish())).rows[0].id,first.id);
+      await assert.rejects(db.query(publish(publication,'90000000-0000-4000-8000-000000000002')),e=>e.message==='publication_rate_limited');
+    }finally {await db.exec('rollback');}
+  })();
+  if(db.fork) await check('native PostgreSQL simultaneous publication retries create one item',async()=>{
+    const clients=await Promise.all([db.fork(),db.fork()]);
+    try {
+      const idsReturned=await Promise.all(clients.map(async client=>{
+        await client.query('begin');
+        try {
+          await client.query('set local role authenticated');await client.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+          const row=(await client.query(publish())).rows[0];await client.query('commit');return row.id;
+        }catch(error){await client.query('rollback');throw error;}
+      }));assert.equal(idsReturned[0],idsReturned[1]);
+    }finally {await Promise.all(clients.map(client=>client.end()));}
+  })();
   console.log(`PASS: ${passed} offline PostgreSQL security checks (${itemDateType})`);
 } catch (error) {
   console.error('FAIL', error.code || error.name, error.message);

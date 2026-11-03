@@ -1,3 +1,4 @@
+import { createPublicationPublisher } from '../lib/publicationDelivery';
 import { reportError } from '../lib/reportError';
 /**
  * COMPONENTE PRINCIPAL (App.tsx)
@@ -7,7 +8,7 @@ import { reportError } from '../lib/reportError';
  */
 import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 // Iconos de Lucide para la interfaz visual
-import { supabase } from '../lib/supabase';
+import { supabase, type Database } from '../lib/supabase';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import { Search, MapPin, SlidersHorizontal, Plus, AlertCircle, CheckCircle2, Sparkles, Navigation, X, ShieldAlert } from 'lucide-react';
 // Tipos TypeScript para tipado estricto
@@ -123,6 +124,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pushRevision = useRef(0);
   const messageIntents = useRef(createMessageIntents());
+  const publications = useRef(createPublicationPublisher<Database['public']['Tables']['items']['Row']>());
   const recoveryRequests = useRef(new Map<string,Promise<boolean>>());
   const messageRequests = useRef(new Map<string, Promise<void>>());
   const captureOperation = useCallback(() => {
@@ -416,31 +418,21 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
     if (!current()) throw new Error('La sesión cambió.');
     if (!isValidCoordinates(newItemData.lat, newItemData.lng)) throw new Error('Selecciona una ubicación válida.');
     const date = serializeItemDate(newItemData.date);
-    const imageUrl = await uploadItemImage(newItemData.imageUrl, currentUser.id, current);
+    const data = await publications.current.publish({
+      owner_id:currentUser.id,title:newItemData.title,description:newItemData.description,
+      category:newItemData.category,status:newItemData.status,location_name:newItemData.locationName,
+      lat:newItemData.lat,lng:newItemData.lng,date,image_url:newItemData.imageUrl,reward:newItemData.reward
+    },{
+      upload:key=>uploadItemImage(newItemData.imageUrl,currentUser.id,current,key),
+      rpc:args=>supabase.rpc('publish_item_once',args).single(),
+      legacy:input=>supabase.from('items').insert(input).select('*').single(),isCurrent:current
+    }).catch(error=>{
+      if (!current()) throw new Error('La sesión cambió.');
+      reportError('No se pudo guardar la publicación:',error);
+      throw new Error((error as {message?:string})?.message==='publication_rate_limited'
+        ? 'Espera antes de publicar más objetos. Tu borrador se conserva.' : 'No se pudo guardar la publicación.');
+    });
     if (!current()) throw new Error('La sesión cambió.');
-    const { data, error } = await supabase
-      .from('items')
-      .insert({
-        owner_id: currentUser.id,
-        title: newItemData.title,
-        description: newItemData.description,
-        category: newItemData.category,
-        status: newItemData.status,
-        location_name: newItemData.locationName,
-        lat: newItemData.lat,
-        lng: newItemData.lng,
-        date,
-        image_url: imageUrl,
-        reward: newItemData.reward
-      })
-      .select('*')
-      .single();
-
-    if (!current()) throw new Error('La sesión cambió.');
-    if (error) {
-      reportError('No se pudo guardar la publicación:', error);
-      throw new Error('No se pudo guardar la publicación.');
-    }
 
     const newItem = mapItem(data, currentUser);
     setItems(prev => [newItem, ...prev.filter(item => item.id !== newItem.id)]);

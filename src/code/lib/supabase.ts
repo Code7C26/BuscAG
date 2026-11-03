@@ -145,6 +145,7 @@ export interface Database {
       }
     }
     Functions: {
+      buscag_capabilities: { Args: Record<string,never>; Returns: {queued_match_notifications:boolean}[] };
       send_message_once: {
         Args: {p_request_key:string;p_item_id:string;p_recipient_id:string;p_text:string}
         Returns: Database['public']['Tables']['messages']['Row'][]

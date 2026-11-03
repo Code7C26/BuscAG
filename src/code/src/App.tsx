@@ -17,6 +17,7 @@ import { loadItems, loadMessages, loadNotifications, loadProfile, mapItem, mapMe
 import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus, disconnectPushDevice } from '../lib/push';
 // Utilidades de cálculo geográfico (Haversine)
 import { getDistanceKm, isValidCoordinates, NEARBY_RADIUS_KM } from './utils/geo';
+import { needsLegacyMatchNotice } from '../lib/matchDelivery';
 import { createMessageIntents, deliverMessage } from '../lib/messageDelivery';
 import { createRefreshQueue } from './utils/refreshQueue';
 import { authCallbackError, cleanAuthCallback } from '../lib/authFlow';
@@ -425,7 +426,9 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
 
       // Registra una notificación en el historial de alertas
       try {
-        await createNotification(
+        const legacy = await needsLegacyMatchNotice(()=>supabase.rpc('buscag_capabilities',{}).single());
+        if (!current()) return;
+        if (legacy) await createNotification(
           `✨ ¡Coincidencia del ${best.score}% encontrada!`,
           `El sistema detectó que "${newItem.title}" coincide con "${otherTitle}".`,
           'match',

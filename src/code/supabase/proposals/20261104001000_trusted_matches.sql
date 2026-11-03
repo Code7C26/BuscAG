@@ -1,0 +1,149 @@
+-- CANDIDATE: requires reviewed security baseline, message receipts and a scheduled worker.
+-- No existing data/backfill or conversation-retention policy is changed.
+begin;
+do $$ begin
+  if to_regclass('buscag_private.message_receipts') is null
+    or to_regclass('public.public_profiles') is null then
+    raise exception 'Reviewed security baseline and message receipts are required';
+  end if;
+end; $$;
+create table buscag_private.match_jobs (
+  item_id uuid primary key references public.items(id) on delete cascade,
+  after_id uuid,
+  queued_at timestamptz not null default now()
+);
+create table buscag_private.match_notices (
+  lost_id uuid not null references public.items(id) on delete cascade,
+  found_id uuid not null references public.items(id) on delete cascade,
+  recipient_id uuid not null references auth.users(id) on delete cascade,
+  notification_id uuid references public.notifications(id) on delete set null,
+  primary key(lost_id,found_id,recipient_id)
+);
+alter table buscag_private.match_jobs enable row level security;
+alter table buscag_private.match_notices enable row level security;
+revoke all on buscag_private.match_jobs,buscag_private.match_notices from public,anon,authenticated,service_role;
+create index match_jobs_order_idx on buscag_private.match_jobs(queued_at,item_id);
+create index items_match_candidates_idx on public.items(category,status,id)
+  where status in ('perdido','encontrado') and owner_id is not null;
+
+create function buscag_private.match_words(body text) returns text[]
+language sql immutable set search_path='' as $$
+  select coalesce(array_agg(distinct word),array[]::text[]) from
+    regexp_split_to_table(regexp_replace(regexp_replace(
+      normalize(lower(left(coalesce(body,''),10000)),NFD),U&'[\0300-\036f]','','g'),
+      '[^a-z0-9[:space:]]',' ','g'),'[[:space:]]+') word
+  where char_length(word)>=3 and word<>all(array[
+  'de', 'la', 'el', 'en', 'y', 'a', 'los', 'del', 'se', 'las', 'por', 'un', 'para',
+  'con', 'no', 'una', 'su', 'al', 'lo', 'como', 'mas', 'pero', 'sus', 'le', 'ya',
+  'o', 'fue', 'este', 'ha', 'si', 'porque', 'esta', 'son', 'entre', 'esta', 'cuando',
+  'muy', 'sin', 'sobre', 'ser', 'tiene', 'tambien', 'me', 'hasta', 'hay', 'donde',
+  'quien', 'desde', 'todo', 'nos', 'durante', 'todos', 'uno', 'les', 'ni', 'contra',
+  'otros', 'ese', 'eso', 'ante', 'ellos', 'e', 'esto', 'mi', 'antes', 'algunos',
+  'unos', 'yo', 'otro', 'otras', 'otra', 'él', 'tanto', 'esa', 'estos', 'mucho',
+  'quienes', 'nada', 'muchos', 'cual', 'sea', 'poco', 'ella', 'estar', 'estas',
+  'algunas', 'algo', 'nosotros', 'mi', 'mis', 'tu', 'tus', 'cerca', 'alrededor',
+  'tiradas', 'olvidada', 'olvidado', 'encontre', 'perdi', 'extravio', 'recuperado',
+  'av', 'avenida', 'calle', 'plaza'
+]);
+$$;
+-- Conservative alert threshold: at least two exact keywords and >=75/100.
+-- UI suggestions keep their broader threshold and partial-word support.
+create function buscag_private.match_score(l public.items,f public.items) returns integer
+language plpgsql immutable set search_path='' as $$
+declare shared integer; distance_km numeric; geo integer; timing integer; hours double precision;
+  hav double precision;
+begin
+  if l.status<>'perdido' or f.status<>'encontrado' or l.category is distinct from f.category
+    or l.owner_id is null or f.owner_id is null or l.owner_id=f.owner_id
+    or l.lat is null or l.lng is null or f.lat is null or f.lng is null
+    or not(l.lat between -90 and 90 and f.lat between -90 and 90 and l.lng between -180 and 180 and f.lng between -180 and 180)
+    or l.date is null or f.date is null or not isfinite(l.date) or not isfinite(f.date)
+    or f.date<l.date-interval '24 hours' then return null; end if;
+  select count(*) into shared from unnest(buscag_private.match_words(l.title||' '||l.description)) w
+    where w=any(buscag_private.match_words(f.title||' '||f.description));
+  if shared<2 then return null; end if;
+  hav:=power(sin(radians(f.lat-l.lat)/2),2)+cos(radians(l.lat))*cos(radians(f.lat))*power(sin(radians(f.lng-l.lng)/2),2);
+  distance_km:=round((6371*2*asin(sqrt(least(1,greatest(0,hav)))))::numeric,1);
+  geo:=case when distance_km<=1 then 100 when distance_km<=3 then 85 when distance_km<=6 then 60 when distance_km<=12 then 35 else 15 end;
+  hours:=extract(epoch from (f.date-l.date))/3600;
+  timing:=case when hours<0 then 75 when hours<=12 then 100 when hours<=48 then 85 when hours<=168 then 60 else 30 end;
+  return round((case when shared>=3 then 100 else 75 end)*0.5+geo*0.35+timing*0.15)::integer;
+end; $$;
+
+create function buscag_private.enqueue_match() returns trigger
+language plpgsql security definer set search_path='' as $$
+begin
+  insert into buscag_private.match_jobs(item_id) values(new.id)
+    on conflict(item_id) do update set after_id=null,queued_at=now();
+  return new;
+end; $$;
+create trigger buscag_enqueue_match_insert after insert on public.items
+  for each row execute function buscag_private.enqueue_match();
+create trigger buscag_enqueue_match_edit after update of title,description,category,status,lat,lng,date,owner_id on public.items
+  for each row when ((old.title,old.description,old.category,old.status,old.lat,old.lng,old.date,old.owner_id)
+    is distinct from (new.title,new.description,new.category,new.status,new.lat,new.lng,new.date,new.owner_id))
+  execute function buscag_private.enqueue_match();
+
+create function public.process_match_jobs(p_limit integer default 5) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare job record; target public.items%rowtype; other public.items%rowtype;
+  lost public.items%rowtype; found_item public.items%rowtype;
+  score integer; recipient uuid; counterpart uuid; counterpart_owner uuid; nid uuid;
+  claimed integer:=0; inspected integer; delivered integer:=0; added integer; cursor_id uuid;
+begin
+  if p_limit is null or p_limit<1 or p_limit>20 then raise exception 'Invalid batch limit' using errcode='22023'; end if;
+  -- One bounded worker transaction at a time avoids pair-ledger lock cycles.
+  if not pg_try_advisory_xact_lock(hashtextextended('buscag:match-worker',0)) then
+    return jsonb_build_object('batches',0,'notifications',0,'busy',true);
+  end if;
+  for job in select * from buscag_private.match_jobs order by queued_at,item_id for update skip locked limit p_limit loop
+    claimed:=claimed+1; inspected:=0; cursor_id:=job.after_id;
+    select * into target from public.items where id=job.item_id;
+    if not found or target.owner_id is null or target.status not in ('perdido','encontrado') then
+      delete from buscag_private.match_jobs where item_id=job.item_id; continue;
+    end if;
+    for other in select * from public.items where category=target.category
+      and status=case when target.status='perdido' then 'encontrado' else 'perdido' end
+      and owner_id is not null and owner_id<>target.owner_id
+      and (job.after_id is null or id>job.after_id) order by id limit 201 loop
+      inspected:=inspected+1; exit when inspected>200; cursor_id:=other.id;
+      if target.status='perdido' then lost:=target;found_item:=other; else lost:=other;found_item:=target; end if;
+      score:=buscag_private.match_score(lost,found_item);
+      if score is null or score<75 then continue; end if;
+      foreach recipient in array array[lost.owner_id,found_item.owner_id] loop
+        if recipient=lost.owner_id then counterpart:=found_item.id;counterpart_owner:=found_item.owner_id;
+        else counterpart:=lost.id;counterpart_owner:=lost.owner_id; end if;
+        insert into buscag_private.match_notices(lost_id,found_id,recipient_id)
+          values(lost.id,found_item.id,recipient) on conflict do nothing;
+        get diagnostics added=row_count;
+        if added=0 then continue; end if;
+        insert into public.notifications(user_id,title,message,type,related_item_id,related_user_id)
+          values(recipient,'Coincidencia del '||score||'% encontrada',
+            'Hay una publicación con características compatibles. Revisa la coincidencia.','match',counterpart,counterpart_owner)
+          returning id into nid;
+        update buscag_private.match_notices set notification_id=nid
+          where lost_id=lost.id and found_id=found_item.id and recipient_id=recipient;
+        delivered:=delivered+1;
+      end loop;
+    end loop;
+    if inspected>200 then
+      update buscag_private.match_jobs set after_id=cursor_id,queued_at=now() where item_id=job.item_id;
+    else delete from buscag_private.match_jobs where item_id=job.item_id; end if;
+  end loop;
+  return jsonb_build_object('batches',claimed,'notifications',delivered,'busy',false);
+end; $$;
+revoke all on function public.process_match_jobs(integer) from public,anon,authenticated,service_role;
+grant execute on function public.process_match_jobs(integer) to service_role;
+create function public.buscag_capabilities() returns table(queued_match_notifications boolean)
+language sql stable security invoker set search_path='' as $$ select true $$;
+revoke all on function public.buscag_capabilities() from public,anon,authenticated,service_role;
+grant execute on function public.buscag_capabilities() to authenticated;
+-- All alert creation is trusted after this candidate is activated.
+revoke insert on public.notifications from public,anon,authenticated;
+do $$ declare cols text;begin
+  select string_agg(format('%I',attname),',') into cols from pg_catalog.pg_attribute
+    where attrelid='public.notifications'::regclass and attnum>0 and not attisdropped;
+  execute format('revoke insert (%s) on public.notifications from public,anon,authenticated',cols);
+end; $$;
+revoke all on all functions in schema buscag_private from public,anon,authenticated,service_role;
+commit;

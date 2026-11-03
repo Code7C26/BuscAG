@@ -2,7 +2,7 @@
 // No connection string, project URL, real credentials or production rows are used.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-const { PGlite } = await import(process.env.PGLITE_MODULE || '@electric-sql/pglite');
+const { PGlite } = await import(process.env.LOCAL_PG_SOCKET ? './postgresAdapter.mjs' : process.env.PGLITE_MODULE || '@electric-sql/pglite');
 const db = new PGlite();
 let passed = 0;
 const ids = Object.fromEntries(['a', 'b', 'c', 'd'].map((key, i) =>
@@ -35,7 +35,11 @@ try {
     assert.ok(report['02_inventory'].every(x => !x.exists_in_public));
   })();
   await db.exec(`
-    create role anon; create role authenticated; create role service_role bypassrls;
+    do $$ begin
+      if not exists(select from pg_roles where rolname='anon') then create role anon; end if;
+      if not exists(select from pg_roles where rolname='authenticated') then create role authenticated; end if;
+      if not exists(select from pg_roles where rolname='service_role') then create role service_role bypassrls; end if;
+    end; $$;
     create schema auth; create schema storage;
     create table auth.users (id uuid primary key, raw_user_meta_data jsonb default '{}');
     create function auth.uid() returns uuid language sql stable as
@@ -280,6 +284,83 @@ try {
       assert.equal((await db.query(rpc())).rows[0].id,original.id);
       await assert.rejects(db.query(rpc('30000000-0000-4000-8000-000000000002')),e=>e.message==='message_rate_limited');
     }finally {await db.exec('rollback');}
+  })();
+  const beforeMatches=await snapshot();
+  await db.exec(await read('../supabase/proposals/20261104001000_trusted_matches.sql'));
+  await check('match installation preserves data and does not backfill or enqueue old publications',async()=>{
+    assert.deepEqual(await snapshot(),beforeMatches);
+    assert.equal((await db.query('select count(*)::int n from buscag_private.match_jobs')).rows[0].n,0);
+  })();
+  await check('only backend can process matches; clients cannot forge match notices or access private queue',async()=>{
+    await denied('authenticated',ids.a,'select public.process_match_jobs(5)');
+    await denied('anon',null,'select public.process_match_jobs(5)');
+    await denied('authenticated',ids.a,`insert into public.notifications(user_id,title,message,type) values('${ids.a}','Fake','Fake','match')`);
+    await denied('authenticated',ids.a,'select * from buscag_private.match_jobs');
+    assert.equal((await as('authenticated',ids.a,'select * from public.buscag_capabilities()')).rows[0].queued_match_notifications,true);
+  })();
+  const lost='40000000-0000-4000-8000-000000000001';
+  const foundItem='40000000-0000-4000-8000-000000000002';
+  await db.query(`insert into public.items(id,owner_id,title,description,category,status,location_name,lat,lng,date)
+    values('${lost}','${ids.a}','Mochila AZUL Nike','Mochila azul nike','Otros','perdido','Synthetic',0,0,'2026-11-01T12:00:00Z'),
+    ('${foundItem}','${ids.b}','Mochila azul Nike','Mochila azul nike','Otros','encontrado','Synthetic',0,0,'2026-11-01T13:00:00Z')`);
+  await check('trusted worker notifies both owners exactly once even when both items are queued',async()=>{
+    assert.equal((await as('service_role',null,'select public.process_match_jobs(5) result')).rows[0].result.notifications,2);
+    await db.query('select public.process_match_jobs(5)');
+    assert.equal((await db.query('select count(*)::int n from buscag_private.match_notices')).rows[0].n,2);
+    const rows=(await db.query(`select user_id,related_item_id from public.notifications where type='match' order by user_id`)).rows;
+    assert.deepEqual(rows,[{user_id:ids.a,related_item_id:foundItem},{user_id:ids.b,related_item_id:lost}]);
+    await db.query(`update public.items set description='Mochila azul NIKE actualizada' where id='${lost}'`);
+    await db.query('select public.process_match_jobs(5)');
+    assert.equal((await db.query('select count(*)::int n from buscag_private.match_notices')).rows[0].n,2);
+  })();
+  await check('counter/read-only edits do not enqueue work, recovered items skip matching',async()=>{
+    await db.query(`update public.items set contact_count=contact_count+1 where id='${lost}'`);
+    assert.equal((await db.query('select count(*)::int n from buscag_private.match_jobs')).rows[0].n,0);
+    await db.query(`update public.items set status='recuperado' where id='${lost}'`);
+    assert.equal((await db.query('select public.process_match_jobs(5) result')).rows[0].result.notifications,0);
+  })();
+  await check('matching excludes invalid coordinates, same owner, weak text and incompatible dates',async()=>{
+    const score=async(extra)=> (await db.query(`select buscag_private.match_score(
+      jsonb_populate_record(null::public.items,(select to_jsonb(i) from public.items i where id='${lost}')||'{"status":"perdido"}'),
+      jsonb_populate_record(null::public.items,(select to_jsonb(i) from public.items i where id='${foundItem}')||$1::jsonb)) score`,[JSON.stringify(extra)])).rows[0].score;
+    assert.equal(await score({}),100);
+    for(const extra of [{lat:91},{lng:181},{lat:null},{owner_id:ids.a},{owner_id:null},{title:'Keys',description:'Different'},{date:'2026-10-29T00:00:00Z'}]) assert.equal(await score(extra),null);
+  })();
+  await check('keywords normalize accents and repeated words without inflating scores',async()=>{
+    const row=(await db.query("select buscag_private.match_words('Mochíla AZÚL azul en la calle') words")).rows[0];
+    assert.deepEqual(row.words.sort(),['azul','mochila']);
+  })();
+  await check('large candidate sets resume after 200 rows and still deliver the final match',async()=>{
+    await db.exec('begin');
+    try {
+      await db.query(`update public.items set status='perdido' where id='${lost}'`);
+      await db.query(`insert into public.items(id,owner_id,title,description,category,status,location_name,lat,lng,date)
+        select ('60000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'${ids.b}',
+          case when n=205 then 'Mochila azul Nike' else 'Different object' end,'Synthetic','Otros','encontrado','Synthetic',0,0,'2026-11-01T13:00:00Z'
+        from generate_series(1,205) n`);
+      await db.query('select public.process_match_jobs(1)');
+      assert.ok((await db.query(`select after_id from buscag_private.match_jobs where item_id='${lost}'`)).rows[0].after_id);
+      assert.equal((await db.query('select public.process_match_jobs(1) result')).rows[0].result.notifications,2);
+      assert.equal((await db.query(`select count(*)::int n from buscag_private.match_jobs where item_id='${lost}'`)).rows[0].n,0);
+    }finally {await db.exec('rollback');}
+  })();
+  if (db.fork) await check('native PostgreSQL concurrent retries commit one message and one receipt',async()=>{
+    const clients=await Promise.all([db.fork(),db.fork()]);
+    const key='50000000-0000-4000-8000-000000000001';
+    try {
+      const results=await Promise.all(clients.map(async client=>{
+        await client.query('begin');
+        try {
+          await client.query('set local role authenticated');
+          await client.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+          const result=await client.query(rpc(key,'Parallel synthetic'));
+          await client.query('commit');return result.rows[0].id;
+        }catch(error){await client.query('rollback');throw error;}
+      }));
+      assert.equal(results[0],results[1]);
+      assert.equal((await db.query('select count(*)::int n from buscag_private.message_receipts where request_key=$1',[key])).rows[0].n,1);
+      assert.equal((await db.query("select count(*)::int n from public.messages where text='Parallel synthetic'")).rows[0].n,1);
+    }finally {await Promise.all(clients.map(client=>client.end()));}
   })();
   console.log(`PASS: ${passed} offline PostgreSQL security checks`);
 } catch (error) {

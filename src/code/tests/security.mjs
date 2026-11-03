@@ -495,6 +495,16 @@ try {
       }));assert.equal(idsReturned[0],idsReturned[1]);
     }finally {await Promise.all(clients.map(client=>client.end()));}
   })();
+  await check('read-only diagnostic reports publication RPC and denies direct receipt access to every API role',async()=>{
+    const report=JSON.parse((await db.query(await read('../supabase/audit/production_diagnostic.sql'))).rows[0].diagnostic);
+    assert.equal(report['17_optional_workflow_inventory'].find(row=>row.name==='publication_receipts').exists,true);
+    const permissions=report['18_rpc_permissions'].filter(row=>row.proname==='publish_item_once');
+    assert.equal(permissions.find(row=>row.rolname==='authenticated').can_execute,true);
+    assert.equal(permissions.find(row=>row.rolname==='anon').can_execute,false);
+    for(const row of report['19_private_workflow_permissions'].filter(row=>row.relname==='publication_receipts')){
+      assert.equal(row.can_select,false);assert.equal(row.can_insert,false);assert.equal(row.can_update,false);assert.equal(row.can_delete,false);
+    }
+  })();
   console.log(`PASS: ${passed} offline PostgreSQL security checks (${itemDateType})`);
 } catch (error) {
   console.error('FAIL', error.code || error.name, error.message);

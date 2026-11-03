@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
-    "test": "tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs",
+    "test": "tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs tests/storage-backup.test.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "check:diagnostic": "node scripts/check-supabase-diagnostic.mjs",
     "test:backend": "node scripts/test-backend-matrix.mjs pglite",
-    "test:backend:postgres": "node scripts/test-backend-matrix.mjs postgres"
+    "test:backend:postgres": "node scripts/test-backend-matrix.mjs postgres",
+    "backup:storage": "node scripts/backup-storage.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

@@ -11,7 +11,7 @@ import L from 'leaflet';
 // Iconos de interfaz
 import { Search, Navigation, Filter, AlertCircle, CheckCircle2, ChevronRight, X, Sparkles } from 'lucide-react';
 import { Item, FilterType, Category } from '../types';
-import { getDistanceKm, DEFAULT_CENTER, isValidCoordinates } from '../utils/geo';
+import { getDistanceKm, DEFAULT_CENTER, isValidCoordinates, NEARBY_RADIUS_KM } from '../utils/geo';
 
 // Propiedades que recibe el componente MapView
 interface MapViewProps {
@@ -136,7 +136,7 @@ export const MapView: React.FC<MapViewProps> = ({
         activeFilter === 'todos' ? true :
         activeFilter === 'encontrados' ? item.status === 'encontrado' :
         activeFilter === 'perdidos' ? item.status === 'perdido' :
-        activeFilter === 'cerca' ? (item.distanceKm !== undefined && item.distanceKm <= 3.5) : true;
+        activeFilter === 'cerca' ? (item.distanceKm !== undefined && item.distanceKm <= NEARBY_RADIUS_KM) : true;
 
       const matchesCat = selectedCategory === 'Todas' || item.category === selectedCategory;
 

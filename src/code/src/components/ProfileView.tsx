@@ -4,9 +4,11 @@ import { ShieldCheck, CheckCircle2, Package, LogOut, Trash2, Plus, ChevronRight,
 import { ItemCard } from './ItemCard';
 
 interface ProfileViewProps {
+  onEditItem?: (item: Item) => void;
   currentUser: User;
   userItems: Item[];
   onSignOut: () => void;
+  onChangePassword?: () => void;
   onViewItem: (item: Item) => void;
   onOpenPublish: () => void;
   onMarkAsRecovered: (itemId: string) => void;
@@ -19,8 +21,10 @@ interface ProfileViewProps {
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
   currentUser,
+  onEditItem,
   userItems,
   onSignOut,
+  onChangePassword,
   onViewItem,
   onOpenPublish,
   onMarkAsRecovered,
@@ -188,6 +192,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   
                   {/* Quick Owner Actions overlay */}
                   <div className="mt-2 flex gap-2">
+                    {onEditItem && <button type="button" onClick={() => onEditItem(item)}
+                      className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0">Editar</button>}
                     <button
                       onClick={() => onMarkAsRecovered(item.id)}
                       className="flex-1 py-1.5 px-3 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
@@ -256,6 +262,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <span className="text-xs text-slate-500">El GPS se solicita al usar “Cerca de mí” y no se guarda en tu perfil</span>
             </div>
           </div>
+
+          {onChangePassword && <button type="button" onClick={onChangePassword}
+            className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
+            <span className="font-bold text-slate-800 text-sm block">Cambiar contraseña</span>
+          </button>}
 
           <button 
             onClick={onSignOut}

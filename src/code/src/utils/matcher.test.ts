@@ -69,4 +69,10 @@ describe('matcher', () => {
 
     assert.deepEqual(findAllMatches([lost, found, unrelated]).map(match => match.id), ['match_item-1_item-2']);
   });
+  it('keeps location-only suggestions at medium confidence and invalidates cached text', () => {
+    const [lost,found] = createPair({title:'roble caracol',description:'montaña naranja'}, {title:'lámpara violeta',description:'bicicleta azul'});
+    assert.equal(compareTwoItems(lost,found)?.confidence,'media');
+    lost.title=found.title;lost.description=found.description;
+    assert.ok((compareTwoItems(lost,found)?.matchedKeywords.length ?? 0)>0);
+  });
 });

@@ -58,6 +58,17 @@ function calculateKeywordOverlap(words1: string[], words2: string[]): {
   return { overlapScore, matchedWords };
 }
 
+// Cache tokenization only while both source strings remain unchanged. Weak keys
+// do not retain account data after its item objects are released.
+const keywordCache = new WeakMap<Item,{title:string;description:string;words:string[]}>();
+function itemKeywords(item: Item): string[] {
+  const cached = keywordCache.get(item);
+  if (cached?.title === item.title && cached.description === item.description) return cached.words;
+  const words = [...extractKeywords(item.title),...extractKeywords(item.description)];
+  keywordCache.set(item,{title:item.title,description:item.description,words});
+  return words;
+}
+
 /**
  * Compara un objeto perdido con un objeto encontrado y devuelve el resultado del match
  * Si la puntuación mínima no se alcanza, devuelve null.
@@ -95,14 +106,8 @@ export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | 
   reasons.push(`Misma categoría: ${lostItem.category}`);
 
   // 2. SIMILITUD DE TEXTO (TÍTULO Y DESCRIPCIÓN)
-  const lostKeywords = [
-    ...extractKeywords(lostItem.title),
-    ...extractKeywords(lostItem.description)
-  ];
-  const foundKeywords = [
-    ...extractKeywords(foundItem.title),
-    ...extractKeywords(foundItem.description)
-  ];
+  const lostKeywords = itemKeywords(lostItem);
+  const foundKeywords = itemKeywords(foundItem);
 
   const { matchedWords } = calculateKeywordOverlap(lostKeywords, foundKeywords);
 
@@ -197,6 +202,8 @@ export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | 
   } else if (totalScore >= 55) {
     confidence = 'alta';
   }
+
+  if (textScore === 10) confidence = 'media';
 
   return {
     id: `match_${lostItem.id}_${foundItem.id}`,

@@ -1,10 +1,11 @@
+import { useDialogFocus } from '../utils/useDialogFocus';
 /**
  * MODAL DE COMPARACIÓN LADO A LADO DE COINCIDENCIAS (MatchComparisonModal.tsx)
  * Permite examinar minuciosamente un objeto perdido contra un objeto encontrado
  * para verificar si se trata del mismo artículo antes de coordinar la entrega.
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { X, Sparkles, MapPin, Clock, Tag, MessageSquare, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, ExternalLink } from 'lucide-react';
 import { MatchResult, Item, User } from '../types';
 import { formatTimeAgo } from '../utils/geo';
@@ -26,6 +27,8 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
   onViewItemDetail,
   currentUser
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen && Boolean(match), dialogRef, onClose);
   if (!isOpen || !match) return null;
 
   const { lostItem, foundItem, score, confidence, reasons, distanceKm, matchedKeywords } = match;
@@ -60,7 +63,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
 
   return (
     <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="modal-dialog w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Comparación de coincidencias" tabIndex={-1} className="modal-dialog w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
         
         {/* Cabecera del Modal */}
         <div className="modal-header p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">

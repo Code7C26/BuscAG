@@ -6,6 +6,13 @@
 
 Aplicación comunitaria de objetos perdidos y encontrados. La app usa Supabase para autenticación, perfiles, publicaciones, mensajes, notificaciones, fotos y actualizaciones en tiempo real.
 
+## Estado de preparación para producción
+
+Consulta [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) para cambios locales,
+pruebas y bloqueos, y [SUPABASE_MIGRATION_PLAN.md](./SUPABASE_MIGRATION_PLAN.md) para el
+diagnóstico único de sólo lectura, respaldo y aplicación condicionada al esquema real.
+Los cambios de código no aplican migraciones ni despliegan Firebase automáticamente.
+
 ## Preparar Supabase
 
 Antes de aplicar la corrección de seguridad de noviembre, revisa

@@ -29,6 +29,12 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
   return (
     <div 
       onClick={() => onViewMore(item)}
+      role="button" tabIndex={0}
+      onKeyDown={event => {
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault(); onViewMore(item);
+        }
+      }}
       className="item-card overflow-hidden border flex flex-col group cursor-pointer"
     >
       {/* Contenedor de la Imagen con relación de aspecto 4:3 */}

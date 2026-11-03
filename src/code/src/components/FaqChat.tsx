@@ -47,7 +47,7 @@ const faqEntries = [
   },
   {
     keywords: ['datos personales', 'datos protegidos', 'privacidad', 'seguridad de mis datos'],
-    answer: 'El perfil puede mostrar tu nombre, ubicación, avatar y calificación; el teléfono puede aparecer como opción de llamada si lo configuraste. Comparte solo la información necesaria y no publiques contraseñas, domicilio exacto ni otros datos sensibles.'
+    answer: 'Tu nombre y avatar identifican tus publicaciones. Comparte sólo la información necesaria: no publiques contraseñas, domicilio exacto ni otros datos sensibles en descripciones o fotos.'
   },
   {
     keywords: ['contactar', 'contacto', 'mensaje directo', 'hablar con', 'telefono del usuario', 'llamar al publicador'],
@@ -63,7 +63,7 @@ const faqEntries = [
   },
   {
     keywords: ['correo', 'email', 'contraseña', 'contrasena', 'confirmar cuenta'],
-    answer: 'Puedes crear una cuenta desde la pantalla de acceso. Si recibes un correo de confirmación, ábrelo antes de iniciar sesión. La contraseña debe tener al menos 6 caracteres.'
+    answer: 'Puedes crear una cuenta desde la pantalla de acceso. Si recibes un correo de confirmación, ábrelo antes de iniciar sesión. Puedes solicitar recuperación de contraseña o reenviar la confirmación desde la pantalla de acceso. Las contraseñas nuevas deben tener al menos 8 caracteres.'
   },
   {
     keywords: ['ubicacion', 'ubicación', 'gps', 'cerca de mi', 'cerca de mí'],

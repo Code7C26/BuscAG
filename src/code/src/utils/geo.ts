@@ -98,3 +98,5 @@ export const DEFAULT_CENTER = {
   addressName: 'Plaza de Mayo, Centro'
 };
 
+
+export const NEARBY_RADIUS_KM = 4;

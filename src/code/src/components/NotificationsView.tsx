@@ -48,6 +48,12 @@ export const NotificationsView: React.FC<NotificationsViewProps> = ({
               <div
                 key={notif.id}
                 onClick={() => onSelectNotification(notif)}
+      role="button" tabIndex={0}
+      onKeyDown={event => {
+        if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault(); onSelectNotification(notif);
+        }
+      }}
                 className={`p-4 flex items-start gap-3.5 hover:bg-slate-50 transition cursor-pointer ${
                   !notif.read ? 'bg-blue-50/40' : ''
                 }`}

@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Compass, LoaderCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { authRedirect, authErrorMessage } from '../../lib/authFlow';
 import { FaqChat } from './FaqChat';
 
-export const AuthView: React.FC = () => {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+type AuthMode = 'signin' | 'signup' | 'reset' | 'update' | 'resend';
+export const AuthView: React.FC<{ recovery?: boolean; onRecovered?: () => void; notice?: string }> = ({ recovery = false, onRecovered, notice = '' }) => {
+  const [mode, setMode] = useState<AuthMode>(recovery ? 'update' : 'signin');
+  const lifetime = useRef(0);
+  const busy = useRef(false);
+  useEffect(() => () => { lifetime.current += 1; }, []);
+  useEffect(() => { if (recovery) setMode('update'); }, [recovery]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,23 +22,41 @@ export const AuthView: React.FC = () => {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (busy.current) return;
     if (!supabase) {
       setErrorMessage('Falta configurar VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY.');
       return;
     }
 
+    if ((mode === 'signup' || mode === 'update') && password.length < 8) {
+      setErrorMessage('La nueva contraseña debe tener al menos 8 caracteres.'); return;
+    }
+    if (mode === 'signup' && !name.trim()) { setErrorMessage('Completa tu nombre.'); return; }
+    const version = lifetime.current;
+    busy.current = true;
     setErrorMessage('');
     setSuccessMessage('');
     setIsSubmitting(true);
 
     try {
-      if (mode === 'signup') {
-        const redirectBase = import.meta.env.VITE_APP_URL?.trim() || window.location.origin;
+      const redirectBase = import.meta.env?.VITE_APP_URL?.trim() || window.location.origin;
+      const redirect = authRedirect(redirectBase);
+      if (mode === 'reset' || mode === 'resend') {
+        const { error } = mode === 'reset'
+          ? await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: authRedirect(redirectBase, true) })
+          : await supabase.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: redirect } });
+        if (error) throw error;
+        if (version === lifetime.current) setSuccessMessage('Si la cuenta admite esta operación, recibirás un correo con los siguientes pasos.');
+      } else if (mode === 'update') {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        if (version === lifetime.current) { setPassword(''); onRecovered?.(); }
+      } else if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: {
-            emailRedirectTo: new URL('/', redirectBase).toString(),
+            emailRedirectTo: redirect,
             data: {
               full_name: name.trim(),
               phone: phone.trim(),
@@ -41,20 +65,27 @@ export const AuthView: React.FC = () => {
           }
         });
         if (error) throw error;
-        if (!data.session) {
+        if (version === lifetime.current && !data.session) {
           setSuccessMessage('Te enviamos un correo para confirmar tu cuenta. Luego podrás iniciar sesión.');
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (error) throw error;
       }
     } catch (error) {
-      console.error('No se pudo completar la autenticación:', error);
-      setErrorMessage(error instanceof Error ? error.message : 'No se pudo completar la autenticación.');
+      if (version === lifetime.current) setErrorMessage(authErrorMessage(error));
     } finally {
-      setIsSubmitting(false);
+      busy.current = false;
+      if (version === lifetime.current) setIsSubmitting(false);
     }
   };
+
+  const changeMode = (next: AuthMode) => {
+    if (busy.current) return;
+    lifetime.current += 1; setMode(next); setPassword(''); setErrorMessage(''); setSuccessMessage('');
+  };
+  const label = mode === 'signin' ? 'Iniciar sesión' : mode === 'signup' ? 'Crear cuenta'
+    : mode === 'update' ? 'Guardar nueva contraseña' : mode === 'reset' ? 'Recuperar contraseña' : 'Reenviar confirmación';
 
   return (
     <main className="auth-view min-h-screen flex items-center justify-center px-4 py-10">
@@ -67,7 +98,7 @@ export const AuthView: React.FC = () => {
             Objetos <span className="text-blue-800">Perdidos</span>
           </h1>
           <p className="text-sm text-slate-500 mt-2">
-            {mode === 'signin' ? 'Inicia sesión para continuar' : 'Crea tu cuenta comunitaria'}
+            {mode === 'signin' ? 'Inicia sesión para continuar' : mode === 'signup' ? 'Crea tu cuenta comunitaria' : label}
           </p>
         </div>
 
@@ -105,7 +136,7 @@ export const AuthView: React.FC = () => {
               </label>
             </>
           )}
-          <label className="block text-sm font-semibold text-slate-700">
+          {mode !== 'update' && <label className="block text-sm font-semibold text-slate-700">
             Correo electrónico
             <input
               required
@@ -115,24 +146,22 @@ export const AuthView: React.FC = () => {
               onChange={(event) => setEmail(event.target.value)}
               className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
             />
-          </label>
-          <label className="block text-sm font-semibold text-slate-700">
-            Contraseña
+          </label>}
+          {(mode === 'signin' || mode === 'signup' || mode === 'update') && <label className="block text-sm font-semibold text-slate-700">
+            {mode === 'update' ? 'Nueva contraseña' : 'Contraseña'}
             <input
               required
               type="password"
-              minLength={6}
+              minLength={mode === 'signin' ? 6 : 8}
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
             />
-          </label>
+          </label>}
 
-          {errorMessage && (
-            <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-3 text-sm text-red-700">
-              {errorMessage}
-            </p>
+          {(errorMessage || notice) && (
+            <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-3 text-sm text-red-700">{errorMessage || notice}</p>
           )}
           {successMessage && (
             <p role="status" className="rounded-xl bg-emerald-50 px-3.5 py-3 text-sm text-emerald-700">
@@ -146,24 +175,24 @@ export const AuthView: React.FC = () => {
             className="w-full rounded-xl bg-slate-800 py-3 text-sm font-semibold text-white hover:bg-slate-900 disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {isSubmitting && <LoaderCircle className="w-4 h-4 animate-spin" />}
-            {mode === 'signin' ? 'Iniciar sesión' : 'Crear cuenta'}
+            {label}
           </button>
         </form>
 
         <p className="text-center text-sm text-slate-500 mt-6">
-          {mode === 'signin' ? '¿Todavía no tienes cuenta?' : '¿Ya tienes una cuenta?'}{' '}
-          <button
-            type="button"
-            onClick={() => {
-              setMode(mode === 'signin' ? 'signup' : 'signin');
-              setErrorMessage('');
-              setSuccessMessage('');
-            }}
-            className="font-bold text-blue-600 hover:text-blue-700"
-          >
-            {mode === 'signin' ? 'Regístrate' : 'Inicia sesión'}
+          {mode === 'signin' ? '¿Todavía no tienes cuenta?' : mode === 'signup' ? '¿Ya tienes una cuenta?' : ''}{' '}
+          <button type="button" disabled={isSubmitting}
+            onClick={() => mode === 'update' ? onRecovered?.() : changeMode(mode === 'signin' ? 'signup' : 'signin')}
+            className="font-bold text-blue-600 hover:text-blue-700">
+            {mode === 'signin' ? 'Regístrate' : mode === 'update' ? 'Volver a la aplicación' : 'Inicia sesión'}
           </button>
         </p>
+        {(mode === 'signin' || mode === 'signup') && <p className="text-center text-sm text-slate-500 mt-6">
+          <button type="button" disabled={isSubmitting} onClick={() => changeMode('reset')}
+            className="font-bold text-blue-600 hover:text-blue-700">Recuperar contraseña</button>{' · '}
+          <button type="button" disabled={isSubmitting} onClick={() => changeMode('resend')}
+            className="font-bold text-blue-600 hover:text-blue-700">Reenviar confirmación</button>
+        </p>}
       </section>
       <FaqChat />
     </main>

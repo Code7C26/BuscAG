@@ -8,7 +8,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://buscag.invalid' });
 Object.assign(globalThis, { window: dom.window, document: dom.window.document,
-  HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true });
+  HTMLElement: dom.window.HTMLElement, FileReader: dom.window.FileReader, IS_REACT_ACT_ENVIRONMENT: true });
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.window.navigator });
 const { createElement: h, act, StrictMode } = await import('react');
 const { createRoot } = await import('react-dom/client');
@@ -24,7 +24,8 @@ const sources = {
     export const mapNotification=row=>row;`,
   push: `export const getPushNotificationStatus=(...a)=>globalThis.__production.push.status(...a);
     export const enablePushNotifications=(...a)=>globalThis.__production.push.enable(...a);
-    export const disablePushNotifications=(...a)=>globalThis.__production.push.disable(...a);`,
+    export const disablePushNotifications=(...a)=>globalThis.__production.push.disable(...a);
+    export const disconnectPushDevice=(...a)=>globalThis.__production.push.disconnect(...a);`,
   leaflet: `export default globalThis.__leaflet;`
 };
 async function bundle(entry, app = false) {
@@ -78,7 +79,7 @@ function resetMock() {
   mock={startup, listeners:[], views:{}, queries:[], channels:[], removed:0,
     result: async query => ({data:query.operation==='delete'?{id:'item-a'}:{id:'message-new',text:query.payload?.text},error:null}),
     data:{ loadProfile:async u=>user(u.id),loadItems:async()=>[item()],loadMessages:async()=>[],loadNotifications:async()=>[],uploadItemImage:async()=> 'synthetic-image' },
-    push:{ status:async()=>false,enable:async()=>{},disable:async()=>{} }
+    push:{ status:async()=>false,enable:async()=>{},disable:async()=>{},disconnect:async()=>{} }
   };
   mock.client={
     auth:{onAuthStateChange(cb){ mock.listeners.push(cb);return {data:{subscription:{unsubscribe(){mock.listeners=mock.listeners.filter(x=>x!==cb);}}}};},
@@ -92,19 +93,26 @@ function resetMock() {
         single(){return mock.result(query);},maybeSingle(){return mock.result(query);},
         then(resolve,reject){return mock.result(query).then(resolve,reject);}};return q; }
   };
-  mock.emit=id=>mock.listeners.forEach(cb=>cb(id?'SIGNED_IN':'SIGNED_OUT',{user:id?{id}:null}));
+  mock.emit=(id,event=id?'SIGNED_IN':'SIGNED_OUT')=>mock.listeners.forEach(cb=>cb(event,{user:id?{id}:null}));
   globalThis.__production=mock;
 }
 resetMock();
 const {default:App}=await bundle('src/App.tsx',true);
 const {PublishModal}=await bundle('src/components/PublishModal.tsx');
 const {ContactModal}=await bundle('src/components/ContactModal.tsx');
+const {AuthView}=await bundle('src/components/AuthView.tsx');
+const {AppErrorBoundary}=await bundle('src/components/AppErrorBoundary.tsx');
 const {MapView}=await bundle('src/components/MapView.tsx');
 const {ItemDetailModal}=await bundle('src/components/ItemDetailModal.tsx');
-async function mount(Component, props={}, strict=false) {
+async function mount(Component, props={}, strict=false, choosePhoto=true) {
   const host=document.createElement('div');document.body.append(host);const root=createRoot(host);roots.push(root);
   const render=async next=>act(async()=>root.render(strict?h(StrictMode,null,h(Component,next)):h(Component,next)));
-  await render(props);return {host,render};
+  await render(props);
+  // Most publication regressions start with an explicitly chosen sample photo.
+  if (Component === PublishModal && props.isOpen && !props.initialItem && choosePhoto) {
+    await click([...host.querySelectorAll('button')].find(button => button.textContent === 'Mochila'));
+  }
+  return {host,render};
 }
 async function change(input,value) {
   await act(async()=>{
@@ -293,4 +301,131 @@ test('a confirmed map point still permits a descriptive address without changing
   await act(async()=>maps.at(-1).handlers.click({latlng:{lat:10,lng:20}}));
   await change(host.querySelector('input[placeholder^="Ej: Plaza"]'),'Descriptive meeting point');await submit(host);
   assert.equal(submitted.locationName,'Descriptive meeting point');assert.equal(submitted.lat,10);assert.equal(submitted.lng,20);
+});
+
+
+test('password recovery and confirmation resend use safe redirects and suppress duplicate requests',async()=>{
+  let reset=0,resend=0;const pending=defer();
+  mock.client.auth.resetPasswordForEmail=(email,options)=>{reset++;assert.equal(email,'user@example.invalid');assert.equal(options.redirectTo,'https://buscag.invalid/?auth=recovery');return pending.promise;};
+  mock.client.auth.resend=async options=>{resend++;assert.equal(options.type,'signup');return {error:null};};
+  const {host}=await mount(AuthView);
+  await click([...host.querySelectorAll('button')].find(b=>b.textContent==='Recuperar contraseña'));
+  await change(host.querySelector('input[type="email"]'),'user@example.invalid');await submit(host);await submit(host);assert.equal(reset,1);
+  await act(async()=>pending.resolve({error:null}));assert.match(host.textContent,/Si la cuenta/);
+  await click([...host.querySelectorAll('button')].find(b=>b.textContent==='Inicia sesión'));
+  await click([...host.querySelectorAll('button')].find(b=>b.textContent==='Reenviar confirmación'));await submit(host);assert.equal(resend,1);
+});
+
+test('password update validates length and exits only on confirmed success',async()=>{
+  let calls=0,done=0,fail=true;mock.client.auth.updateUser=async()=>{calls++;return {error:fail?{code:'weak_password'}:null};};
+  const {host}=await mount(AuthView,{recovery:true,onRecovered:()=>{done++;}});
+  await change(host.querySelector('input[type="password"]'),'short');await submit(host);assert.equal(calls,0);
+  await change(host.querySelector('input[type="password"]'),'synthetic-strong-password');await submit(host);assert.equal(done,0);assert.match(host.textContent,/más segura/);
+  fail=false;await submit(host);assert.equal(done,1);assert.equal(host.querySelector('input[type="password"]').value,'');
+});
+
+test('only an authenticated recovery event or explicit account action opens password update',async()=>{
+  window.history.replaceState(null,'','/?auth=recovery');await mount(App);await emit('a');
+  assert.ok(document.querySelector('[data-view="Header"]'));
+  await act(async()=>mock.emit('a','PASSWORD_RECOVERY'));assert.equal(mock.views.AuthView.recovery,true);
+  await act(async()=>mock.views.AuthView.onRecovered());assert.ok(document.querySelector('[data-view="Header"]'));
+  window.history.replaceState(null,'','/');
+});
+
+test('incoming unread messages are marked while a chat is already open without clearing its draft',async()=>{
+  let marked=0;const props={item:item(),isOpen:true,currentUser:user('b'),participantId:'a',messages:[],onMarkThreadRead:()=>{marked++;},onSendMessage:async()=>{}};
+  const {host,render}=await mount(ContactModal,props);await change(host.querySelector('input'),'draft');
+  const message={id:'incoming',itemId:'item-a',senderId:'a',receiverId:'b',text:'hello',timestamp:new Date().toISOString(),isRead:false};
+  await render({...props,messages:[message]});assert.equal(marked,1);assert.equal(host.querySelector('input').value,'draft');
+  await render({...props,messages:[{...message,isRead:true}]});assert.equal(marked,1);
+});
+
+test('recovery celebration waits for server success',async()=>{
+  let success=false;const props={item:item(),currentUser:user('a'),onClose:()=>{},onContact:()=>{},onMarkAsRecovered:async()=>success};
+  const {host}=await mount(ItemDetailModal,props);const button=()=>[...host.querySelectorAll('button')].find(b=>b.textContent.includes('Marcar como Recuperado'));
+  await click(button());assert.ok(!host.textContent.includes('¡Felicidades!'));success=true;await click(button());assert.ok(host.textContent.includes('¡Felicidades!'));
+});
+
+test('editing changes content only, preserves ID/ownership/count and does not reupload an unchanged image',async()=>{
+  let uploads=0;mock.data.uploadItemImage=async()=>{uploads++;return 'changed';};
+  mock.result=async query=>({data:{...item(),title:query.payload?.title??'Synthetic'},error:null});
+  await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+  await act(async()=>mock.views.ProfileView.onEditItem(item()));
+  assert.equal(mock.views.PublishModal.initialItem.id,'item-a');
+  await act(async()=>mock.views.PublishModal.onSubmit({...item(),title:'Edited'}));
+  const query=mock.queries.find(q=>q.operation==='update');assert.equal(query.payload.title,'Edited');
+  for(const forbidden of ['id','owner_id','contact_count','created_at'])assert.equal(forbidden in query.payload,false);
+  assert.ok(query.filters.some(([key,value])=>key==='owner_id'&&value==='a'));assert.equal(uploads,0);
+});
+
+test('editing existing valid coordinates works without deleting or replacing the original record',async()=>{
+  let saved;const {host}=await mount(PublishModal,{isOpen:true,initialItem:item(),currentUser:user('a'),onClose:()=>{},onSubmit:async data=>{saved=data;}});
+  assert.equal(host.querySelector('input[placeholder^="Ej: Mochila"]').value,'Synthetic');
+  await change(host.querySelector('input[placeholder^="Ej: Mochila"]'),'Updated');await submit(host);assert.equal(saved.title,'Updated');assert.equal(saved.lat,0);
+});
+
+test('dialogs associate labels, trap focus and close with Escape without changing classes',async()=>{
+  const opener=document.createElement('button');document.body.append(opener);opener.focus();let closed=0;
+  const {host}=await mount(PublishModal,{isOpen:true,currentUser:user('a'),onClose:()=>{closed++;},onSubmit:async()=>{}});
+  const dialog=host.querySelector('[role="dialog"]');assert.equal(dialog.getAttribute('aria-modal'),'true');
+  for(const label of host.querySelectorAll('label[for]'))assert.ok(document.getElementById(label.htmlFor));
+  const first=dialog.querySelector('button');first.focus();
+  await act(async()=>document.dispatchEvent(new window.KeyboardEvent('keydown',{key:'Escape',bubbles:true})));
+  assert.equal(closed,1);
+});
+
+test('logout revokes browser push before Auth signout and never signs out a newly switched account',async()=>{
+  const pending=defer();let signouts=0;mock.push.disconnect=()=>pending.promise;
+  mock.client.auth.signOut=async()=>{signouts++;return {error:null};};
+  await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+  await act(async()=>mock.views.ProfileView.onSignOut());await emit('b');
+  await act(async()=>pending.resolve());assert.equal(signouts,0);
+});
+
+
+test('render errors show a recoverable fallback instead of a blank page',async()=>{
+  const previous=console.error;console.error=()=>{};
+  try {
+    function Broken(){throw Error('synthetic-render-failure');}
+    const {host}=await mount(AppErrorBoundary,{children:h(Broken)});
+    assert.ok(host.querySelector('[role="alert"]'));assert.match(host.textContent,/Recarga/);assert.ok(!host.textContent.includes('synthetic-render-failure'));
+  } finally {console.error=previous;}
+});
+
+test('notification deep links open only records visible to the current account',async()=>{
+  window.history.replaceState(null,'','/?notification=notice-a');
+  mock.data.loadNotifications=async()=>[{id:'notice-a',read:true,type:'match',relatedItemId:'item-a',title:'Owned notice'}];
+  await mount(App);await emit('a');assert.equal(mock.views.Header.activeTab,'notifications');assert.equal(mock.views.ItemDetailModal.item.id,'item-a');
+  assert.equal(new URL(window.location.href).searchParams.has('notification'),false);
+});
+
+test('push cleanup failures do not prevent logout and are shown without private error details',async()=>{
+  mock.push.disconnect=async()=>{throw Error('PRIVATE_ENDPOINT');};await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+  await act(async()=>mock.views.ProfileView.onSignOut());assert.ok(document.querySelector('[data-view="AuthView"]'));
+  assert.match(mock.views.AuthView.notice,/push/);assert.ok(!mock.views.AuthView.notice.includes('PRIVATE_ENDPOINT'));
+});
+
+
+test('token renewal does not reload all data and an old push status cannot undo a new toggle',async()=>{
+  let reads=0;const pending=defer();mock.data.loadItems=async()=>{reads++;return [item()];};mock.push.status=()=>pending.promise;
+  await mount(App);await emit('a');await emit('a');assert.equal(reads,1);
+  await act(async()=>mock.views.Header.onOpenProfile());await act(async()=>mock.views.ProfileView.onTogglePush(true));
+  assert.equal(mock.views.ProfileView.pushEnabled,true);await act(async()=>pending.resolve(false));assert.equal(mock.views.ProfileView.pushEnabled,true);
+});
+
+
+test('new publications never silently use a demo photo and successful saves clear the selection',async()=>{
+  let calls=0;const {host}=await mount(PublishModal,{isOpen:true,currentUser:user('a'),onClose:()=>{},onSubmit:async()=>{calls++;}},false,false);
+  await change(host.querySelector('input[placeholder^="Ej: Mochila"]'),'Title');await change(host.querySelector('textarea'),'Description');
+  await act(async()=>maps.at(-1).handlers.click({latlng:{lat:0,lng:0}}));await submit(host);assert.equal(calls,0);assert.match(host.textContent,/Selecciona una foto/);
+  await click([...host.querySelectorAll('button')].find(button=>button.textContent==='Mochila'));await submit(host);assert.equal(calls,1);assert.equal(host.querySelector('img'),null);
+});
+
+
+test('dropping a file validates it and reads a real selected image without navigation',async()=>{
+  const {host}=await mount(PublishModal,{isOpen:true,currentUser:user('a'),onClose:()=>{},onSubmit:async()=>{}},false,false);
+  const target=host.querySelector('[aria-label="Subir foto"]');
+  const drop=async file=>act(async()=>{const event=new window.Event('drop',{bubbles:true,cancelable:true});Object.defineProperty(event,'dataTransfer',{value:{files:[file]}});target.dispatchEvent(event);await new Promise(resolve=>setTimeout(resolve,10));assert.equal(event.defaultPrevented,true);});
+  await drop(new window.File(['not-image'],'bad.txt',{type:'text/plain'}));assert.match(host.textContent,/JPG, PNG o WebP/);assert.equal(host.querySelector('img'),null);
+  await drop(new window.File(['synthetic-image'],'photo.png',{type:'image/png'}));assert.match(host.querySelector('img').src,/^data:image\/png/);
 });

@@ -1,3 +1,4 @@
+import { useDialogFocus } from '../utils/useDialogFocus';
 /**
  * MODAL DE CONTACTO Y CHAT DIRECTO (ContactModal.tsx)
  * Permite a los usuarios comunicarse directamente con quien publicó un objeto.
@@ -41,6 +42,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onMarkThreadRead,
   onSendMessage
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, dialogRef, onClose);
+
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const sendLock = useRef(false);
@@ -50,9 +54,15 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     sendLock.current = false;
     setIsSending(false);
     setInputMessage('');
-    if (isOpen && item && participantId) onMarkThreadRead(item.id, participantId);
     return () => { threadVersion.current += 1; };
   }, [item?.id, participantId, isOpen, currentUser.id, onMarkThreadRead]);
+
+  const unreadKey = messages.filter(message => message.itemId === item?.id
+    && message.senderId === participantId && message.receiverId === currentUser.id && !message.isRead)
+    .map(message => message.id).join(',');
+  useEffect(() => {
+    if (isOpen && item && participantId && unreadKey) onMarkThreadRead(item.id, participantId);
+  }, [item?.id, participantId, currentUser.id, isOpen, unreadKey, onMarkThreadRead]);
 
   // Si no está abierto o no hay objeto, no renderiza nada
   if (!isOpen || !item) return null;
@@ -103,7 +113,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
   return (
     <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="modal-dialog w-full max-w-lg overflow-hidden flex flex-col h-[85vh] max-h-[650px] animate-in zoom-in-95 duration-200">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Conversación" tabIndex={-1} className="modal-dialog w-full max-w-lg overflow-hidden flex flex-col h-[85vh] max-h-[650px] animate-in zoom-in-95 duration-200">
         {/* Cabecera del Chat con datos del publicador */}
         <div className="modal-header p-3.5 border-b border-slate-200 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">

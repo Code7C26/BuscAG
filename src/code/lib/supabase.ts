@@ -1,3 +1,4 @@
+import { validateEnvironment } from './environment';
 import { createClient } from '@supabase/supabase-js'
 
 type Table<Row, Insert, Update = Partial<Insert>> = {
@@ -152,7 +153,8 @@ export interface Database {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey)
+export const configurationError = validateEnvironment({ VITE_SUPABASE_URL: supabaseUrl, VITE_SUPABASE_PUBLISHABLE_KEY: supabasePublishableKey, VITE_APP_URL: import.meta.env.VITE_APP_URL }, import.meta.env.PROD);
+export const isSupabaseConfigured = !configurationError
 
 export const supabase = isSupabaseConfigured
   ? createClient<Database>(supabaseUrl, supabasePublishableKey)

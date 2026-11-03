@@ -1,3 +1,4 @@
+import { useDialogFocus } from '../utils/useDialogFocus';
 /**
  * MODAL DE DETALLE DE PUBLICACIÓN (ItemDetailModal.tsx)
  * Muestra la información completa de un objeto seleccionado:
@@ -20,8 +21,9 @@ interface ItemDetailModalProps {
   item: Item | null;                             // Objeto a detallar (null si el modal está cerrado)
   onClose: () => void;                           // Cierra este modal
   onContact: (item: Item) => void;               // Inicia el contacto con el publicador
+  onEditItem?: (item: Item) => void;
   currentUser: User;                             // Usuario que está utilizando la app actualmente
-  onMarkAsRecovered?: (itemId: string) => void;  // Cambia el estado a 'recuperado'
+  onMarkAsRecovered?: (itemId: string) => Promise<boolean>;  // Cambia el estado a 'recuperado'
   onDeleteItem?: (itemId: string) => Promise<boolean>;       // Elimina la publicación de la lista
   allItems?: Item[];                             // Catálogo completo de publicaciones para calcular matches
   onOpenMatchComparison?: (match: MatchResult) => void; // Abre la vista de comparación lado a lado
@@ -32,17 +34,31 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   onClose,
   onContact,
   currentUser,
+  onEditItem,
   onMarkAsRecovered,
   onDeleteItem,
   allItems = [],
   onOpenMatchComparison
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(Boolean(item), dialogRef, onClose);
+
   // Referencias para el mini-mapa dentro del modal
   const miniMapRef = useRef<HTMLDivElement>(null);
   const leafletMiniMapRef = useRef<L.Map | null>(null);
 
   // Estado para mostrar un banner de celebración festiva al recuperar el objeto
   const [showRecoveredConfetti, setShowRecoveredConfetti] = useState(false);
+  const recovering = useRef(false);
+  const recoveryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latestItem = useRef(item?.id);
+  latestItem.current = item?.id;
+  useEffect(() => {
+    recovering.current = false;
+    latestItem.current = item?.id;
+    setShowRecoveredConfetti(false);
+    return () => { latestItem.current = undefined; if (recoveryTimer.current) clearTimeout(recoveryTimer.current); };
+  }, [item?.id]);
 
   // Verificaciones de permisos y estado del objeto
   const isOwner = Boolean(item && currentUser.id === item.user.id);
@@ -71,7 +87,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     });
 
     // Mosaicos de OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
 
     // Color del marcador según estado (Rojo: Perdido, Verde: Encontrado / Recuperado)
     const pinColor = isLost ? '#DC2626' : isRecovered ? '#059669' : '#16A34A';
@@ -118,19 +134,21 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   /**
    * Manejador para marcar el objeto como recuperado con animación de celebración
    */
-  const handleMarkRecovered = () => {
-    setShowRecoveredConfetti(true);
-    if (onMarkAsRecovered) {
-      onMarkAsRecovered(item.id);
-    }
-    setTimeout(() => {
-      setShowRecoveredConfetti(false);
-    }, 3000);
+  const handleMarkRecovered = async () => {
+    if (!onMarkAsRecovered || recovering.current) return;
+    recovering.current = true; const id = item.id;
+    try {
+      const saved = await onMarkAsRecovered(id);
+      if (saved && latestItem.current === id) {
+        setShowRecoveredConfetti(true);
+        recoveryTimer.current = setTimeout(() => setShowRecoveredConfetti(false),3000);
+      }
+    } finally { if (latestItem.current === id) recovering.current = false; }
   };
 
   return (
     <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="modal-dialog w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Detalle de publicación" tabIndex={-1} className="modal-dialog w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
         
         {/* Banner animado de felicitaciones al recuperar el objeto */}
         {showRecoveredConfetti && (
@@ -357,6 +375,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           {/* Si el usuario actual es el autor de la publicación */}
           {isOwner ? (
             <div className="w-full flex gap-2">
+              {onEditItem && <button type="button" onClick={() => onEditItem(item)}
+                className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0">Editar</button>}
               {!isRecovered && (
                 <button
                   onClick={handleMarkRecovered}

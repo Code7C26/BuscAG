@@ -103,3 +103,16 @@ export async function disablePushNotifications(userId: string, isCurrent: () => 
   if (!isCurrent()) return;
   await subscription.unsubscribe();
 }
+
+/** Revoke this browser's delivery capability on logout without deleting stored rows. */
+export async function disconnectPushDevice(isCurrent: () => boolean = () => true): Promise<void> {
+  if (!('serviceWorker' in navigator)) return;
+  const registration = await navigator.serviceWorker.getRegistration('/');
+  if (!registration || !isCurrent()) return;
+  const subscription = await registration.pushManager?.getSubscription();
+  if (!isCurrent()) return;
+  if (subscription && !(await subscription.unsubscribe())) throw new Error('No se pudo desactivar el dispositivo.');
+  if (!isCurrent()) return;
+  const notices = await registration.getNotifications?.();
+  if (isCurrent()) notices?.forEach(notice => notice.close());
+}

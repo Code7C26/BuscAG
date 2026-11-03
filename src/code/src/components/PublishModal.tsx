@@ -1,3 +1,5 @@
+import { reportError } from '../../lib/reportError';
+import { useDialogFocus } from '../utils/useDialogFocus';
 /**
  * MODAL DE PUBLICACIÓN DE OBJETOS (PublishModal.tsx)
  * Permite a cualquier usuario reportar un objeto perdido o encontrado.
@@ -7,7 +9,7 @@
  * - Selector interactivo de ubicación con mini-mapa Leaflet y soporte para GPS
  * - Campos para título, descripción, categoría, fecha y recompensa opcional
  */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 import { X, Camera, Upload, MapPin, Tag, Calendar, AlertCircle, CheckCircle2, Sparkles, Navigation } from 'lucide-react';
 import L from 'leaflet';
 import { Category, ItemStatus, Item, User } from '../types';
@@ -18,6 +20,7 @@ interface PublishModalProps {
   isOpen: boolean;        // Determina si el modal está visible en pantalla
   onClose: () => void;    // Función para cerrar la ventana modal
   onSubmit: (newItem: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => void | Promise<void>; // Emite los datos validados
+  initialItem?: Item | null;
   currentUser: User;      // Usuario que está publicando
 }
 
@@ -40,11 +43,13 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  currentUser
+  currentUser,
+  initialItem = null
 }) => {
   // ==========================================
   // ESTADOS DEL FORMULARIO
   // ==========================================
+  const formId = useId();
   const [status, setStatus] = useState<ItemStatus>('encontrado');      // Estado inicial: encontrado
   const [title, setTitle] = useState('');                             // Título del objeto
   const [description, setDescription] = useState('');                 // Descripción detallada
@@ -53,7 +58,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   const [locationName, setLocationName] = useState(''); // Nombre legible del lugar
   const [lat, setLat] = useState(DEFAULT_CENTER.lat);                 // Coordenada latitud
   const [lng, setLng] = useState(DEFAULT_CENTER.lng);                 // Coordenada longitud
-  const [imageUrl, setImageUrl] = useState(PRESET_PHOTOS[0].url);     // Foto del objeto (URL o Base64)
+  const [imageUrl, setImageUrl] = useState('');     // Foto del objeto (URL o Base64)
   const [reward, setReward] = useState('');                           // Recompensa voluntaria
   const [isSubmitting, setIsSubmitting] = useState(false);             // Estado de carga al enviar
   const [submitError, setSubmitError] = useState('');
@@ -63,11 +68,26 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   const lifecycle = useRef(0);
   useEffect(() => () => { lifecycle.current += 1; }, [isOpen]);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, dialogRef, () => { if (!submitting.current) onClose(); });
+
   // Referencias para el input de archivo y el mapa selector
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mapPickerRef = useRef<HTMLDivElement>(null);
   const leafletPickerRef = useRef<L.Map | null>(null);
   const pickerMarkerRef = useRef<L.Marker | null>(null);
+
+  useEffect(() => {
+    if (!initialItem) return;
+    setStatus(initialItem.status); setTitle(initialItem.title); setDescription(initialItem.description);
+    setCategory(initialItem.category); setLocationName(initialItem.locationName);
+    const valid = isValidCoordinates(initialItem.lat, initialItem.lng);
+    setLat(valid ? initialItem.lat : DEFAULT_CENTER.lat); setLng(valid ? initialItem.lng : DEFAULT_CENTER.lng);
+    setLocationConfirmed(valid); setImageUrl(initialItem.imageUrl); setReward(initialItem.reward ?? '');
+    const parsed = new Date(initialItem.date);
+    setDate(Number.isFinite(parsed.getTime()) ? toDateTimeLocal(parsed) : '');
+    setSubmitError('');
+  }, [initialItem?.id]);
 
   // Lista de categorías para el menú desplegable
   const categories: Category[] = [
@@ -94,7 +114,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     });
 
     // Añade la capa de mosaicos de OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
 
     // Crea un marcador arrastrable (draggable: true)
     const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
@@ -139,28 +159,21 @@ export const PublishModal: React.FC<PublishModalProps> = ({
    * Manejador para cargar una foto propia del usuario desde su dispositivo
    * Utiliza la API nativa de FileReader para convertir la imagen en DataURL (Base64)
    */
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setSubmitError('La foto debe estar en formato JPG, PNG o WebP.');
-      e.target.value = '';
-      return;
+  const readImageFile = (file: File): boolean => {
+    if (!['image/jpeg','image/png','image/webp'].includes(file.type)) {
+      setSubmitError('La foto debe estar en formato JPG, PNG o WebP.'); return false;
     }
     if (file.size > 5 * 1024 * 1024) {
-      setSubmitError('La foto no puede superar los 5 MB.');
-      e.target.value = '';
-      return;
+      setSubmitError('La foto no puede superar los 5 MB.'); return false;
     }
-
-    setSubmitError('');
-    const version = lifecycle.current;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (version === lifecycle.current && typeof reader.result === 'string') setImageUrl(reader.result);
-    };
+    setSubmitError(''); const version = lifecycle.current; const reader = new FileReader();
+    reader.onload = () => { if (version === lifecycle.current && typeof reader.result === 'string') setImageUrl(reader.result); };
     reader.onerror = () => { if (version === lifecycle.current) setSubmitError('No se pudo leer la foto seleccionada.'); };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(file); return true;
+  };
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && !readImageFile(file)) event.target.value = '';
   };
 
   /**
@@ -203,6 +216,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
       return;
     }
 
+    if (!initialItem && !imageUrl) { setSubmitError('Selecciona una foto propia o una imagen de muestra de forma explícita.'); return; }
     if (!locationConfirmed || !isValidCoordinates(lat, lng) || !locationName.trim()) {
       setSubmitError('Confirma una ubicación válida tocando el mapa, moviendo el pin o usando tu GPS.');
       return;
@@ -239,7 +253,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
       setLat(DEFAULT_CENTER.lat);
       setLng(DEFAULT_CENTER.lng);
       setLocationConfirmed(false);
-      setImageUrl(PRESET_PHOTOS[0].url);
+      setImageUrl('');
       setReward('');
       setCameraActive(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -247,7 +261,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
       pickerMarkerRef.current?.setLatLng([DEFAULT_CENTER.lat, DEFAULT_CENTER.lng]);
       onClose();
     } catch (error) {
-      console.error('No se pudo publicar el objeto:', error);
+      reportError('No se pudo publicar el objeto:', error);
       if (version === lifecycle.current) setSubmitError(error instanceof Error ? error.message : 'No se pudo publicar el objeto.');
     } finally {
       submitting.current = false;
@@ -260,14 +274,14 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
   return (
     <div className="publish-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="publish-dialog w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Publicar o editar objeto" tabIndex={-1} className="publish-dialog w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
         {/* Cabecera de la ventana modal */}
         <div className="publish-dialog__header p-4 border-b border-slate-100 flex items-center justify-between">
           <div>
             <h2 className="font-extrabold text-slate-900 text-lg leading-tight flex items-center gap-2">
-              ➕ Publicar Objeto
+              {initialItem ? 'Editar publicación' : '➕ Publicar Objeto'}
             </h2>
-            <p className="text-xs text-slate-500">Publica en menos de 1 minuto</p>
+            <p className="text-xs text-slate-500">{initialItem ? 'Actualiza los datos de tu objeto' : 'Publica en menos de 1 minuto'}</p>
           </div>
           <button
             onClick={onClose}
@@ -326,7 +340,13 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               📷 Foto del Objeto *
             </label>
             
-            <div className="relative aspect-16/9 rounded-2xl border-2 border-dashed border-slate-300 overflow-hidden group bg-slate-50 flex flex-col items-center justify-center p-2 text-center">
+            <div role={!imageUrl ? 'button' : undefined} tabIndex={!imageUrl ? 0 : undefined}
+              aria-label={!imageUrl ? 'Subir foto' : undefined}
+              onDragOver={event => event.preventDefault()}
+              onDrop={event => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (file) readImageFile(file); }}
+              onClick={() => { if (!imageUrl) fileInputRef.current?.click(); }}
+              onKeyDown={event => { if (!imageUrl && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); fileInputRef.current?.click(); } }}
+              className="relative aspect-16/9 rounded-2xl border-2 border-dashed border-slate-300 overflow-hidden group bg-slate-50 flex flex-col items-center justify-center p-2 text-center">
               {imageUrl ? (
                 <>
                   <img src={imageUrl} alt="Vista previa" className="w-full h-full object-cover" />
@@ -385,10 +405,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
           {/* Campo de título */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label htmlFor={`${formId}-title`} className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
               Nombre del objeto *
             </label>
-            <input
+            <input id={`${formId}-title`}
               type="text"
               required
               value={title}
@@ -400,10 +420,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
           {/* Campo de descripción detallada */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+            <label htmlFor={`${formId}-description`} className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
               Descripción *
             </label>
-            <textarea
+            <textarea id={`${formId}-description`}
               required
               rows={3}
               value={description}
@@ -416,10 +436,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           {/* Categoría y Fecha */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label htmlFor={`${formId}-category`} className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Categoría *
               </label>
-              <select
+              <select id={`${formId}-category`}
                 value={category}
                 onChange={(e) => setCategory(e.target.value as Category)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
@@ -433,10 +453,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label htmlFor={`${formId}-date`} className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Fecha *
               </label>
-              <input
+              <input id={`${formId}-date`}
                 type="datetime-local"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
@@ -448,10 +468,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           {/* Campo opcional de recompensa (solo si es un objeto perdido) */}
           {status === 'perdido' && (
             <div>
-              <label className="block text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">
+              <label htmlFor={`${formId}-reward`} className="block text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">
                 🎁 Recompensa (Opcional)
               </label>
-              <input
+              <input id={`${formId}-reward`}
                 type="text"
                 value={reward}
                 onChange={(e) => setReward(e.target.value)}
@@ -464,7 +484,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           {/* Selector de ubicación geográfica */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <label htmlFor={`${formId}-location`} className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 📍 Ubicación *
               </label>
               <button
@@ -478,7 +498,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               </button>
             </div>
 
-            <input
+            <input id={`${formId}-location`}
               type="text"
               required
               value={locationName}
@@ -508,7 +528,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  Publicar Objeto
+                  {initialItem ? 'Guardar cambios' : 'Publicar Objeto'}
                 </>
               )}
             </button>

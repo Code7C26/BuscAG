@@ -2,6 +2,7 @@ import type { User as AuthUser } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { Item, Message, NotificationItem, User } from '../src/types';
 import type { Database } from './supabase';
+import { readAll } from './readAll';
 import { createStorageObjectId } from './storageObjectId';
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
@@ -108,32 +109,34 @@ export async function loadProfile(authUser: AuthUser, isCurrent: () => boolean =
   };
 }
 
-async function loadPublicProfiles(ownerIds: string[]): Promise<ProfileRow[]> {
+async function loadPublicProfiles(ownerIds: string[], isCurrent: () => boolean): Promise<ProfileRow[]> {
   const supabaseClient = client();
-  const { data, error } = await supabaseClient
-    .from('public_profiles')
-    .select('*')
-    .in('id', ownerIds);
-  if (!error) return data;
-  if (error.code !== 'PGRST205' && error.code !== '42P01') throw error;
-
-  // Permit deploying this client before the directory migration. Never fall
-  // back to downloading private fields, even on the older permissive schema.
-  const { data: profiles, error: fallbackError } = await supabaseClient
-    .from('profiles')
-    .select('id, full_name, avatar_url, rating, created_at')
-    .in('id', ownerIds);
-  if (fallbackError) throw fallbackError;
-  return profiles.map(profile => ({ ...profile, phone: '', location: '' }));
+  const profiles: ProfileRow[] = [];
+  let directoryMissing = false;
+  for (let start = 0; start < ownerIds.length; start += 100) {
+    const ids = ownerIds.slice(start, start + 100);
+    if (!directoryMissing) {
+      try {
+        profiles.push(...await readAll<ProfileRow>((from, to) => supabaseClient.from('public_profiles')
+          .select('*', from === 0 ? { count: 'exact' } : {}).in('id', ids).order('id').range(from, to), isCurrent));
+        continue;
+      } catch (error) {
+        if (!['PGRST205','42P01'].includes((error as { code?: string }).code ?? '')) throw error;
+        directoryMissing = true;
+      }
+    }
+    // Deploy-before-migration fallback never requests private fields.
+    const safe = await readAll((from, to) => supabaseClient.from('profiles')
+      .select('id, full_name, avatar_url, rating, created_at', from === 0 ? { count: 'exact' } : {})
+      .in('id', ids).order('id').range(from, to), isCurrent);
+    profiles.push(...safe.map(profile => ({ ...profile, phone: '', location: '' })));
+  }
+  return profiles;
 }
 
-export async function loadItems(): Promise<Item[]> {
-  const supabaseClient = client();
-  const { data: rows, error: itemsError } = await supabaseClient
-    .from('items')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (itemsError) throw itemsError;
+export async function loadItems(isCurrent: () => boolean = () => true): Promise<Item[]> {
+  const rows = await readAll<ItemRow>((from, to) => client().from('items')
+    .select('*', from === 0 ? { count: 'exact' } : {}).order('created_at', { ascending: false }).order('id').range(from, to), isCurrent);
 
   if (!rows.length) return [];
 
@@ -152,7 +155,7 @@ export async function loadItems(): Promise<Item[]> {
     }));
   }
 
-  const profiles = await loadPublicProfiles(ownerIds);
+  const profiles = await loadPublicProfiles(ownerIds, isCurrent);
 
   const users = new Map(profiles.map(profile => [profile.id, mapProfile(profile)]));
   return rows.map(row => {
@@ -171,24 +174,18 @@ export async function loadItems(): Promise<Item[]> {
   });
 }
 
-export async function loadMessages(userId: string): Promise<Message[]> {
-  const { data, error } = await client()
-    .from('messages')
-    .select('*')
-    .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
-    .order('created_at');
-  if (error) throw error;
-  return data.map(mapMessage);
+export async function loadMessages(userId: string, isCurrent: () => boolean = () => true): Promise<Message[]> {
+  const rows = await readAll<MessageRow>((from, to) => client().from('messages')
+    .select('*', from === 0 ? { count: 'exact' } : {}).or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
+    .order('created_at').order('id').range(from, to), isCurrent);
+  return rows.map(mapMessage);
 }
 
-export async function loadNotifications(userId: string): Promise<NotificationItem[]> {
-  const { data, error } = await client()
-    .from('notifications')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data.map(mapNotification);
+export async function loadNotifications(userId: string, isCurrent: () => boolean = () => true): Promise<NotificationItem[]> {
+  const rows = await readAll<NotificationRow>((from, to) => client().from('notifications')
+    .select('*', from === 0 ? { count: 'exact' } : {}).eq('user_id', userId)
+    .order('created_at', { ascending: false }).order('id').range(from, to), isCurrent);
+  return rows.map(mapNotification);
 }
 
 export async function uploadItemImage(imageUrl: string, userId: string, isCurrent: () => boolean = () => true): Promise<string> {

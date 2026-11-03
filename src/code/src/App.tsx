@@ -1,10 +1,11 @@
+import { reportError } from '../lib/reportError';
 /**
  * COMPONENTE PRINCIPAL (App.tsx)
  * Es el núcleo de la aplicación. Administra el estado global (publicaciones, usuario activo,
  * filtros, geolocalización y mensajes), maneja la navegación por pestañas y renderiza las
  * vistas principales y modales.
  */
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 // Iconos de Lucide para la interfaz visual
 import { supabase } from '../lib/supabase';
 import type { User as AuthUser } from '@supabase/supabase-js';
@@ -13,9 +14,11 @@ import { Search, MapPin, SlidersHorizontal, Plus, AlertCircle, CheckCircle2, Spa
 import { Item, FilterType, Category, User, NotificationItem, Message, MatchResult, TabType } from './types';
 import { AuthView } from './components/AuthView';
 import { loadItems, loadMessages, loadNotifications, loadProfile, mapItem, mapMessage, mapNotification, uploadItemImage } from '../lib/database';
-import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus } from '../lib/push';
+import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus, disconnectPushDevice } from '../lib/push';
 // Utilidades de cálculo geográfico (Haversine)
-import { getDistanceKm, isValidCoordinates } from './utils/geo';
+import { getDistanceKm, isValidCoordinates, NEARBY_RADIUS_KM } from './utils/geo';
+import { createRefreshQueue } from './utils/refreshQueue';
+import { authCallbackError, cleanAuthCallback } from '../lib/authFlow';
 import { createSessionGuard, type SessionGuard } from './utils/sessionGuard';
 // Motor de coincidencia automática (Lost & Found Matcher)
 import { findAllMatches, findMatchesForSingleItem } from './utils/matcher';
@@ -23,14 +26,14 @@ import { findAllMatches, findMatchesForSingleItem } from './utils/matcher';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { ItemCard } from './components/ItemCard';
-import { MapView } from './components/MapView';
-import { PublishModal } from './components/PublishModal';
-import { ItemDetailModal } from './components/ItemDetailModal';
+const MapView = lazy(() => import('./components/MapView').then(module => ({ default: module.MapView })));
+const PublishModal = lazy(() => import('./components/PublishModal').then(module => ({ default: module.PublishModal })));
+const ItemDetailModal = lazy(() => import('./components/ItemDetailModal').then(module => ({ default: module.ItemDetailModal })));
 import { ContactModal } from './components/ContactModal';
 import { ProfileView } from './components/ProfileView';
 import { NotificationsView } from './components/NotificationsView';
 import { MatchesView } from './components/MatchesView';
-import { MatchComparisonModal } from './components/MatchComparisonModal';
+const MatchComparisonModal = lazy(() => import('./components/MatchComparisonModal').then(module => ({ default: module.MatchComparisonModal })));
 import { FaqChat } from './components/FaqChat';
 
 export default function App() {
@@ -38,6 +41,8 @@ export default function App() {
   const identityRef = useRef<typeof identity>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const sequence = useRef(0);
+  const [recovery, setRecovery] = useState(false);
+  const [authNotice, setAuthNotice] = useState(() => authCallbackError(window.location.href));
 
   useEffect(() => {
     if (!supabase) { setIsLoadingSession(false); return; }
@@ -58,20 +63,26 @@ export default function App() {
       identityRef.current = next;
       setIdentity(next);
     };
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (active && session?.user && event === 'PASSWORD_RECOVERY') setRecovery(true);
+      if (active && event === 'SIGNED_OUT') setRecovery(false);
       receivedAuthEvent = true;
+      if (active) {
+        const cleaned = cleanAuthCallback(window.location.href);
+        if (cleaned !== window.location.href) window.history.replaceState(null, '', cleaned);
+      }
       acceptUser(session?.user ?? null);
       if (active) setIsLoadingSession(false);
     });
     void supabase.auth.getSession().then(({ data, error }) => {
       // An older startup read must never replace a newer sign-in/sign-out event.
       if (!active || receivedAuthEvent) return;
-      if (error) console.error('No se pudo recuperar la sesión:', error);
+      if (error) setAuthNotice('No se pudo verificar la sesión. Inténtalo nuevamente.');
       acceptUser(data.session?.user ?? null);
       setIsLoadingSession(false);
     }).catch(error => {
       if (!active || receivedAuthEvent) return;
-      console.error('No se pudo recuperar la sesión:', error);
+      setAuthNotice('No se pudo verificar la sesión. Inténtalo nuevamente.');
       setIsLoadingSession(false);
     });
     return () => { active = false; subscription.unsubscribe(); };
@@ -92,14 +103,20 @@ export default function App() {
       </main>
     );
   }
-  if (!identity) return <AuthView />;
+  if (!identity) return <AuthView notice={authNotice} />;
+  if (recovery) return <AuthView recovery notice={authNotice} onRecovered={() => {
+    setRecovery(false); setAuthNotice('');
+    const url = new URL(window.location.href); url.searchParams.delete('auth');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+  }} />;
   // Unmounting also discards child drafts, selections, filters, GPS and timers.
-  return <AccountApp key={identity.key} authUser={identity.user} sessionGuard={identity.guard} />;
+  return <AccountApp key={identity.key} authUser={identity.user} sessionGuard={identity.guard} onChangePassword={() => setRecovery(true)} onLogoutWarning={() => setAuthNotice('La sesión se cerró, pero no se pudo desactivar push en este navegador. Revisa sus permisos de notificaciones.')} />;
 }
 
-function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGuard: SessionGuard }) {
+function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning }: { authUser: AuthUser; sessionGuard: SessionGuard; onChangePassword: () => void; onLogoutWarning: () => void }) {
   const lifetime = useRef(createSessionGuard());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pushRevision = useRef(0);
   const messageRequests = useRef(new Map<string, Promise<void>>());
   const captureOperation = useCallback(() => {
     const sessionCurrent = sessionGuard.capture();
@@ -160,6 +177,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
   // ==========================================
   // isPublishOpen: Controla si el modal de publicar está abierto
   const [isPublishOpen, setIsPublishOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
 
   // selectedDetailItem: Objeto seleccionado para ver ficha detallada (null si está cerrado)
   const [selectedDetailItem, setSelectedDetailItem] = useState<Item | null>(null);
@@ -184,36 +202,36 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
 
     const current = captureOperation();
     let active = true;
-    const refreshData = async () => {
+    const refresh = createRefreshQueue<'items' | 'messages' | 'notifications'>(async keys => {
       if (!active || !current()) return;
       const [loadedItems, loadedMessages, loadedNotifications] = await Promise.all([
-        loadItems(),
-        loadMessages(authUser.id),
-        loadNotifications(authUser.id)
+        keys.has('items') ? loadItems(current) : undefined,
+        keys.has('messages') ? loadMessages(authUser.id, current) : undefined,
+        keys.has('notifications') ? loadNotifications(authUser.id, current) : undefined
       ]);
       if (!active || !current()) return;
-      setItems(loadedItems);
-      setMessages(loadedMessages);
-      setNotifications(loadedNotifications);
-    };
+      if (loadedItems) setItems(loadedItems);
+      if (loadedMessages) setMessages(loadedMessages);
+      if (loadedNotifications) setNotifications(loadedNotifications);
+    });
 
     const channel = supabase
       .channel(`app-data-${authUser.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'items' }, () => {
-        void refreshData().catch(error => {
-          console.error('No se pudieron actualizar las publicaciones:', error);
+        void refresh.request('items').catch(error => {
+          reportError('No se pudieron actualizar las publicaciones:', error);
           if (active && current()) setDataLoadError('No se pudieron actualizar las publicaciones.');
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
-        void refreshData().catch(error => {
-          console.error('No se pudieron actualizar los mensajes:', error);
+        void refresh.request('messages', 'items').catch(error => {
+          reportError('No se pudieron actualizar los mensajes:', error);
           if (active && current()) setDataLoadError('No se pudieron actualizar los mensajes.');
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        void refreshData().catch(error => {
-          console.error('No se pudieron actualizar las notificaciones:', error);
+        void refresh.request('notifications').catch(error => {
+          reportError('No se pudieron actualizar las notificaciones:', error);
           if (active && current()) setDataLoadError('No se pudieron actualizar las notificaciones.');
         });
       })
@@ -226,12 +244,12 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
 
     setIsLoadingData(true);
     setDataLoadError(null);
-    Promise.all([loadProfile(authUser, current), refreshData()])
+    Promise.all([loadProfile(authUser, current), refresh.request('items', 'messages', 'notifications')])
       .then(([profile]) => {
         if (active && current()) setCurrentUser(profile);
       })
       .catch(error => {
-        console.error('No se pudieron cargar los datos de la cuenta:', error);
+        reportError('No se pudieron cargar los datos de la cuenta:', error);
         if (active && current()) setDataLoadError('No se pudieron cargar los datos. Verifica que hayas aplicado la migración de Supabase.');
       })
       .finally(() => {
@@ -242,7 +260,15 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
       active = false;
       void supabase.removeChannel(channel);
     };
-  }, [authUser, captureOperation]);
+  }, [authUser.id, captureOperation]);
+
+  useEffect(() => {
+    setCurrentUser(previous => {
+      if (!previous || previous.id !== authUser.id) return previous;
+      const email = authUser.email ?? '', verified = Boolean(authUser.email_confirmed_at);
+      return previous.email === email && previous.verified === verified ? previous : { ...previous,email,verified };
+    });
+  }, [authUser.id,authUser.email,authUser.email_confirmed_at,currentUser?.id]);
 
   // Cuenta la cantidad de notificaciones que el usuario todavía no ha leído
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
@@ -260,17 +286,18 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
     if (!authUser) return;
     const current = captureOperation();
     let active = true;
+    const revision = pushRevision.current;
     void getPushNotificationStatus(authUser.id)
       .then(enabled => {
-        if (active && current()) setPushEnabled(enabled);
+        if (active && current() && revision === pushRevision.current) setPushEnabled(enabled);
       })
       .catch(error => {
-        console.error('No se pudo verificar la suscripción a notificaciones:', error);
+        reportError('No se pudo verificar la suscripción a notificaciones:', error);
       });
     return () => {
       active = false;
     };
-  }, [authUser, captureOperation]);
+  }, [authUser.id, captureOperation]);
 
   // Lista de categorías para generar los botones de filtro rápido
   const categoriesList: (Category | 'Todos')[] = [
@@ -319,7 +346,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
         activeFilter === 'todos' ? true :
         activeFilter === 'encontrados' ? item.status === 'encontrado' :
         activeFilter === 'perdidos' ? item.status === 'perdido' :
-        activeFilter === 'cerca' ? (item.distanceKm !== undefined && item.distanceKm <= 4) : true;
+        activeFilter === 'cerca' ? (item.distanceKm !== undefined && item.distanceKm <= NEARBY_RADIUS_KM) : true;
 
       // Coincidencia con la categoría
       const matchesCategory = selectedCategory === 'Todos' || item.category === selectedCategory;
@@ -379,7 +406,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
 
     if (!current()) throw new Error('La sesión cambió.');
     if (error) {
-      console.error('No se pudo guardar la publicación:', error);
+      reportError('No se pudo guardar la publicación:', error);
       throw new Error('No se pudo guardar la publicación.');
     }
 
@@ -403,7 +430,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
           newItem.status === 'perdido' ? best.foundItem.id : best.lostItem.id
         );
       } catch (error) {
-        console.error('La publicación se guardó, pero no se pudo guardar la notificación del match:', error);
+        reportError('La publicación se guardó, pero no se pudo guardar la notificación del match:', error);
         if (current()) triggerToast('La publicación se guardó, pero no se pudo guardar la notificación.');
       }
     } else {
@@ -414,32 +441,50 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
     setActiveTab('home'); // Regresa a la vista principal
   };
 
+  const handleEditSubmit = async (changes: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => {
+    if (!supabase || !currentUser || !editingItem || editingItem.user.id !== currentUser.id) throw new Error('No tienes permiso para editar esta publicación.');
+    if (!isValidCoordinates(changes.lat,changes.lng)) throw new Error('Selecciona una ubicación válida.');
+    const current = captureOperation();
+    const date = new Date(changes.date).toISOString();
+    const imageUrl = changes.imageUrl === editingItem.imageUrl ? editingItem.imageUrl
+      : await uploadItemImage(changes.imageUrl,currentUser.id,current);
+    if (!current()) throw new Error('La sesión cambió.');
+    const {data,error} = await supabase.from('items').update({
+      title:changes.title,description:changes.description,category:changes.category,status:changes.status,
+      location_name:changes.locationName,lat:changes.lat,lng:changes.lng,date,image_url:imageUrl,reward:changes.reward ?? null
+    }).eq('id',editingItem.id).eq('owner_id',currentUser.id).select('*').maybeSingle();
+    if (!current()) throw new Error('La sesión cambió.');
+    if (error) throw error;
+    if (!data) throw new Error('No se pudo actualizar la publicación.');
+    const updated = mapItem(data,currentUser);
+    setItems(previous=>previous.map(item=>item.id===editingItem.id?updated:item));
+    triggerToast('Publicación actualizada.');
+  };
+  const openEdit = (item: Item) => {
+    if (item.user.id !== currentUser?.id) return;
+    setSelectedDetailItem(null); setIsPublishOpen(false); setEditingItem(item);
+  };
+
   /**
    * Cambia el estado de un objeto a 'recuperado' y genera una notificación
    */
-  const handleMarkAsRecovered = (itemId: string) => {
-    if (!currentUser || !supabase) return;
+  const handleMarkAsRecovered = async (itemId: string): Promise<boolean> => {
+    if (!currentUser || !supabase) return false;
     const current = captureOperation();
-    if (!current()) return;
-    void (async () => {
-      try {
-        const { data, error } = await supabase
-          .from('items')
-          .update({ status: 'recuperado' })
-          .eq('id', itemId)
-          .eq('owner_id', currentUser.id)
-          .select('*')
-          .maybeSingle();
-        if (!current()) return;
-        if (error) throw error;
-        if (!data) throw new Error('No tienes permiso para cambiar esta publicación.');
-        setItems(prev => prev.map(item => item.id === itemId ? { ...item, status: 'recuperado' } : item));
-        triggerToast('🎉 ¡Excelente! Objeto marcado como RECUPERADO.');
-      } catch (error) {
-        console.error('No se pudo actualizar el estado de la publicación:', error);
-        if (current()) triggerToast('No se pudo actualizar la publicación.');
-      }
-    })();
+    if (!current()) return false;
+    try {
+      const {data,error} = await supabase.from('items').update({status:'recuperado'})
+        .eq('id',itemId).eq('owner_id',currentUser.id).select('*').maybeSingle();
+      if (!current()) return false;
+      if (error) throw error;
+      if (!data) throw new Error('No tienes permiso para cambiar esta publicación.');
+      setItems(prev=>prev.map(item=>item.id===itemId?{...item,status:'recuperado'}:item));
+      triggerToast('🎉 ¡Excelente! Objeto marcado como RECUPERADO.');
+      return true;
+    } catch {
+      if (current()) triggerToast('No se pudo actualizar la publicación.');
+      return false;
+    }
   };
 
   /**
@@ -460,7 +505,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
       triggerToast('Publicación eliminada');
       return true;
     } catch (error) {
-      console.error('No se pudo eliminar la publicación:', error);
+      reportError('No se pudo eliminar la publicación:', error);
       if (current()) triggerToast('No se pudo eliminar la publicación.');
       return false;
     }
@@ -526,7 +571,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
             : message
         ));
       } catch (error) {
-        console.error('No se pudo actualizar el estado de lectura de los mensajes:', error);
+        reportError('No se pudo actualizar el estado de lectura de los mensajes:', error);
         if (current()) setDataLoadError('No se pudo actualizar el estado de lectura de los mensajes.');
       }
     })();
@@ -599,13 +644,14 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
       if (!current()) return;
       triggerToast('📍 Ubicación actualizada para búsqueda cercana.');
     } catch (error) {
-      console.error('No se pudo obtener la ubicación actual:', error);
+      reportError('No se pudo obtener la ubicación actual:', error);
       if (current()) triggerToast(error instanceof Error ? error.message : 'No se pudo obtener la ubicación actual.');
     }
   };
 
   const handleTogglePushNotifications = async (enabled: boolean) => {
     if (!currentUser) return;
+    pushRevision.current += 1;
     const current = captureOperation();
     try {
       if (enabled) {
@@ -620,7 +666,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
         triggerToast('Notificaciones desactivadas en este dispositivo.');
       }
     } catch (error) {
-      console.error('No se pudo actualizar la configuración de notificaciones:', error);
+      reportError('No se pudo actualizar la configuración de notificaciones:', error);
       if (current()) triggerToast(error instanceof Error ? error.message : 'No se pudo actualizar la configuración de notificaciones.');
     }
   };
@@ -628,9 +674,12 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
   const handleSignOut = async () => {
     if (!supabase) return;
     const current = captureOperation();
+    try { await disconnectPushDevice(current); }
+    catch { if (current()) onLogoutWarning(); }
+    if (!current()) return;
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('No se pudo cerrar la sesión:', error);
+      reportError('No se pudo cerrar la sesión:', error);
       if (current()) triggerToast('No se pudo cerrar la sesión.');
     }
   };
@@ -661,7 +710,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
           existing.id === notification.id ? { ...existing, read: true } : existing
         ));
       } catch (error) {
-        console.error('No se pudo marcar la notificación como leída:', error);
+        reportError('No se pudo marcar la notificación como leída:', error);
         if (current()) triggerToast('No se pudo actualizar la notificación.');
       }
     }
@@ -681,6 +730,17 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
     }
   };
 
+  useEffect(() => {
+    if (!currentUser || isLoadingData) return;
+    const url = new URL(window.location.href); const id = url.searchParams.get('notification');
+    const notice = notifications.find(notification => String(notification.id) === id);
+    if (!notice) return; // Never open an ID that is not visible to this account.
+    url.searchParams.delete('notification');
+    window.history.replaceState(null,'',url.pathname+url.search+url.hash);
+    setActiveTab('notifications');
+    void handleSelectNotification(notice);
+  }, [currentUser?.id,isLoadingData,notifications,items]);
+
   if (!currentUser) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center gap-4 p-6 bg-slate-50">
@@ -697,6 +757,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
   }
 
   return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm font-semibold text-slate-500">Cargando...</div>}>
     <div className="app-shell min-h-screen flex flex-col font-sans text-slate-800">
       {/* Mensaje flotante de alerta (Toast) */}
       {toastMessage && (
@@ -935,7 +996,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
                 .then(({ error }) => {
                   if (!current()) return;
                   if (error) {
-                    console.error('No se pudieron marcar las notificaciones como leídas:', error);
+                    reportError('No se pudieron marcar las notificaciones como leídas:', error);
                     triggerToast('No se pudieron actualizar las notificaciones.');
                     return;
                   }
@@ -953,6 +1014,8 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
           <ProfileView
             currentUser={currentUser}
             userItems={items.filter(i => i.user.id === currentUser.id)}
+            onEditItem={openEdit}
+            onChangePassword={onChangePassword}
             onSignOut={() => void handleSignOut()}
             onViewItem={(selected) => setSelectedDetailItem(selected)}
             onOpenPublish={() => setIsPublishOpen(true)}
@@ -989,12 +1052,18 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
         currentUser={currentUser}
       />
 
+      {editingItem && <PublishModal
+        isOpen={Boolean(editingItem)} initialItem={editingItem}
+        onClose={() => setEditingItem(null)} onSubmit={handleEditSubmit} currentUser={currentUser}
+      />}
+
       {/* Modal 2: Vista detallada con fotos, descripción completa, mapa y acciones */}
       <ItemDetailModal
-        item={selectedDetailItem}
+        item={items.find(item => item.id === selectedDetailItem?.id) ?? null}
         onClose={() => setSelectedDetailItem(null)}
         onContact={openContact}
         currentUser={currentUser}
+        onEditItem={openEdit}
         onMarkAsRecovered={handleMarkAsRecovered}
         onDeleteItem={handleDeleteItem}
         allItems={items}
@@ -1006,8 +1075,8 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
 
       {/* Modal 3: Chat directo y opciones de contacto (llamada/WhatsApp) */}
       <ContactModal
-        item={contactingItem}
-        isOpen={Boolean(contactingItem)}
+        item={items.find(item => item.id === contactingItem?.id) ?? null}
+        isOpen={items.some(item => item.id === contactingItem?.id)}
         onClose={() => {
           setContactingItem(null);
           setContactingParticipantId(null);
@@ -1021,7 +1090,7 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
 
       {/* Modal 4: Comparación lado a lado de coincidencias sugeridas */}
       <MatchComparisonModal
-        match={selectedMatchComparison}
+        match={matches.find(match => match.id === selectedMatchComparison?.id) ?? null}
         isOpen={Boolean(selectedMatchComparison)}
         onClose={() => setSelectedMatchComparison(null)}
         onContact={(itemToContact) => {
@@ -1036,5 +1105,6 @@ function AccountApp({ authUser, sessionGuard }: { authUser: AuthUser; sessionGua
       />
       <FaqChat />
     </div>
+    </Suspense>
   );
 }

@@ -19,10 +19,15 @@ async function loadModule(file, responses) {
       const query = {
         select(columns) { call.columns = columns; return query; },
         order() { return query; },
+        range(from, to) { call.range = [from, to]; return query; },
         in(column, values) { call.ids = [column, values]; return query; },
         eq(column, value) { call.filter = [column, value]; return query; },
         maybeSingle() { return query; },
-        then(resolve, reject) { return Promise.resolve(response).then(resolve, reject); }
+        then(resolve, reject) {
+          const output = call.range && Array.isArray(response.data)
+            ? { ...response, data: response.data.slice(call.range[0], call.range[1] + 1), count: response.data.length } : response;
+          return Promise.resolve(output).then(resolve, reject);
+        }
       };
       return query;
     }
@@ -133,6 +138,16 @@ try {
     await assert.rejects(module.enablePushNotifications(profile.id, () => false), /sesión/);
     await assert.rejects(module.disablePushNotifications(profile.id, () => false), /sesión/);
     assert.equal(calls.length, 0);
+  });
+  await check('logout disconnect revokes browser push and closes notices without deleting database rows', async () => {
+    let unsubscribed = 0, closed = 0;
+    navigator.serviceWorker.getRegistration = async () => ({
+      pushManager: { getSubscription: async () => ({ unsubscribe: async () => { unsubscribed++; return true; } }) },
+      getNotifications: async () => [{ close: () => { closed++; } }]
+    });
+    const { module, calls } = await loadModule('lib/push.ts', {});
+    await module.disconnectPushDevice();
+    assert.equal(unsubscribed, 1); assert.equal(closed, 1); assert.equal(calls.length, 0);
   });
   console.log(`PASS: ${passed} offline client security checks`);
 } finally {

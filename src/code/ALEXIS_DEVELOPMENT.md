@@ -1,5 +1,7 @@
 # Desarrollo unificado en Alexis
 
+**Procedimiento vigente de backend:** [BACKEND_ACTIVATION.md](BACKEND_ACTIVATION.md), con instalación deshabilitada y activación separada. Los pasos anteriores de activación inmediata quedan reemplazados.
+
 Decisión del titular: única rama activa `Alexis`, commits directos, push normal,
 sin ramas nuevas ni PR nuevos. `main` y `German` deben permanecer intactas.
 No se despliega Firebase ni se ejecutan migraciones en Supabase real.

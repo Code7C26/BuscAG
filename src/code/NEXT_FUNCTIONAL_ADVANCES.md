@@ -1,5 +1,7 @@
 # Avances sobre PR #25: candidatos y operación segura
 
+**Procedimiento vigente de backend:** [BACKEND_ACTIVATION.md](BACKEND_ACTIVATION.md), con instalación deshabilitada y activación separada. Los pasos anteriores de activación inmediata quedan reemplazados.
+
 **Organización vigente:** desarrollo directo en [Alexis](ALEXIS_DEVELOPMENT.md). Las referencias a ramas/PR inferiores son históricas.
 
 Base exacta: `production/auth-data-readiness` en `e70a0c3`. Rama derivada:

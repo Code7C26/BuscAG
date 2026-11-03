@@ -1,5 +1,7 @@
 # Diagnóstico y aplicación de seguridad: pendiente de evidencia remota
 
+**Procedimiento vigente de backend:** [BACKEND_ACTIVATION.md](BACKEND_ACTIVATION.md), con instalación deshabilitada y activación separada. Los pasos anteriores de activación inmediata quedan reemplazados.
+
 Estado conocido por el titular: cuatro tablas principales con RLS, policies INSERT
 abiertas en items, lectura amplia de perfiles, comprobación sospechosa de mensajes,
 owner_id nullable, public_profiles/push_subscriptions ausentes y sin historial de

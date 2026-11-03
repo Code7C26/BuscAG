@@ -17,6 +17,7 @@ import { loadItems, loadMessages, loadNotifications, loadProfile, mapItem, mapMe
 import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus, disconnectPushDevice } from '../lib/push';
 // Utilidades de cálculo geográfico (Haversine)
 import { getDistanceKm, isValidCoordinates, NEARBY_RADIUS_KM } from './utils/geo';
+import { createMessageIntents, deliverMessage } from '../lib/messageDelivery';
 import { createRefreshQueue } from './utils/refreshQueue';
 import { authCallbackError, cleanAuthCallback } from '../lib/authFlow';
 import { createSessionGuard, type SessionGuard } from './utils/sessionGuard';
@@ -117,6 +118,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
   const lifetime = useRef(createSessionGuard());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pushRevision = useRef(0);
+  const messageIntents = useRef(createMessageIntents());
   const messageRequests = useRef(new Map<string, Promise<void>>());
   const captureOperation = useCallback(() => {
     const sessionCurrent = sessionGuard.capture();
@@ -529,13 +531,15 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
     const request = Promise.resolve().then(async () => {
       try {
         if (!current()) throw new Error('La sesión cambió.');
-        const { data, error } = await supabase.from('messages').insert({
-          item_id: item.id, sender_id: currentUser.id, recipient_id: recipientId,
-          sender_name: currentUser.name, sender_avatar: currentUser.avatar,
-          item_title: item.title, item_image: item.imageUrl, text: body
-        }).select('*').single();
-        if (!current()) throw new Error('La sesión cambió.');
-        if (error) throw error;
+        const input = {
+          item_id:item.id,sender_id:currentUser.id,recipient_id:recipientId,sender_name:currentUser.name,
+          sender_avatar:currentUser.avatar,item_title:item.title,item_image:item.imageUrl,text:body
+        };
+        const data = await deliverMessage(input,messageIntents.current.key(key),{
+          rpc:args=>supabase.rpc('send_message_once',args).single(),
+          legacy:payload=>supabase.from('messages').insert(payload).select('*').single(),isCurrent:current
+        });
+        messageIntents.current.acknowledge(key);
         const newMessage = mapMessage(data);
         setMessages(prev => prev.some(message => message.id === newMessage.id) ? prev : [...prev, newMessage]);
       } catch (error) {

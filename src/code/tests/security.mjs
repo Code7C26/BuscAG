@@ -228,6 +228,59 @@ try {
     assert.equal((await as('authenticated', ids.a, 'delete from public.push_subscriptions returning id')).rows.length, 1);
     assert.equal((await as('service_role', null, 'select endpoint,p256dh,auth from public.push_subscriptions')).rows.length, 1);
   })();
+  const beforeReceipts = await snapshot();
+  await db.exec(await read('../supabase/proposals/20261104000000_message_receipts.sql'));
+  await check('message RPC installation preserves all existing application rows',async()=>{
+    assert.deepEqual(await snapshot(),beforeReceipts);
+  })();
+  const rpc=(key='30000000-0000-4000-8000-000000000001',body='RPC synthetic',recipient=ids.b,item=itemB)=>
+    `select * from public.send_message_once('${key}','${item}','${recipient}','${body}')`;
+  await check('RPC requires authentication; direct INSERT and private receipts are inaccessible',async()=>{
+    await denied('anon',null,rpc());
+    await denied('authenticated',ids.a,send(ids.a,ids.b,itemB));
+    await denied('authenticated',ids.a,'select * from buscag_private.message_receipts');
+    await denied('authenticated',ids.a,rpc(undefined,undefined,ids.c));
+  })();
+  await check('same request returns one message, one notification and one counter increment',async()=>{
+    await db.exec('begin');
+    try {
+      await db.exec('set local role authenticated');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+      const first=(await db.query(rpc())).rows[0];
+      assert.equal(first.sender_name,'User A');
+      assert.equal((await db.query(rpc())).rows[0].id,first.id);
+      await db.exec('reset role');
+      assert.equal((await db.query(`select count(*)::int n from public.notifications where type='message' and related_item_id='${itemB}'`)).rows[0].n,2);
+      assert.equal((await db.query(`select contact_count from public.items where id='${itemB}'`)).rows[0].contact_count,2);
+    } finally {await db.exec('rollback');}
+  })();
+  await check('request key collision with changed payload rejects atomically',async()=>{
+    await db.exec('begin');
+    try {
+      await db.exec('set local role authenticated');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+      await db.query(rpc());
+      await assert.rejects(db.query(rpc(undefined,'Different')),e=>e.code==='22023');
+    }finally {await db.exec('rollback');}
+  })();
+  await check('empty/oversized messages are rejected without receipts',async()=>{
+    await assert.rejects(as('authenticated',ids.a,rpc(undefined,'   ')),e=>e.code==='22023');
+    await assert.rejects(as('authenticated',ids.a,rpc(undefined,'x'.repeat(4001))),e=>e.code==='22023');
+  })();
+  await check('rate limit blocks new requests but permits retries of accepted requests',async()=>{
+    await db.exec('begin');
+    try {
+      await db.exec('set local role authenticated');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+      const original=(await db.query(rpc())).rows[0];
+      await db.exec('reset role');
+      await db.query(`insert into buscag_private.message_receipts(actor_id,request_key,request_hash,message_id)
+        select '${ids.a}',gen_random_uuid(),'synthetic','${original.id}' from generate_series(1,119)`);
+      await db.exec('set local role authenticated');
+      assert.equal((await db.query(rpc())).rows[0].id,original.id);
+      await assert.rejects(db.query(rpc('30000000-0000-4000-8000-000000000002')),e=>e.message==='message_rate_limited');
+    }finally {await db.exec('rollback');}
+  })();
   console.log(`PASS: ${passed} offline PostgreSQL security checks`);
 } catch (error) {
   console.error('FAIL', error.code || error.name, error.message);

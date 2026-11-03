@@ -144,7 +144,12 @@ export interface Database {
         Relationships: []
       }
     }
-    Functions: Record<string, never>
+    Functions: {
+      send_message_once: {
+        Args: {p_request_key:string;p_item_id:string;p_recipient_id:string;p_text:string}
+        Returns: Database['public']['Tables']['messages']['Row'][]
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

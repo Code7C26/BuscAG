@@ -82,6 +82,7 @@ function resetMock() {
     push:{ status:async()=>false,enable:async()=>{},disable:async()=>{},disconnect:async()=>{} }
   };
   mock.client={
+    rpc(){ return {single:async()=>({data:null,error:{code:'PGRST202'}})}; },
     auth:{onAuthStateChange(cb){ mock.listeners.push(cb);return {data:{subscription:{unsubscribe(){mock.listeners=mock.listeners.filter(x=>x!==cb);}}}};},
       getSession:()=>startup.promise,signOut:async()=>{ mock.emit(null);return {error:null}; }},
     channel(){ const c={handlers:[],on(_type,filter,cb){this.handlers.push({filter,cb});return this;},subscribe(){return this;}};mock.channels.push(c);return c;},

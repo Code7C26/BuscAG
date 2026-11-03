@@ -31,6 +31,9 @@ end; $$;
 create table buscag_private.match_jobs (
   item_id uuid primary key references public.items(id) on delete cascade,
   after_id uuid,
+  attempts integer not null default 0,
+  next_attempt_at timestamptz not null default now(),
+  last_error_code text,
   queued_at timestamptz not null default now()
 );
 create table buscag_private.match_notices (
@@ -43,7 +46,7 @@ create table buscag_private.match_notices (
 alter table buscag_private.match_jobs enable row level security;
 alter table buscag_private.match_notices enable row level security;
 revoke all on buscag_private.match_jobs,buscag_private.match_notices from public,anon,authenticated,service_role;
-create index match_jobs_order_idx on buscag_private.match_jobs(queued_at,item_id);
+create index match_jobs_order_idx on buscag_private.match_jobs(next_attempt_at,queued_at,item_id);
 create index items_match_candidates_idx on public.items(category,status,id)
   where status in ('perdido','encontrado') and owner_id is not null;
 
@@ -95,7 +98,7 @@ create function buscag_private.enqueue_match() returns trigger
 language plpgsql security definer set search_path='' as $$
 begin
   insert into buscag_private.match_jobs(item_id) values(new.id)
-    on conflict(item_id) do update set after_id=null,queued_at=now();
+    on conflict(item_id) do update set after_id=null,attempts=0,last_error_code=null,next_attempt_at=now(),queued_at=now();
   return new;
 end; $$;
 create trigger buscag_enqueue_match_insert after insert on public.items
@@ -111,13 +114,17 @@ declare job record; target public.items%rowtype; other public.items%rowtype;
   lost public.items%rowtype; found_item public.items%rowtype;
   score integer; recipient uuid; counterpart uuid; counterpart_owner uuid; nid uuid;
   claimed integer:=0; inspected integer; delivered integer:=0; added integer; cursor_id uuid;
+  failures integer:=0; prior_delivered integer;
 begin
   if p_limit is null or p_limit<1 or p_limit>20 then raise exception 'Invalid batch limit' using errcode='22023'; end if;
   -- One bounded worker transaction at a time avoids pair-ledger lock cycles.
   if not pg_try_advisory_xact_lock(hashtextextended('buscag:match-worker',0)) then
-    return jsonb_build_object('batches',0,'notifications',0,'busy',true);
+    return jsonb_build_object('batches',0,'notifications',0,'failures',0,'busy',true);
   end if;
-  for job in select * from buscag_private.match_jobs order by queued_at,item_id for update skip locked limit p_limit loop
+  for job in select * from buscag_private.match_jobs where next_attempt_at<=now()
+    order by next_attempt_at,queued_at,item_id for update skip locked limit p_limit loop
+    prior_delivered:=delivered;
+    begin
     claimed:=claimed+1; inspected:=0; cursor_id:=job.after_id;
     select * into target from public.items where id=job.item_id;
     if not found or target.owner_id is null or target.status is null or target.status not in ('perdido','encontrado') then
@@ -148,10 +155,19 @@ begin
       end loop;
     end loop;
     if inspected>200 then
-      update buscag_private.match_jobs set after_id=cursor_id,queued_at=now() where item_id=job.item_id;
+      update buscag_private.match_jobs set after_id=cursor_id,queued_at=now(),next_attempt_at=now(),attempts=0,last_error_code=null where item_id=job.item_id;
     else delete from buscag_private.match_jobs where item_id=job.item_id; end if;
+    exception when others then
+      -- The subtransaction rolls back this pair batch, including notices/ledger.
+      -- Keep the job, redact details, and allow other jobs to progress.
+      delivered:=prior_delivered;failures:=failures+1;
+      update buscag_private.match_jobs set attempts=least(attempts+1,1000000),
+        last_error_code=sqlstate,
+        next_attempt_at=now()+make_interval(secs=>least(3600,15*power(2,least(attempts,8)))::double precision)
+        where item_id=job.item_id;
+    end;
   end loop;
-  return jsonb_build_object('batches',claimed,'notifications',delivered,'busy',false);
+  return jsonb_build_object('batches',claimed,'notifications',delivered,'failures',failures,'busy',false);
 end; $$;
 revoke all on function public.process_match_jobs(integer) from public,anon,authenticated,service_role;
 grant execute on function public.process_match_jobs(integer) to service_role;

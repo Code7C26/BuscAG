@@ -354,6 +354,26 @@ try {
       assert.equal((await db.query(`select count(*)::int n from buscag_private.match_jobs where item_id='${lost}'`)).rows[0].n,0);
     }finally {await db.exec('rollback');}
   })();
+  await check('a failed match batch rolls back its notices, backs off and lets other jobs progress',async()=>{
+    await db.exec('begin');
+    try {
+      await db.query(`update public.items set status='perdido' where id='${lost}'`);
+      await db.query(`insert into public.items(id,owner_id,title,description,category,status,location_name,lat,lng,date)
+        values('70000000-0000-4000-8000-000000000001','${ids.c}','Mochila azul Nike','Synthetic','Otros','encontrado','Synthetic',0,0,'2026-11-01T13:00:00Z')`);
+      await db.exec(`create function public.synthetic_failure() returns trigger language plpgsql as $$begin raise exception 'synthetic private detail';end;$$;
+        create trigger synthetic_failure before insert on public.notifications for each row execute function public.synthetic_failure()`);
+      const noticesBefore=(await db.query('select count(*)::int n from public.notifications')).rows[0].n;
+      const result=(await db.query('select public.process_match_jobs(1) result')).rows[0].result;
+      assert.equal(result.failures,1);assert.equal(result.notifications,0);
+      const job=(await db.query(`select attempts,last_error_code,next_attempt_at>now() deferred from buscag_private.match_jobs where item_id='${lost}'`)).rows[0];
+      assert.deepEqual(job,{attempts:1,last_error_code:'P0001',deferred:true});
+      assert.equal((await db.query('select count(*)::int n from public.notifications')).rows[0].n,noticesBefore);
+      assert.equal((await db.query('select count(*)::int n from buscag_private.match_notices')).rows[0].n,2);
+      await db.exec('drop trigger synthetic_failure on public.notifications');
+      const next=(await db.query('select public.process_match_jobs(1) result')).rows[0].result;
+      assert.equal(next.failures,0);assert.equal(next.notifications,2);
+    }finally {await db.exec('rollback');}
+  })();
   if (db.fork) await check('native PostgreSQL concurrent retries commit one message and one receipt',async()=>{
     const clients=await Promise.all([db.fork(),db.fork()]);
     const key='50000000-0000-4000-8000-000000000001';
@@ -370,6 +390,24 @@ try {
       assert.equal(results[0],results[1]);
       assert.equal((await db.query('select count(*)::int n from buscag_private.message_receipts where request_key=$1',[key])).rows[0].n,1);
       assert.equal((await db.query("select count(*)::int n from public.messages where text='Parallel synthetic'")).rows[0].n,1);
+    }finally {await Promise.all(clients.map(client=>client.end()));}
+  })();
+  if (db.fork) await check('native PostgreSQL simultaneous workers never duplicate pair notifications',async()=>{
+    await db.query(`insert into public.items(id,owner_id,title,description,category,status,location_name,lat,lng,date)
+      values('80000000-0000-4000-8000-000000000001','${ids.a}','Wallet brown leather','Wallet brown leather','Otros','perdido','Synthetic',0,0,'2026-11-01T12:00:00Z'),
+      ('80000000-0000-4000-8000-000000000002','${ids.b}','Wallet brown leather','Wallet brown leather','Otros','encontrado','Synthetic',0,0,'2026-11-01T13:00:00Z')`);
+    const clients=await Promise.all([db.fork(),db.fork()]);
+    try {
+      const results=await Promise.all(clients.map(async client=>{
+        await client.query('begin');
+        try {
+          await client.query('set local role service_role');
+          const result=(await client.query('select public.process_match_jobs(5) result')).rows[0].result;
+          await client.query('commit');return result;
+        }catch(error){await client.query('rollback');throw error;}
+      }));
+      assert.equal(results.reduce((sum,r)=>sum+r.notifications,0),2);
+      assert.equal((await db.query("select count(*)::int n from buscag_private.match_notices where lost_id='80000000-0000-4000-8000-000000000001'")).rows[0].n,2);
     }finally {await Promise.all(clients.map(client=>client.end()));}
   })();
   console.log(`PASS: ${passed} offline PostgreSQL security checks`);

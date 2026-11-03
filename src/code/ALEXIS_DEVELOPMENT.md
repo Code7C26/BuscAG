@@ -18,9 +18,10 @@ estos cuatro PR. Antes de borrar referencias remotas, comprobar sus SHA como anc
 de Alexis local y comparar el SHA remoto después del push. Cerrar primero #26 y
 luego #25 antes de eliminar sus ramas. Las ramas temporales antiguas de #23/#24
 sólo pueden retirarse si sus puntas siguen siendo exactamente las ya incorporadas.
-La rama de #22 security/rls-hardening no es ancestro ni da equivalencia completa
-con git cherry; conservarla hasta reconciliar su diferencia y confirmar que está
-sin uso. No tocar ramas de compañeros aunque aparezcan como ancestros de otra rama.
+La rama de #22 security/rls-hardening inicialmente no era ancestro por el cherry-pick
+original hacia Alexis. Se reconcilió su historia mediante el merge b4cd29e,
+comprobando que el árbol resultante es idéntico byte por byte al anterior: sus
+protecciones ya estaban incorporadas y se conservan todas las mejoras posteriores. No tocar ramas de compañeros aunque aparezcan como ancestros de otra rama.
 
 ## Compatibilidad de la fecha de los objetos
 
@@ -54,8 +55,9 @@ como incorporado al avanzar su base). Se eliminaron local/remotamente:
 production/auth-data-readiness, production/next-functional-advances,
 production/session-publication-safety y security/alexis-rls-hardening.
 Las puntas exactas de las cuatro son ancestros de Alexis. main (`ef964b4`) y German
-(`074539d`) se conservaron sin cambios. security/rls-hardening se conserva por la
-reconciliación pendiente indicada arriba. No hay ramas nuevas ni PR nuevos.
+(`074539d`) se conservaron sin cambios. Después de publicar y verificar la
+reconciliación b4cd29e, security/rls-hardening también puede retirarse junto al PR #22
+obsoleto. No hay ramas nuevas ni PR nuevos.
 
 ## Publicación idempotente y subida recuperable
 
@@ -93,3 +95,15 @@ respaldado y requiere autorización de producción.
 Sin el RPC existe fallback sólo ante PGRST202: no garantiza publicaciones exactamente
 una vez en backend antiguo. Las claves son de memoria y no sobreviven una recarga.
 No hay deploy de Storage, Firebase, Edge Functions ni aplicación SQL implícitos.
+
+
+## Validación final de esta etapa
+
+- Aplicación: 81/81.
+- Cliente/privacidad/Storage simulado: 15/15.
+- PostgreSQL 17 nativo: 53/53 con DATE y 53/53 con timestamptz; incluyen tres
+  escenarios de conexiones concurrentes independientes.
+- PGlite: 50/50 con DATE y 50/50 con timestamptz (sin las tres multiconexión).
+- TypeScript, compilación Vite y Deno check --frozen de ambas Edge Functions: correctos.
+- Sin diferencias de CSS, colores, tipografías o distribución visual.
+- Las comprobaciones SQL sólo usan datos sintéticos en bases descartables.

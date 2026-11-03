@@ -1,0 +1,296 @@
+// React/DOM regression tests: all backend, GPS and Leaflet operations are simulated.
+import assert from 'node:assert/strict';
+import { test, after, afterEach, beforeEach } from 'node:test';
+import { JSDOM } from 'jsdom';
+import { build } from 'esbuild';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://buscag.invalid' });
+Object.assign(globalThis, { window: dom.window, document: dom.window.document,
+  HTMLElement: dom.window.HTMLElement, IS_REACT_ACT_ENVIRONMENT: true });
+Object.defineProperty(globalThis, 'navigator', { configurable: true, value: dom.window.navigator });
+const { createElement: h, act, StrictMode } = await import('react');
+const { createRoot } = await import('react-dom/client');
+const dir = await mkdtemp(path.resolve('node_modules/.production-tests-'));
+const sources = {
+  auth: `export const supabase = new Proxy({}, { get: (_, key) => globalThis.__production.client[key] });`,
+  data: `export const loadItems=(...a)=>globalThis.__production.data.loadItems(...a);
+    export const loadMessages=(...a)=>globalThis.__production.data.loadMessages(...a);
+    export const loadNotifications=(...a)=>globalThis.__production.data.loadNotifications(...a);
+    export const loadProfile=(...a)=>globalThis.__production.data.loadProfile(...a);
+    export const uploadItemImage=(...a)=>globalThis.__production.data.uploadItemImage(...a);
+    export const mapItem=(row,user)=>({...row,user}); export const mapMessage=row=>row;
+    export const mapNotification=row=>row;`,
+  push: `export const getPushNotificationStatus=(...a)=>globalThis.__production.push.status(...a);
+    export const enablePushNotifications=(...a)=>globalThis.__production.push.enable(...a);
+    export const disablePushNotifications=(...a)=>globalThis.__production.push.disable(...a);`,
+  leaflet: `export default globalThis.__leaflet;`
+};
+async function bundle(entry, app = false) {
+  const outfile = path.join(dir, path.basename(entry) + '.mjs');
+  await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'esm',
+    external: ['react', 'react-dom', 'react-dom/*', 'lucide-react'], plugins: [{ name: 'offline', setup(p) {
+      p.onResolve({ filter: /(^|\/)supabase(\.ts)?$/ }, () => ({ path: 'auth', namespace: 'mock' }));
+      p.onResolve({ filter: /^leaflet$/ }, () => ({ path: 'leaflet', namespace: 'mock' }));
+      if (app) {
+        p.onResolve({ filter: /\/lib\/database$/ }, () => ({ path: 'data', namespace: 'mock' }));
+        p.onResolve({ filter: /\/lib\/push$/ }, () => ({ path: 'push', namespace: 'mock' }));
+        p.onResolve({ filter: /^\.\/components\// }, args => ({ path: args.path.split('/').pop(), namespace: 'view' }));
+      }
+      p.onLoad({ filter: /.*/, namespace: 'mock' }, args => ({ contents: sources[args.path], loader: 'js' }));
+      p.onLoad({ filter: /.*/, namespace: 'view' }, args => ({ contents: `import React from 'react';
+        export const ${args.path} = props => {
+          globalThis.__production.views['${args.path}'] = props;
+          return React.createElement('div', {'data-view':'${args.path}'}, props.item?.user?.phone || '');
+        };`, loader: 'js' }));
+    } }] });
+  return import(pathToFileURL(outfile));
+}
+let roots = [];
+const defer = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return { promise, resolve, reject }; };
+const user = id => ({ id, name: `User ${id}`, avatar: 'https://images.invalid/avatar.png', email: '', phone: `private-${id}`, rating: 5, location: 'private' });
+const item = (id = 'item-a', owner = 'a') => ({ id, user: user(owner), title: 'Synthetic', description: 'Synthetic',
+  category: 'Otros', status: 'encontrado', locationName: 'Synthetic', lat: 0, lng: 0,
+  date: new Date().toISOString(), createdAt: new Date().toISOString(), imageUrl: 'https://images.invalid/item.png', contactCount: 0 });
+let maps = [], markers = [];
+const leaflet = {
+  map(_element, options) {
+    assert.ok(options.center.every(Number.isFinite));
+    const map = { handlers: {}, on(name, cb) { this.handlers[name]=cb; return this; },
+      remove() {}, invalidateSize() {}, setView() { return this; }, panTo() {} };
+    maps.push(map); return map;
+  },
+  marker(coords) {
+    assert.ok(coords.every(Number.isFinite)); assert.ok(Math.abs(coords[0])<=90 && Math.abs(coords[1])<=180);
+    const marker={coords, handlers:{}, addTo(){ return this; }, on(n,cb){ this.handlers[n]=cb;return this; },
+      setLatLng(){ return this; },getLatLng(){return {lat:0,lng:0};},bindTooltip(){return this;}};
+    markers.push(marker); return marker;
+  },
+  tileLayer() { return { addTo() {} }; }, divIcon() { return {}; },
+  layerGroup() { return { addTo(){ return this; }, clearLayers(){}, addLayer(){} }; },
+  control:{ zoom(){ return { addTo(){} }; } }
+};
+globalThis.__leaflet = leaflet;
+let mock;
+function resetMock() {
+  const startup=defer();
+  mock={startup, listeners:[], views:{}, queries:[], channels:[], removed:0,
+    result: async query => ({data:query.operation==='delete'?{id:'item-a'}:{id:'message-new',text:query.payload?.text},error:null}),
+    data:{ loadProfile:async u=>user(u.id),loadItems:async()=>[item()],loadMessages:async()=>[],loadNotifications:async()=>[],uploadItemImage:async()=> 'synthetic-image' },
+    push:{ status:async()=>false,enable:async()=>{},disable:async()=>{} }
+  };
+  mock.client={
+    auth:{onAuthStateChange(cb){ mock.listeners.push(cb);return {data:{subscription:{unsubscribe(){mock.listeners=mock.listeners.filter(x=>x!==cb);}}}};},
+      getSession:()=>startup.promise,signOut:async()=>{ mock.emit(null);return {error:null}; }},
+    channel(){ const c={handlers:[],on(_type,filter,cb){this.handlers.push({filter,cb});return this;},subscribe(){return this;}};mock.channels.push(c);return c;},
+    removeChannel:async()=>{mock.removed++;},
+    from(table){ const query={table,filters:[]}; mock.queries.push(query);
+      const q={insert(payload){query.operation='insert';query.payload=payload;return q;},
+        update(payload){query.operation='update';query.payload=payload;return q;},delete(){query.operation='delete';return q;},
+        select(){return q;},eq(...args){query.filters.push(args);return q;},
+        single(){return mock.result(query);},maybeSingle(){return mock.result(query);},
+        then(resolve,reject){return mock.result(query).then(resolve,reject);}};return q; }
+  };
+  mock.emit=id=>mock.listeners.forEach(cb=>cb(id?'SIGNED_IN':'SIGNED_OUT',{user:id?{id}:null}));
+  globalThis.__production=mock;
+}
+resetMock();
+const {default:App}=await bundle('src/App.tsx',true);
+const {PublishModal}=await bundle('src/components/PublishModal.tsx');
+const {ContactModal}=await bundle('src/components/ContactModal.tsx');
+const {MapView}=await bundle('src/components/MapView.tsx');
+const {ItemDetailModal}=await bundle('src/components/ItemDetailModal.tsx');
+async function mount(Component, props={}, strict=false) {
+  const host=document.createElement('div');document.body.append(host);const root=createRoot(host);roots.push(root);
+  const render=async next=>act(async()=>root.render(strict?h(StrictMode,null,h(Component,next)):h(Component,next)));
+  await render(props);return {host,render};
+}
+async function change(input,value) {
+  await act(async()=>{
+    const proto=input.tagName==='TEXTAREA'?window.HTMLTextAreaElement.prototype:window.HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto,'value').set.call(input,value);
+    input.dispatchEvent(new window.Event('input',{bubbles:true}));
+  });
+}
+const submit=async host=>act(async()=>host.querySelector('form').dispatchEvent(new window.Event('submit',{bubbles:true,cancelable:true})));
+const click=async element=>act(async()=>element.click());
+const emit=async id=>act(async()=>mock.emit(id));
+const settle=async()=>act(async()=>{await Promise.resolve();});
+beforeEach(()=>{resetMock();maps=[];markers=[];window.confirm=()=>false;window.alert=()=>{};});
+afterEach(async()=>{await act(async()=>{for(const root of roots)root.unmount();});roots=[];document.body.innerHTML='';});
+after(async()=>{dom.window.close();await rm(dir,{recursive:true,force:true});});
+
+test('account switch resets every private selection, GPS, filters and drafts; old startup read cannot restore A', async()=>{
+  await mount(App);await emit('a');
+  await act(async()=>mock.views.Header.onOpenProfile());
+  await act(async()=>mock.views.ProfileView.onViewItem(item()));
+  await act(async()=>mock.views.ProfileView.onOpenPublish());
+  assert.ok(mock.views.ItemDetailModal.item);
+  await emit('b');
+  assert.equal(mock.views.Header.currentUser.id,'b');
+  assert.equal(mock.views.ItemDetailModal.item,null);
+  assert.equal(mock.views.ContactModal.item,null);
+  assert.equal(mock.views.PublishModal.isOpen,false);
+  assert.equal(mock.views.Header.activeTab,'home');
+  await act(async()=>mock.startup.resolve({data:{session:{user:{id:'a'}}},error:null}));
+  assert.equal(mock.views.Header.currentUser.id,'b');
+  await act(async()=>mock.views.Header.onOpenProfile());
+  await act(async()=>mock.views.ProfileView.onSignOut());
+  assert.ok(document.querySelector('[data-view="AuthView"]'));
+});
+
+test('late data, realtime, push and GPS from A cannot update B (including StrictMode)',async()=>{
+  const oldData=defer(),oldPush=defer();let gps;
+  mock.data.loadMessages=()=>oldData.promise;mock.push.status=()=>oldPush.promise;
+  await mount(App,{},true);await emit('a');
+  const channel=mock.channels.at(-1);
+  mock.data.loadMessages=async()=>[];mock.push.status=async()=>false;
+  await emit('b');
+  await act(async()=>mock.views.Header.onSelectTab('map'));
+  Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition(cb){gps=cb;}}});
+  let location;
+  await act(async()=>{ location=mock.views.MapView.onLocateMe();location.catch(()=>{}); });
+  await emit('c');
+  await act(async()=>{oldData.resolve([{id:'private-a'}]);oldPush.resolve(true);gps({coords:{latitude:10,longitude:20}});});
+  await location.catch(()=>{});
+  await act(async()=>mock.views.Header.onOpenProfile());
+  assert.equal(mock.views.ProfileView.currentUser.id,'c');assert.equal(mock.views.ProfileView.pushEnabled,false);
+  const before=mock.queries.length;await act(async()=>channel.handlers[0].cb());assert.equal(mock.queries.length,before);
+  await act(async()=>mock.views.Header.onSelectTab('map'));
+  assert.equal(mock.views.MapView.userLat,undefined);assert.ok(mock.removed>0);
+});
+
+test('logout during upload prevents the subsequent publication INSERT',async()=>{
+  const upload=defer();mock.data.uploadItemImage=()=>upload.promise;
+  await mount(App);await emit('a');let pending;
+  await act(async()=>{pending=mock.views.PublishModal.onSubmit(item());pending.catch(()=>{});});
+  await emit('b');await act(async()=>upload.resolve('uploaded-before-logout'));
+  await assert.rejects(pending,/sesión/);
+  assert.equal(mock.queries.filter(q=>q.table==='items'&&q.operation==='insert').length,0);
+});
+
+test('every deletion entry point confirms and cancellation sends no delete',async()=>{
+  await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+  const fromProfile=mock.views.ProfileView.onDeleteItem;
+  await act(async()=>mock.views.ProfileView.onViewItem(item()));
+  const fromDetail=mock.views.ItemDetailModal.onDeleteItem;
+  let prompts=0;window.confirm=()=>{prompts++;return false;};
+  await act(async()=>fromProfile('item-a'));await act(async()=>fromDetail('item-a'));
+  assert.equal(prompts,2);assert.equal(mock.queries.filter(q=>q.operation==='delete').length,0);
+  window.confirm=()=>true;await act(async()=>fromProfile('item-a'));
+  assert.equal(mock.queries.filter(q=>q.operation==='delete').length,1);
+});
+
+test('failed message retains draft; duplicate submit and preset clicks share one pending send',async()=>{
+  const pending=defer();let calls=0;
+  const props={item:item(),isOpen:true,currentUser:user('b'),messages:[],participantId:'a',onMarkThreadRead:()=>{},
+    onSendMessage:()=>{calls++;return pending.promise;}};
+  const {host}=await mount(ContactModal,props);await change(host.querySelector('input'),'draft');
+  await submit(host);await submit(host);
+  await click([...host.querySelectorAll('button')].find(b=>b.textContent.includes('¿Aún')));
+  assert.equal(calls,1);assert.equal(host.querySelector('input').value,'draft');
+  await act(async()=>pending.reject(new Error('offline')));
+  assert.equal(host.querySelector('input').value,'draft');assert.equal(host.querySelector('button[type="submit"]').disabled,false);
+});
+
+test('successful send clears only its own draft, and a late response cannot clear a new thread',async()=>{
+  const pending=defer();const props={item:item(),isOpen:true,currentUser:user('b'),messages:[],participantId:'a',onMarkThreadRead:()=>{},onSendMessage:()=>pending.promise};
+  const {host,render}=await mount(ContactModal,props);await change(host.querySelector('input'),'sent');await submit(host);
+  await render({...props,participantId:'c'});await change(host.querySelector('input'),'new private draft');
+  await act(async()=>pending.resolve());assert.equal(host.querySelector('input').value,'new private draft');
+  await render({...props,participantId:'c',onSendMessage:async()=>{}});await submit(host);
+  assert.equal(host.querySelector('input').value,'');
+});
+
+test('App deduplicates concurrent identical messages and ignores completion after account change',async()=>{
+  const pending=defer();mock.result=()=>pending.promise;
+  await mount(App);await emit('b');await act(async()=>mock.views.Header.onSelectTab('map'));
+  await act(async()=>mock.views.MapView.onSelectPublication(item()));
+  const send=mock.views.ContactModal.onSendMessage;let one,two;
+  await act(async()=>{one=send('item-a','same','a');two=send('item-a','same','a');one.catch(()=>{});two.catch(()=>{});});
+  assert.equal(one,two);assert.equal(mock.queries.filter(q=>q.table==='messages').length,1);
+  await emit('c');await act(async()=>pending.resolve({data:{id:'old-message'},error:null}));
+  await assert.rejects(one,/sesión/);assert.equal(document.body.textContent.includes('No se pudo enviar'),false);
+});
+
+test('publication requires an explicit valid map location, preserves failure draft and resets only after success',async()=>{
+  let calls=0,close=0,fail=true;
+  const props={isOpen:true,currentUser:user('a'),onClose:()=>{close++;},onSubmit:async()=>{calls++;if(fail)throw Error('offline');}};
+  const {host,render}=await mount(PublishModal,props);
+  const title=()=>host.querySelector('input[placeholder^="Ej: Mochila"]');
+  await change(title(),'Private title');await change(host.querySelector('textarea'),'Description');
+  await submit(host);assert.equal(calls,0);assert.match(host.textContent,/Confirma una ubicación/);
+  await act(async()=>maps.at(-1).handlers.click({latlng:{lat:NaN,lng:0}}));await submit(host);assert.equal(calls,0);
+  await act(async()=>maps.at(-1).handlers.click({latlng:{lat:0,lng:0}}));
+  await submit(host);assert.equal(calls,1);assert.equal(title().value,'Private title');assert.equal(close,0);
+  fail=false;await submit(host);assert.equal(calls,2);assert.equal(title().value,'');assert.equal(host.querySelector('textarea').value,'');assert.equal(close,1);
+  await render({...props,isOpen:false});await render(props);await change(title(),'Second');await change(host.querySelector('textarea'),'Second');
+  await submit(host);assert.equal(calls,2); // reset also removes the old location confirmation
+});
+
+test('GPS must be valid; typing a place name never confirms default coordinates',async()=>{
+  let calls=0,callback;
+  Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition(cb){callback=cb;}}});
+  const {host}=await mount(PublishModal,{isOpen:true,currentUser:user('a'),onClose:()=>{},onSubmit:async()=>{calls++;}});
+  await change(host.querySelector('input[placeholder^="Ej: Mochila"]'),'Title');await change(host.querySelector('textarea'),'Description');
+  await change(host.querySelector('input[placeholder^="Ej: Plaza"]'),'Typed address');await submit(host);assert.equal(calls,0);
+  await click([...host.querySelectorAll('button')].find(b=>b.textContent.includes('Usar mi GPS')));
+  await act(async()=>callback({coords:{latitude:91,longitude:0}}));await submit(host);assert.equal(calls,0);
+  await act(async()=>callback({coords:{latitude:0,longitude:0}}));await submit(host);assert.equal(calls,1);
+});
+
+test('invalid legacy coordinates never reach Leaflet; existing publication remains available in detail',async()=>{
+  const invalid={...item('invalid'),lat:NaN,lng:200};
+  await mount(MapView,{items:[invalid,item('valid')],userLat:Infinity,userLng:0,onSelectPublication:()=>{},onLocateMe:async()=>({lat:0,lng:0})});
+  assert.equal(markers.length,1);assert.deepEqual(markers[0].coords,[0,0]);
+  const before=maps.length;const {host}=await mount(ItemDetailModal,{item:invalid,currentUser:user('b'),onClose:()=>{},onContact:()=>{}});
+  assert.equal(maps.length,before);assert.ok(host.textContent.includes('Synthetic'));
+});
+
+
+test('token refresh for the same account preserves its selected publication and draft modal',async()=>{
+  await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+  await act(async()=>mock.views.ProfileView.onViewItem(item()));await act(async()=>mock.views.ProfileView.onOpenPublish());
+  await emit('a');assert.equal(mock.views.ItemDetailModal.item.id,'item-a');assert.equal(mock.views.PublishModal.isOpen,true);
+});
+
+test('detail deletion closes only after confirmed successful deletion, without a second prompt',async()=>{
+  let deleted=false,closed=0,prompts=0;window.confirm=()=>{prompts++;return true;};
+  const props={item:item(),currentUser:user('a'),onClose:()=>{closed++;},onContact:()=>{},onDeleteItem:async()=>deleted};
+  const {host}=await mount(ItemDetailModal,props);
+  const button=()=>[...host.querySelectorAll('button')].find(b=>b.textContent.includes('Eliminar'));
+  await click(button());assert.equal(closed,0);deleted=true;await click(button());assert.equal(closed,1);assert.equal(prompts,0);
+});
+
+test('rapid publication submits issue one request; GPS from a closed form cannot confirm a reopened form',async()=>{
+  let gps,calls=0;const pending=defer();
+  Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition(cb){gps=cb;}}});
+  const props={isOpen:true,currentUser:user('a'),onClose:()=>{},onSubmit:()=>{calls++;return pending.promise;}};
+  const {host,render}=await mount(PublishModal,props);
+  await click([...host.querySelectorAll('button')].find(b=>b.textContent.includes('Usar mi GPS')));
+  await render({...props,isOpen:false});await render(props);
+  await act(async()=>gps({coords:{latitude:0,longitude:0}}));
+  await change(host.querySelector('input[placeholder^="Ej: Mochila"]'),'Title');await change(host.querySelector('textarea'),'Description');
+  await submit(host);assert.equal(calls,0);
+  await act(async()=>maps.at(-1).handlers.click({latlng:{lat:0,lng:0}}));await submit(host);await submit(host);assert.equal(calls,1);
+  await act(async()=>pending.resolve());
+});
+
+
+test('a failed App send releases the request lock for an explicit retry',async()=>{
+  let calls=0;mock.result=async()=>{calls++;return calls===1?{data:null,error:new Error('offline')}:{data:{id:'sent-on-retry',text:'draft'},error:null};};
+  await mount(App);await emit('b');
+  const send=mock.views.ContactModal.onSendMessage;
+  await act(async()=>{await assert.rejects(send('item-a','draft','a'),/offline/);});
+  await act(async()=>send('item-a','draft','a'));assert.equal(calls,2);
+});
+
+test('a confirmed map point still permits a descriptive address without changing coordinates',async()=>{
+  let submitted;
+  const {host}=await mount(PublishModal,{isOpen:true,currentUser:user('a'),onClose:()=>{},onSubmit:async data=>{submitted=data;}});
+  await change(host.querySelector('input[placeholder^="Ej: Mochila"]'),'Title');await change(host.querySelector('textarea'),'Description');
+  await act(async()=>maps.at(-1).handlers.click({latlng:{lat:10,lng:20}}));
+  await change(host.querySelector('input[placeholder^="Ej: Plaza"]'),'Descriptive meeting point');await submit(host);
+  assert.equal(submitted.locationName,'Descriptive meeting point');assert.equal(submitted.lat,10);assert.equal(submitted.lng,20);
+});

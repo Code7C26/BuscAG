@@ -98,6 +98,17 @@ try {
     assert.equal(user.phone, 'private-synthetic');
     assert.deepEqual(calls[0].filter, ['id', profile.id]);
   });
+  await check('profile fallback cannot write after its session expires during the read', async () => {
+    const { module, calls } = await loadModule('lib/database.ts', { profiles: { data: null, error: null } });
+    let checks = 0;
+    await assert.rejects(module.loadProfile({ id: profile.id, user_metadata: {} }, () => ++checks === 1), /sesión/);
+    assert.equal(calls.length, 1);
+  });
+  await check('an expired session cannot begin an image upload', async () => {
+    const { module, calls } = await loadModule('lib/database.ts', {});
+    await assert.rejects(module.uploadItemImage('https://images.invalid/example.png', profile.id, () => false), /sesión/);
+    assert.equal(calls.length, 0);
+  });
   globalThis.window = { Notification: {}, PushManager: {} };
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true, value: { serviceWorker: { getRegistration: async () => undefined } }
@@ -116,6 +127,12 @@ try {
       push_subscriptions: { data: null, error }
     });
     await assert.rejects(module.getPushNotificationStatus(profile.id), e => e === error);
+  });
+  await check('expired sessions cannot enable or disable browser push', async () => {
+    const { module, calls } = await loadModule('lib/push.ts', {});
+    await assert.rejects(module.enablePushNotifications(profile.id, () => false), /sesión/);
+    await assert.rejects(module.disablePushNotifications(profile.id, () => false), /sesión/);
+    assert.equal(calls.length, 0);
   });
   console.log(`PASS: ${passed} offline client security checks`);
 } finally {

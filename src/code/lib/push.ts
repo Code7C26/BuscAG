@@ -36,7 +36,8 @@ export async function getPushNotificationStatus(userId: string): Promise<boolean
   return subscription !== null && data.some(row => row.endpoint === subscription.endpoint);
 }
 
-export async function enablePushNotifications(userId: string): Promise<void> {
+export async function enablePushNotifications(userId: string, isCurrent: () => boolean = () => true): Promise<void> {
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   if (!isPushAvailable()) {
     throw new Error('Este navegador no admite notificaciones push. Prueba con un navegador compatible y una conexión segura (HTTPS).');
   }
@@ -47,6 +48,7 @@ export async function enablePushNotifications(userId: string): Promise<void> {
   }
 
   const permission = await Notification.requestPermission();
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   if (permission !== 'granted') {
     throw new Error(permission === 'denied'
       ? 'El navegador bloqueó las notificaciones. Habilítalas desde los permisos del sitio.'
@@ -54,9 +56,12 @@ export async function enablePushNotifications(userId: string): Promise<void> {
   }
 
   const registration = await navigator.serviceWorker.register('/sw.js');
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   await navigator.serviceWorker.ready;
-  const subscription = await registration.pushManager.getSubscription() ??
-    await registration.pushManager.subscribe({
+  if (!isCurrent()) throw new Error('La sesión cambió.');
+  const existing = await registration.pushManager.getSubscription();
+  if (!isCurrent()) throw new Error('La sesión cambió.');
+  const subscription = existing ?? await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: decodeApplicationServerKey(applicationServerKey)
     });
@@ -66,6 +71,7 @@ export async function enablePushNotifications(userId: string): Promise<void> {
     throw new Error('El navegador creó una suscripción push incompleta.');
   }
 
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   const { error } = await requireClient()
     .from('push_subscriptions')
     .upsert({
@@ -78,13 +84,15 @@ export async function enablePushNotifications(userId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function disablePushNotifications(userId: string): Promise<void> {
+export async function disablePushNotifications(userId: string, isCurrent: () => boolean = () => true): Promise<void> {
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   if (!isPushAvailable()) return;
 
   const registration = await navigator.serviceWorker.getRegistration('/');
   const subscription = await registration?.pushManager.getSubscription();
   if (!subscription) return;
 
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   const { error } = await requireClient()
     .from('push_subscriptions')
     .delete()
@@ -92,5 +100,6 @@ export async function disablePushNotifications(userId: string): Promise<void> {
     .eq('endpoint', subscription.endpoint);
 
   if (error) throw error;
+  if (!isCurrent()) return;
   await subscription.unsubscribe();
 }

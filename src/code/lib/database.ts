@@ -69,7 +69,8 @@ export const mapNotification = (row: NotificationRow): NotificationItem => ({
   relatedUserId: row.related_user_id ?? undefined
 });
 
-export async function loadProfile(authUser: AuthUser): Promise<User> {
+export async function loadProfile(authUser: AuthUser, isCurrent: () => boolean = () => true): Promise<User> {
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   const supabaseClient = client();
   const { data, error } = await supabaseClient
     .from('profiles')
@@ -77,6 +78,7 @@ export async function loadProfile(authUser: AuthUser): Promise<User> {
     .eq('id', authUser.id)
     .maybeSingle();
 
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   if (error) throw error;
   if (data) {
     return {
@@ -189,7 +191,8 @@ export async function loadNotifications(userId: string): Promise<NotificationIte
   return data.map(mapNotification);
 }
 
-export async function uploadItemImage(imageUrl: string, userId: string): Promise<string> {
+export async function uploadItemImage(imageUrl: string, userId: string, isCurrent: () => boolean = () => true): Promise<string> {
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   const supabaseClient = client();
   const supabaseOrigin = new URL(import.meta.env.VITE_SUPABASE_URL).origin;
   let imageUrlObject: URL;
@@ -213,6 +216,7 @@ export async function uploadItemImage(imageUrl: string, userId: string): Promise
   const response = await fetch(imageUrl);
   if (!response.ok) throw new Error('No se pudo descargar la foto para guardarla.');
   const image = await response.blob();
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(image.type)) {
     throw new Error('La foto debe estar en formato JPG, PNG o WebP.');
   }
@@ -226,5 +230,6 @@ export async function uploadItemImage(imageUrl: string, userId: string): Promise
     upsert: false
   });
   if (error) throw error;
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   return supabaseClient.storage.from('item-images').getPublicUrl(path).data.publicUrl;
 }

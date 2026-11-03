@@ -17,6 +17,7 @@ import { loadItems, loadMessages, loadNotifications, loadProfile, mapItem, mapMe
 import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus, disconnectPushDevice } from '../lib/push';
 // Utilidades de cálculo geográfico (Haversine)
 import { getDistanceKm, isValidCoordinates, NEARBY_RADIUS_KM } from './utils/geo';
+import { persistReadReceipts } from '../lib/readReceipts';
 import { needsLegacyMatchNotice } from '../lib/matchDelivery';
 import { createMessageIntents, deliverMessage } from '../lib/messageDelivery';
 import { createReconnectSync } from './utils/reconnectSync';
@@ -148,6 +149,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
 
   // messages: Historial de mensajes del chat de contacto interno
   const [messages, setMessages] = useState<Message[]>([]);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [dataLoadError, setDataLoadError] = useState<string | null>(null);
@@ -595,22 +598,11 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
     if (!current()) return;
     void (async () => {
       try {
-        const { error } = await supabase
-          .from('messages')
-          .update({ is_read: true })
-          .eq('item_id', itemId)
-          .eq('sender_id', senderId)
-          .eq('recipient_id', userId)
-          .eq('is_read', false);
-        if (!current()) return;
-        if (error) throw error;
-        setMessages(prev => prev.map(message =>
-          message.itemId === itemId &&
-          message.senderId === senderId &&
-          message.receiverId === userId
-            ? { ...message, isRead: true }
-            : message
-        ));
+        const unread = messagesRef.current.filter(message=>message.itemId===itemId && message.senderId===senderId && message.receiverId===userId && !message.isRead).map(message=>message.id);
+        await persistReadReceipts(unread,ids=>supabase.from('messages').update({is_read:true})
+          .eq('recipient_id',userId).eq('item_id',itemId).eq('sender_id',senderId).in('id',ids).select('id'),current,
+          confirmed=>setMessages(previous=>previous.map(message=>confirmed.has(message.id)?{...message,isRead:true}:message)));
+
       } catch (error) {
         reportError('No se pudo actualizar el estado de lectura de los mensajes:', error);
         if (current()) setDataLoadError('No se pudo actualizar el estado de lectura de los mensajes.');
@@ -1029,19 +1021,13 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
             notifications={notifications}
             onMarkAllRead={() => {
               const current = captureOperation();
-              void supabase
-                .from('notifications')
-                .update({ is_read: true })
-                .eq('user_id', currentUser.id)
-                .eq('is_read', false)
-                .then(({ error }) => {
-                  if (!current()) return;
-                  if (error) {
-                    reportError('No se pudieron marcar las notificaciones como leídas:', error);
-                    triggerToast('No se pudieron actualizar las notificaciones.');
-                    return;
-                  }
-                  setNotifications(prev => prev.map(notification => ({ ...notification, read: true })));
+              const unread = notifications.filter(notification=>!notification.read).map(notification=>notification.id);
+              void persistReadReceipts(unread,ids=>supabase.from('notifications').update({is_read:true})
+                .eq('user_id',currentUser.id).in('id',ids).select('id'),current,
+                confirmed=>setNotifications(previous=>previous.map(notification=>confirmed.has(notification.id)?{...notification,read:true}:notification)))
+                .catch(error=>{
+                  reportError('No se pudieron marcar las notificaciones como leídas:',error);
+                  if (current()) triggerToast('No se pudieron actualizar las notificaciones.');
                 });
             }}
             onSelectNotification={notification => void handleSelectNotification(notification)}

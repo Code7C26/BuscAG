@@ -55,7 +55,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     setIsSending(false);
     setInputMessage('');
     return () => { threadVersion.current += 1; };
-  }, [item?.id, participantId, isOpen, currentUser.id, onMarkThreadRead]);
+  }, [item?.id, participantId, isOpen, currentUser.id]);
 
   const unreadKey = messages.filter(message => message.itemId === item?.id
     && message.senderId === participantId && message.receiverId === currentUser.id && !message.isRead)

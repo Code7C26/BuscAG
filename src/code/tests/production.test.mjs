@@ -90,7 +90,7 @@ function resetMock() {
     from(table){ const query={table,filters:[]}; mock.queries.push(query);
       const q={insert(payload){query.operation='insert';query.payload=payload;return q;},
         update(payload){query.operation='update';query.payload=payload;return q;},delete(){query.operation='delete';return q;},
-        select(){return q;},eq(...args){query.filters.push(args);return q;},
+        select(){return q;},in(...args){query.filters.push(args);return q;},eq(...args){query.filters.push(args);return q;},
         single(){return mock.result(query);},maybeSingle(){return mock.result(query);},
         then(resolve,reject){return mock.result(query).then(resolve,reject);}};return q; }
   };
@@ -455,4 +455,27 @@ test('recovery requires ownership and confirmation and concurrent clicks share o
   assert.equal(first,second);assert.equal(mock.queries.length,1);
   await act(async()=>pending.resolve({data:{id:'item-a'},error:null}));assert.equal(await first,true);
   assert.ok(mock.queries[0].filters.some(([column,value])=>column==='owner_id'&&value==='a'));
+});
+
+
+test('read confirmation cannot mark a notification arriving during the pending request',async()=>{
+  const notice=id=>({id,title:'Synthetic',message:'Synthetic',date:new Date().toISOString(),type:'match',read:false});
+  mock.data.loadNotifications=async()=>[notice('old')];
+  await mount(App);await emit('a');await act(async()=>mock.views.BottomNav.onSelectTab('notifications'));
+  const pending=defer();mock.result=()=>pending.promise;
+  await act(async()=>mock.views.NotificationsView.onMarkAllRead());
+  assert.ok(mock.queries[0].filters.some(([column,ids])=>column==='id'&&ids.length===1&&ids[0]==='old'));
+  mock.data.loadNotifications=async()=>[notice('new'),notice('old')];
+  await act(async()=>mock.channels.at(-1).handlers.find(h=>h.filter.table==='notifications').cb());
+  await settle();
+  await act(async()=>pending.resolve({data:[{id:'old'}],error:null}));
+  assert.equal(mock.views.NotificationsView.notifications.find(n=>n.id==='old').read,true);
+  assert.equal(mock.views.NotificationsView.notifications.find(n=>n.id==='new').read,false);
+});
+
+
+test('a changed read callback never erases a conversation draft',async()=>{
+  const props={item:item(),isOpen:true,currentUser:user('b'),messages:[],participantId:'a',onMarkThreadRead:()=>{},onSendMessage:async()=>{}};
+  const {host,render}=await mount(ContactModal,props);await change(host.querySelector('input'),'Keep this draft');
+  await render({...props,onMarkThreadRead:()=>{}});assert.equal(host.querySelector('input').value,'Keep this draft');
 });

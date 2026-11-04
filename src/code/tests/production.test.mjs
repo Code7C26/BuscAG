@@ -105,6 +105,7 @@ const {AuthView}=await bundle('src/components/AuthView.tsx');
 const {AppErrorBoundary}=await bundle('src/components/AppErrorBoundary.tsx');
 const {MapView}=await bundle('src/components/MapView.tsx');
 const {ItemDetailModal}=await bundle('src/components/ItemDetailModal.tsx');
+const {ItemCard}=await bundle('src/components/ItemCard.tsx');
 async function mount(Component, props={}, strict=false, choosePhoto=true) {
   const host=document.createElement('div');document.body.append(host);const root=createRoot(host);roots.push(root);
   const render=async next=>act(async()=>root.render(strict?h(StrictMode,null,h(Component,next)):h(Component,next)));
@@ -184,7 +185,7 @@ test('every deletion entry point confirms and cancellation sends no delete',asyn
   const fromProfile=mock.views.ProfileView.onDeleteItem;
   await act(async()=>mock.views.ProfileView.onViewItem(item()));
   const fromDetail=mock.views.ItemDetailModal.onDeleteItem;
-  let prompts=0;window.confirm=()=>{prompts++;return false;};
+  let prompts=0;window.confirm=message=>{assert.match(message,/conversaciones/);prompts++;return false;};
   await act(async()=>fromProfile('item-a'));await act(async()=>fromDetail('item-a'));
   assert.equal(prompts,2);assert.equal(mock.queries.filter(q=>q.operation==='delete').length,0);
   window.confirm=()=>true;await act(async()=>fromProfile('item-a'));
@@ -493,4 +494,13 @@ test('publication retry after an uncertain RPC response keeps its request key an
   await act(async()=>{await assert.rejects(publish(draft));});
   fail=false;await act(async()=>publish(draft));
   assert.equal(keys[0],keys[1]);assert.equal(uploads,1);assert.equal(mock.queries.filter(q=>q.operation==='insert').length,0);
+});
+
+
+test('legacy missing content is labelled honestly and editing requires explicit classification',async()=>{
+  const legacy={...item(),title:'',description:'',category:'',status:null,date:'',lat:NaN,lng:NaN,imageUrl:''};
+  const card=await mount(ItemCard,{item:legacy,onViewMore:()=>{}});
+  assert.match(card.host.textContent,/Publicación sin título/);assert.match(card.host.textContent,/Estado sin informar/);assert.match(card.host.textContent,/Categoría sin informar/);
+  let saves=0;const form=await mount(PublishModal,{isOpen:true,initialItem:legacy,currentUser:user('a'),onClose:()=>{},onSubmit:async()=>{saves++;}});
+  assert.equal(form.host.querySelector('select').value,'');await submit(form.host);assert.equal(saves,0);assert.match(form.host.textContent,/categoría y estado válidos/);
 });

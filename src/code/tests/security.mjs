@@ -1,12 +1,14 @@
 // Offline policy regression tests. All SQL runs in an ephemeral WASM PostgreSQL.
 // No connection string, project URL, real credentials or production rows are used.
 import assert from 'node:assert/strict';
+import {createObservedTables,applyObservedAccess,observed} from './observedContract.mjs';
 import {analyzeDiagnostic} from '../scripts/check-supabase-diagnostic.mjs';
 import { readFile } from 'node:fs/promises';
 const { PGlite } = await import(process.env.LOCAL_PG_SOCKET ? './postgresAdapter.mjs' : process.env.PGLITE_MODULE || '@electric-sql/pglite');
 const db = new PGlite();
 let passed = 0;
-const itemDateType=process.env.TEST_ITEM_DATE_TYPE||'timestamptz';
+const observedShape=process.env.TEST_SCHEMA_SHAPE==='observed';
+const itemDateType=process.env.TEST_ITEM_DATE_TYPE||(observedShape?'date':'timestamptz');
 if(!['date','timestamptz'].includes(itemDateType)) throw new Error('Unsupported fixture date type');
 const ids = Object.fromEntries(['a', 'b', 'c', 'd'].map((key, i) =>
   [key, `00000000-0000-4000-8000-00000000000${i + 1}`]));
@@ -56,18 +58,22 @@ try {
       $$ select string_to_array($1, '/') $$;
     create publication supabase_realtime;
   `);
+  if(observedShape)await createObservedTables(db);
   for (const file of ['20261014000000_dynamic_database.sql', '20261015000000_push_notifications.sql', '20261016000000_notification_permissions.sql']) {
     // PGlite has built-in gen_random_uuid(); its pgcrypto extension is not needed.
     await db.exec((await read(`../supabase/migrations/${file}`))
       .replace('create extension if not exists pgcrypto;', '')
       .replace('date timestamptz not null default now()',`date ${itemDateType} not null default now()`));
   }
+  if(observedShape)await applyObservedAccess(db);
   // Model Supabase default grants plus observed drift and old column ACLs.
-  await db.exec(`
+  if(!observedShape)  await db.exec(`
     grant select, insert, update, delete on all tables in schema public to anon, authenticated;
     grant update (rating) on public.profiles to public, authenticated;
     grant update (contact_count) on public.items to authenticated;
     create policy legacy_anonymous_insert on public.items for insert to anon with check (true);
+  `);
+  await db.exec(`
     insert into auth.users (id, raw_user_meta_data) values
       ('${ids.a}', '{"full_name":"User A","phone":"private-a","location":"private-a"}'),
       ('${ids.b}', '{"full_name":"User B","phone":"private-b","location":"private-b"}'),
@@ -87,13 +93,36 @@ try {
   await check('baseline detects recursive message INSERT policy expansion', async () => {
     await assert.rejects(as('authenticated', ids.a, send(ids.a, ids.c, itemB)), error => error.code === '42P17');
   })();
+  await check('pre-migration roles reproduce profile exposure and owner-modifiable rating/counter',async()=>{
+    const publicProfiles=(await as('authenticated',ids.c,'select id,phone from public.profiles')).rows;
+    assert.equal(publicProfiles.length,3);assert.ok(publicProfiles.some(row=>row.phone==='private-a'));
+    assert.equal((await as('authenticated',ids.a,`update public.profiles set rating=9.9 where id='${ids.a}' returning rating`)).rows.length,1);
+    assert.equal((await as('authenticated',ids.a,`update public.items set contact_count=99 where id='${itemA}' returning contact_count`)).rows[0].contact_count,99);
+  })();
+  if(observedShape)await check('observed anon role can read/forge item ownership and has SQL TRUNCATE (rolled back)',async()=>{
+    assert.ok((await as('anon',null,'select id,owner_id from public.items')).rows.length>0);
+    const forged=await as('anon',null,`insert into public.items(owner_id,title) values('${ids.b}','Synthetic forged ownership') returning owner_id`);
+    assert.equal(forged.rows[0].owner_id,ids.b);
+    await as('anon',null,'truncate public.items cascade');
+  })();
   // Match the reported missing push table, despite its presence in old migrations.
-  await db.exec('drop table public.push_subscriptions');
+  await db.exec('drop table if exists public.push_subscriptions');
+  if(observedShape)await check('observed contract reproduces all 41 column types/nullability/default presence and 15 constraints',async()=>{
+    const report=JSON.parse((await db.query(await read('../supabase/audit/production_diagnostic.sql'))).rows[0].diagnostic);
+    const projection=rows=>rows.map(c=>({relation_name:c.relation_name,attnum:c.attnum,column_name:c.column_name,column_type:c.column_type,not_null:c.not_null,has_default:c.has_default}));
+    assert.deepEqual(projection(report['04_columns']),projection(observed.columns));
+    assert.deepEqual(report['10_constraints'].filter(c=>c.contype!=='n'),observed.constraints);
+    assert.deepEqual(report['11_indexes'],observed.indexes);
+    assert.deepEqual(report['09_column_permissions'],observed.column_permissions);
+    assert.deepEqual(report['05_policies'],observed.policies);
+    assert.deepEqual(report['08_table_permissions'].map(({can_truncate,can_reference,can_trigger,...p})=>p),observed.permissions);
+  })();
   const snapshot = async () => (await db.query(`select
     (select jsonb_agg(to_jsonb(p) order by id) from public.profiles p) as profiles,
     (select jsonb_agg(to_jsonb(i) order by id) from public.items i) as items,
     (select jsonb_agg(to_jsonb(m) order by id) from public.messages m) as messages,
     (select jsonb_agg(to_jsonb(n) order by id) from public.notifications n) as notifications`)).rows;
+  if(observedShape)await db.query(`insert into public.items(id,owner_id) values('b0000000-0000-4000-8000-000000000001','${ids.b}')`);
   const before = await snapshot();
   for (const file of ['20261103000000_secure_items_messages.sql', '20261103001000_private_profiles_public_directory.sql',
     '20261103002000_secure_notifications.sql', '20261103003000_ensure_private_push_subscriptions.sql']) {
@@ -108,6 +137,7 @@ try {
       await denied('anon', null, `select * from public.${table}`);
     })();
   }
+  await check('security baseline revokes anonymous SQL TRUNCATE',()=>denied('anon',null,'truncate public.items cascade'))();
   await check('anonymous publication INSERT is denied', () => denied('anon', null,
     `insert into public.items (title,description,category,location_name,lat,lng) values ('X','X','Otros','X',0,0)`))();
   await check('authenticated publication INSERT succeeds with server-owned defaults', async () => {
@@ -537,6 +567,29 @@ try {
       assert.equal(row.can_select,false);assert.equal(row.can_insert,false);assert.equal(row.can_update,false);assert.equal(row.can_delete,false);
     }
   })();
+  const beforeValidation=await snapshot();
+  await db.exec(await read('../supabase/proposals/20261104003000_validate_legacy_compatible_writes.sql'));
+  await check('write validation installation preserves every existing row and rejects invalid categories without table CHECKs',async()=>{
+    assert.deepEqual(await snapshot(),beforeValidation);
+    await assert.rejects(as('authenticated',ids.a,publish({...publication,category:'Todos'})),e=>e.code==='22023');
+    await assert.rejects(as('authenticated',ids.a,`update public.items set status='inventado' where id='${itemA}'`),e=>e.code==='22023');
+    await assert.rejects(as('authenticated',ids.a,`update public.items set lat='NaN'::float8 where id='${itemA}'`),e=>e.code==='22023');
+  })();
+  if(observedShape)await check('legacy nullable item remains readable/contactable/recoverable without rewriting content',async()=>{
+    await db.exec('begin');
+    const legacy='b0000000-0000-4000-8000-000000000001';
+    try {
+      await db.exec('set local role authenticated');await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.a]);
+      const sent=(await db.query(`select * from public.send_message_once('b0000000-0000-4000-8000-000000000002','${legacy}','${ids.b}','Synthetic legacy contact')`)).rows[0];
+      assert.equal(sent.item_title,'Publicación sin título');assert.equal(sent.item_image,'');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[ids.b]);
+      await db.query(`update public.items set status='recuperado' where id='${legacy}'`);
+      const item=(await db.query(`select title,description,date,lat,image_url,contact_count from public.items where id='${legacy}'`)).rows[0];
+      assert.deepEqual(item,{title:null,description:null,date:null,lat:null,image_url:null,contact_count:1});
+      assert.equal((await db.query(`select * from public.notifications where related_item_id='${legacy}' and type='recovered'`)).rows.length,1);
+      await db.query(`update public.items set description='Repaired description' where id='${legacy}'`);
+    }finally {await db.exec('rollback');}
+  })();
   await check('integrated workflow: two publishers, retries, both matches, reciprocal messages, privacy and recovery',async()=>{
     await db.exec('begin');
     const act=async(uid,sql,args=[])=>{
@@ -578,6 +631,14 @@ try {
       assert.equal((await db.query('select public.process_match_jobs(20) result')).rows[0].result.notifications,0);
     }finally {await db.exec('rollback');}
   })();
+  await check('existing item deletion cascades messages; no migration changes this retention behavior',async()=>{
+    await db.exec('begin');
+    try {
+      assert.equal((await db.query(`select count(*)::int n from public.messages where item_id='${itemB}'`)).rows[0].n>0,true);
+      await db.query(`delete from public.items where id='${itemB}'`);
+      assert.equal((await db.query(`select count(*)::int n from public.messages where item_id='${itemB}'`)).rows[0].n,0);
+    }finally {await db.exec('rollback');}
+  })();
   await check('pausing preserves jobs and ledger, blocks processing and restores only own legacy notices',async()=>{
     await db.exec('begin');
     try {
@@ -591,7 +652,7 @@ try {
       await db.query(`insert into public.notifications(user_id,title,message,type) values('${ids.a}','Synthetic','Synthetic','match')`);
     }finally {await db.exec('rollback');}
   })();
-  console.log(`PASS: ${passed} offline PostgreSQL security checks (${itemDateType})`);
+  console.log(`PASS: ${passed} offline PostgreSQL security checks (${itemDateType}, ${observedShape?"observed":"repository"})`);
 } catch (error) {
   console.error('FAIL', error.code || error.name, error.message);
   if (error.query) console.error(error.query);

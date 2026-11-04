@@ -1,3 +1,4 @@
+import {isItemCategory,isItemStatus} from '../src/utils/itemContract';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { Item, Message, NotificationItem, User } from '../src/types';
@@ -30,15 +31,15 @@ export const mapProfile = (profile: ProfileRow): User => ({
 
 export const mapItem = (row: ItemRow, owner: User): Item => ({
   id: row.id,
-  title: row.title,
-  description: row.description,
-  category: row.category as Item['category'],
-  status: row.status as Item['status'],
-  locationName: row.location_name,
-  lat: row.lat,
-  lng: row.lng,
-  date: row.date,
-  imageUrl: row.image_url,
+  title: row.title ?? '',
+  description: row.description ?? '',
+  category: isItemCategory(row.category)?row.category:'',
+  status: isItemStatus(row.status)?row.status:null,
+  locationName: row.location_name??'',
+  lat: row.lat??NaN,
+  lng: row.lng??NaN,
+  date: row.date ?? '',
+  imageUrl: row.image_url??'',
   user: owner,
   createdAt: row.created_at,
   reward: row.reward ?? undefined,
@@ -61,7 +62,7 @@ export const mapMessage = (row: MessageRow): Message => ({
 
 export const mapNotification = (row: NotificationRow): NotificationItem => ({
   id: row.id,
-  title: row.title,
+  title: row.title ?? '',
   message: row.message,
   date: row.created_at,
   type: row.type as NotificationItem['type'],

@@ -76,7 +76,7 @@ function itemKeywords(item: Item): string[] {
  */
 export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | null {
   // 1. REGLA FUNDAMENTAL: Ambos deben pertenecer a la misma categoría
-  if (lostItem.category !== foundItem.category) {
+  if (!lostItem.category || lostItem.category !== foundItem.category) {
     return null;
   }
 

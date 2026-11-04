@@ -1,3 +1,4 @@
+import {isItemCategory,isItemStatus} from './utils/itemContract';
 import { createPublicationPublisher } from '../lib/publicationDelivery';
 import { reportError } from '../lib/reportError';
 /**
@@ -416,6 +417,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
     if (!currentUser || !supabase) throw new Error('Inicia sesión para publicar.');
     const current = captureOperation();
     if (!current()) throw new Error('La sesión cambió.');
+    if (!isItemCategory(newItemData.category)||!isItemStatus(newItemData.status)) throw new Error('Selecciona categoría y estado válidos.');
     if (!isValidCoordinates(newItemData.lat, newItemData.lng)) throw new Error('Selecciona una ubicación válida.');
     const date = serializeItemDate(newItemData.date);
     const data = await publications.current.publish({
@@ -469,6 +471,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
 
   const handleEditSubmit = async (changes: Omit<Item, 'id' | 'createdAt' | 'contactCount'>) => {
     if (!supabase || !currentUser || !editingItem || editingItem.user.id !== currentUser.id) throw new Error('No tienes permiso para editar esta publicación.');
+    if (!isItemCategory(changes.category)||!isItemStatus(changes.status)) throw new Error('Selecciona categoría y estado válidos.');
     if (!isValidCoordinates(changes.lat,changes.lng)) throw new Error('Selecciona una ubicación válida.');
     const current = captureOperation();
     const date = serializeItemDate(changes.date === itemDateInput(editingItem.date) ? editingItem.date : changes.date);
@@ -528,7 +531,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
   const handleDeleteItem = async (itemId: string): Promise<boolean> => {
     if (!currentUser || !supabase || !items.some(item => item.id === itemId && item.user.id === currentUser.id)) return false;
     const current = captureOperation();
-    if (!window.confirm('¿Estás seguro de eliminar esta publicación?')) return false;
+    if (!window.confirm('¿Eliminar esta publicación? Sus conversaciones asociadas también se eliminarán. Esta acción no se puede deshacer.')) return false;
     if (!current()) return false;
     try {
       const { data, error } = await supabase.from('items').delete()

@@ -90,7 +90,7 @@ as $$
 begin
   select p.full_name, p.avatar_url into new.sender_name, new.sender_avatar
     from public.profiles p where p.id = new.sender_id;
-  select i.title, i.image_url into new.item_title, new.item_image
+  select coalesce(nullif(btrim(i.title),''),'Publicación sin título'), coalesce(i.image_url,'') into new.item_title, new.item_image
     from public.items i where i.id = new.item_id;
   return new;
 end;

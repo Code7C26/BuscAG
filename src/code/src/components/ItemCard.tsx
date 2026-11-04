@@ -40,8 +40,8 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
       {/* Contenedor de la Imagen con relación de aspecto 4:3 */}
       <div className="item-card__image relative aspect-4/3 w-full overflow-hidden">
         <img
-          src={item.imageUrl}
-          alt={item.title}
+          src={item.imageUrl||undefined}
+          alt={item.title||'Publicación sin título'}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
         />
@@ -61,7 +61,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
           ) : (
             <span className="status-pill status-pill--found inline-flex items-center text-white">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Encontrado
+              {item.status==='encontrado'?'Encontrado':'Estado sin informar'}
             </span>
           )}
 
@@ -77,7 +77,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
         <div className="absolute top-3 right-3">
           <span className="item-card__category inline-flex items-center gap-1 px-2.5 py-1 text-[11px] text-white">
             <Tag className="w-3 h-3" />
-            {item.category}
+            {item.category||'Categoría sin informar'}
           </span>
         </div>
       </div>
@@ -87,7 +87,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
         <div>
           {/* Nombre / Título del objeto */}
           <h3 className="item-card__title text-base leading-snug line-clamp-1 group-hover:text-blue-700 transition-colors">
-            {item.title}
+            {item.title||'Publicación sin título'}
           </h3>
 
           {/* Fragmento de la descripción (truncado a 2 líneas para mantener uniformidad) */}

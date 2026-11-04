@@ -1,6 +1,12 @@
 // Offline metadata analysis only. No network, credentials, SQL execution or writes.
 import {readFile,stat} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
+import {createHash} from 'node:crypto';
+const expectedTriggerSources=new Map();
+for(const file of ['20261014000000_dynamic_database.sql','20261016000000_notification_permissions.sql']){
+  const sql=await readFile(new URL('../supabase/migrations/'+file,import.meta.url),'utf8');
+  for(const match of sql.matchAll(/create or replace function public\.(\w+)\([\s\S]*?as \$\$([\s\S]*?)\$\$;/gi))expectedTriggerSources.set(match[1],createHash('md5').update(match[2]).digest('hex'));
+}
 export function parseDiagnostic(source) {
   let root;
   try {root=JSON.parse(source);} catch {
@@ -40,6 +46,16 @@ export function analyzeDiagnostic(report) {
       if(col.not_null&&!col.has_default&&!col.identity_kind&&!col.generated_kind&&!supplied.includes(col.column_name))issue(errors,'required_unsupplied_column',table+'.'+col.column_name,'NOT NULL sin default: los INSERT actuales no lo suministran.');
     }
   }
+  const nullableContent=columns.filter(c=>c.relation_name==='items'&&!c.not_null&&['title','description','category','status','location_name','lat','lng','date','image_url'].includes(c.column_name)).map(c=>c.column_name);
+  if(nullableContent.length)issue(warnings,'nullable_item_content','items',nullableContent);
+  const itemChecks=(report['10_constraints']??[]).filter(c=>c.relname==='items'&&c.contype==='c');
+  for(const field of ['category','status'])if(!itemChecks.some(c=>new RegExp('\\b'+field+'\\b').test(c.definition)))issue(warnings,'item_domain_check_missing','items.'+field,'No depender del CHECK del bootstrap; validar nuevas escrituras sin reescribir registros antiguos.');
+  for(const edge of report['16_foreign_key_delete_graph']??[])if(edge.child_table==='messages'&&edge.on_delete==='CASCADE')issue(warnings,'conversation_delete_cascade',edge.parent_schema+'.'+edge.parent_table,'Eliminar la fila padre borra mensajes asociados. No cambiar retención automáticamente.');
+  for(const row of report['08_table_permissions']??[])if(['anon','authenticated'].includes(row.rolname)){
+    const acl=inventory.find(table=>table.name===row.relname)?.table_acl??'';
+    const legacyTruncate=(acl.match(new RegExp('(?:[,{])'+row.rolname+'=([^/]*)/'))?.[1]??'').includes('D');
+    if(row.can_truncate??legacyTruncate)issue(warnings,'client_truncate_grant',row.relname+':'+row.rolname,'TRUNCATE no usa RLS; explotación requiere acceso SQL, no basta un DELETE REST.');
+  }
   const rating=columns.find(row=>row.relation_name==='profiles'&&row.column_name==='rating');
   if(!rating||!/^numeric(?:\(\d+,\d+\))?$/.test(rating.column_type))issue(errors,'column_contract','profiles.rating','Debe conservar un tipo numeric compatible; no convertir datos automáticamente.');
   const directory=inventory.find(row=>row.name==='public_profiles');
@@ -75,6 +91,10 @@ export function analyzeDiagnostic(report) {
       const allowed=name==='process_match_jobs'?'service_role':'authenticated';
       if(row.rolname!==allowed&&row.can_execute)issue(errors,'unexpected_rpc_execute',name+':'+row.rolname,'EXECUTE concedido a un rol no previsto.');
     }
+  }
+  for(const fn of funcs){
+    const expected=expectedTriggerSources.get(fn.proname);
+    if(fn.nspname==='public'&&expected&&fn.source_fingerprint!==expected)issue(warnings,'trigger_source_fingerprint_differs',fn.proname,'El texto del cuerpo difiere del repositorio (puede ser formato o lógica). Revisar definición privada; no sustituir automáticamente.');
   }
   const triggers=report['12_triggers_without_arguments']??[];
   for(const name of ['handle_new_auth_user','notify_message_recipient','notify_item_recovered'])if(!triggers.some(row=>row.function_name===name))issue(warnings,'trigger_review_required',name,'No consta el trigger esperado; podría haber una implementación equivalente que debe revisarse.');

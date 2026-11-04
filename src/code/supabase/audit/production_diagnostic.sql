@@ -43,6 +43,9 @@ WITH expected(name, kind) AS (
     has_table_privilege(r.oid,t.oid,'INSERT') AS can_insert_table,
     has_table_privilege(r.oid,t.oid,'UPDATE') AS can_update_table,
     has_table_privilege(r.oid,t.oid,'DELETE') AS can_delete,
+    has_table_privilege(r.oid,t.oid,'TRUNCATE') AS can_truncate,
+    has_table_privilege(r.oid,t.oid,'REFERENCES') AS can_reference,
+    has_table_privilege(r.oid,t.oid,'TRIGGER') AS can_trigger,
     has_any_column_privilege(r.oid,t.oid,'SELECT') AS can_select_any_column,
     has_any_column_privilege(r.oid,t.oid,'INSERT') AS can_insert_any_column,
     has_any_column_privilege(r.oid,t.oid,'UPDATE') AS can_update_any_column
@@ -81,7 +84,8 @@ WITH expected(name, kind) AS (
   WHERE (n.nspname='public' AND p.proname IN
     ('can_send_item_message','canonicalize_message_display','handle_new_auth_user',
      'notify_message_recipient','notify_item_recovered','send_message_once',
-     'process_match_jobs','buscag_capabilities','publish_item_once','match_backend_enabled'))
+     'process_match_jobs','buscag_capabilities','publish_item_once','match_backend_enabled',
+     'validate_item_content_write','ensure_recovered_notice_text'))
     OR (n.nspname='auth' AND p.proname='uid')
 ), rpc_permissions AS (
   SELECT n.nspname,p.proname,pg_catalog.oidvectortypes(p.proargtypes) AS argument_types,r.rolname,
@@ -89,7 +93,8 @@ WITH expected(name, kind) AS (
     has_function_privilege(r.oid,p.oid,'EXECUTE') AS can_execute
   FROM pg_catalog.pg_proc p JOIN pg_catalog.pg_namespace n ON n.oid=p.pronamespace
   CROSS JOIN client_roles r
-  WHERE n.nspname='public' AND p.proname IN ('can_send_item_message','send_message_once','process_match_jobs','buscag_capabilities','publish_item_once','match_backend_enabled')
+  WHERE n.nspname='public' AND p.proname IN ('can_send_item_message','send_message_once','process_match_jobs','buscag_capabilities','publish_item_once','match_backend_enabled',
+     'validate_item_content_write','ensure_recovered_notice_text')
 ), foreign_key_edges AS (
   SELECT cn.nspname AS child_schema,child.relname AS child_table,
     pn.nspname AS parent_schema,parent.relname AS parent_table,c.conname,c.convalidated,
@@ -120,6 +125,13 @@ WITH expected(name, kind) AS (
     has_schema_privilege(r.oid,n.oid,'CREATE') as can_create
   from pg_catalog.pg_namespace n cross join client_roles r
   where n.nspname in ('public','auth','storage','buscag_private')
+), public_rpc_surface AS (
+  select p.proname,pg_catalog.oidvectortypes(p.proargtypes) argument_types,
+    pg_catalog.pg_get_function_result(p.oid) return_type,
+    pg_catalog.pg_get_userbyid(p.proowner) owner,p.prosecdef,p.proconfig,r.rolname,
+    has_function_privilege(r.oid,p.oid,'EXECUTE') can_execute,md5(p.prosrc) source_fingerprint
+  from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace cross join client_roles r
+  where n.nspname='public' and p.prokind='f' and p.prorettype<>'pg_catalog.trigger'::regtype
 ), inherited_roles AS (
   SELECT r.rolname AS client_role,p.rolname AS member_of,p.rolsuper,p.rolbypassrls,
     pg_has_role(r.oid,p.oid,'USAGE') AS immediately_available
@@ -156,6 +168,7 @@ SELECT jsonb_pretty(jsonb_build_object(
   '12_triggers_without_arguments',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM triggers x),'[]'),
   '13_function_metadata_not_bodies',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM functions x),'[]'),
   '14_dependent_views',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM dependent_views x),'[]'),
+  '21_public_rpc_surface',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM public_rpc_surface x),'[]'),
   '20_schema_permissions',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM schema_permissions x),'[]'),
   '16_foreign_key_delete_graph',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM foreign_key_edges x),'[]'),
   '17_optional_workflow_inventory',COALESCE((SELECT jsonb_agg(to_jsonb(x)) FROM private_workflows x),'[]'),

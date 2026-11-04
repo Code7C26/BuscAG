@@ -35,15 +35,15 @@ export interface Database {
         {
           id: string
           owner_id: string | null
-          title: string
-          description: string
-          category: string
-          status: string
-          location_name: string
-          lat: number
-          lng: number
-          date: string
-          image_url: string
+          title: string | null
+          description: string | null
+          category: string | null
+          status: string | null
+          location_name: string | null
+          lat: number | null
+          lng: number | null
+          date: string | null
+          image_url: string | null
           reward: string | null
           contact_count: number
           created_at: string

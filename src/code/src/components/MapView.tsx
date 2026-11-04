@@ -355,7 +355,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
               <img
                 src={selectedMapItem.imageUrl}
-                alt={selectedMapItem.title}
+                alt={selectedMapItem.title||'Publicación sin título'}
                 className="w-full h-full object-cover"
               />
               <span className={`absolute top-1 left-1 w-2.5 h-2.5 rounded-full ${
@@ -369,7 +369,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${
                   selectedMapItem.status === 'perdido' ? 'text-red-600' : 'text-green-600'
                 }`}>
-                  {selectedMapItem.status === 'perdido' ? 'Perdido' : 'Encontrado'}
+                  {selectedMapItem.status === 'perdido' ? 'Perdido' : selectedMapItem.status==='encontrado'?'Encontrado':selectedMapItem.status==='recuperado'?'Recuperado':'Estado sin informar'}
                 </span>
                 <button
                   onClick={() => setSelectedMapItem(null)}
@@ -381,7 +381,7 @@ export const MapView: React.FC<MapViewProps> = ({
               </div>
 
               <h4 className="font-bold text-slate-900 text-xs truncate leading-snug">
-                {selectedMapItem.title}
+                {selectedMapItem.title||'Publicación sin título'}
               </h4>
               <p className="text-[11px] text-slate-500 truncate mt-0.5">
                 📍 {selectedMapItem.locationName}

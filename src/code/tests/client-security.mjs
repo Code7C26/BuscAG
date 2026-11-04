@@ -177,6 +177,13 @@ try {
     try {await assert.rejects(module.uploadItemImage('data:image/png;base64,AQ==',profile.id,()=>true,'90000000-0000-4000-8000-000000000002'),/no coincide/);}
     finally {globalThis.fetch=originalFetch;}
   });
+  await check('nullable production content stays readable without invented category, status, coordinates or dates',async()=>{
+    const {module}=await loadModule('lib/database.ts',{});
+    const mapped=module.mapItem({...item,title:null,description:null,category:null,status:null,location_name:null,lat:null,lng:null,date:null,image_url:null},{id:'synthetic'});
+    assert.equal(mapped.title,'');assert.equal(mapped.description,'');assert.equal(mapped.category,'');assert.equal(mapped.status,null);
+    assert.equal(mapped.date,'');assert.equal(mapped.imageUrl,'');assert.equal(mapped.locationName,'');assert.ok(Number.isNaN(mapped.lat));assert.ok(Number.isNaN(mapped.lng));
+    assert.doesNotThrow(()=>mapped.title.toLowerCase()+mapped.category.toLowerCase());
+  });
   console.log(`PASS: ${passed} offline client security checks`);
 } finally {
   delete globalThis.__securityTestClient;

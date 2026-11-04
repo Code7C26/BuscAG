@@ -76,3 +76,8 @@ describe('matcher', () => {
     assert.ok((compareTwoItems(lost,found)?.matchedKeywords.length ?? 0)>0);
   });
 });
+
+it('does not match unclassified or status-less legacy records',()=>{
+  const [lost,found]=createPair({category:''},{category:''});assert.equal(compareTwoItems(lost,found),null);
+  const [unclassified,normal]=createPair({status:null});assert.equal(compareTwoItems(unclassified,normal),null);
+});

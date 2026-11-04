@@ -61,6 +61,7 @@ begin
     or draft.description !~ '[^[:space:]]' or char_length(draft.description)>10000
     or draft.location_name !~ '[^[:space:]]' or char_length(draft.location_name)>300
     or char_length(coalesce(draft.reward,''))>200 or char_length(draft.image_url)>4096
+    or draft.category not in ('Electrónicos','Documentos y Billeteras','Mascotas','Llaves','Mochilas y Bolsos','Indumentaria','Otros')
     or draft.image_url !~ '^https://' or draft.status not in ('perdido','encontrado')
     or not(draft.lat between -90 and 90 and draft.lng between -180 and 180)
     or not isfinite(draft.date) then

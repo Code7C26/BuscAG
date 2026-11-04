@@ -19,3 +19,13 @@ test('analysis distinguishes broad policies and protected-field ACLs from a prov
   assert.ok(result.warnings.some(x=>x.code==='protected_column_acl'));assert.ok(result.errors.some(x=>x.code==='privileged_api_role'));
   assert.equal(result.production_approved,false);
 });
+
+test('nullable content, absent domain checks, cascading messages and historical TRUNCATE ACLs remain visible',()=>{
+  const report={...empty,'02_inventory':[{name:'items',table_acl:'{anon=arwdDxtm/postgres}'}],
+    '04_columns':[{relation_name:'items',column_name:'title',not_null:false}],
+    '08_table_permissions':[{relname:'items',rolname:'anon'}],
+    '16_foreign_key_delete_graph':[{child_table:'messages',parent_schema:'public',parent_table:'items',on_delete:'CASCADE'}],
+    '13_function_metadata_not_bodies':[{nspname:'public',proname:'notify_message_recipient',source_fingerprint:'different'}]};
+  const codes=analyzeDiagnostic(report).warnings.map(x=>x.code);
+  for(const code of ['nullable_item_content','item_domain_check_missing','conversation_delete_cascade','client_truncate_grant','trigger_source_fingerprint_differs'])assert.ok(codes.includes(code),code);
+});

@@ -128,7 +128,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 {item.user.id !== currentUser.id && item.user.verified && <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" aria-label="Verificado" />}
               </h3>
               <p className="text-xs text-slate-500 truncate">
-                Publicación: <span className="font-semibold text-slate-700">{item.title}</span>
+                Publicación: <span className="font-semibold text-slate-700">{item.title||'Publicación sin título'}</span>
               </p>
             </div>
           </div>
@@ -158,7 +158,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
         <div className="px-4 py-2 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <img src={item.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
-            <span className="text-xs font-semibold text-slate-800 truncate">{item.title}</span>
+            <span className="text-xs font-semibold text-slate-800 truncate">{item.title||'Publicación sin título'}</span>
           </div>
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
             item.status === 'perdido' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'

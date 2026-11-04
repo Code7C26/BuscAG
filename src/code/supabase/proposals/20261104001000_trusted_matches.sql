@@ -122,8 +122,8 @@ begin
     or not(l.lat between -90 and 90 and f.lat between -90 and 90 and l.lng between -180 and 180 and f.lng between -180 and 180)
     or l.date is null or f.date is null or not isfinite(l.date) or not isfinite(f.date)
     or f.date<l.date-interval '24 hours' then return null; end if;
-  select count(*) into shared from unnest(buscag_private.match_words(l.title||' '||l.description)) w
-    where w=any(buscag_private.match_words(f.title||' '||f.description));
+  select count(*) into shared from unnest(buscag_private.match_words(coalesce(l.title,'')||' '||coalesce(l.description,''))) w
+    where w=any(buscag_private.match_words(coalesce(f.title,'')||' '||coalesce(f.description,'')));
   if shared<2 then return null; end if;
   hav:=power(sin(radians(f.lat-l.lat)/2),2)+cos(radians(l.lat))*cos(radians(f.lat))*power(sin(radians(f.lng-l.lng)/2),2);
   distance_km:=round((6371*2*asin(sqrt(least(1,greatest(0,hav)))))::numeric,1);

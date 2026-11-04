@@ -1,3 +1,4 @@
+import {isItemCategory,isItemStatus} from '../utils/itemContract';
 import { itemDateInput, parseItemDate } from '../utils/itemDate';
 import { reportError } from '../../lib/reportError';
 import { useDialogFocus } from '../utils/useDialogFocus';
@@ -51,10 +52,10 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   // ESTADOS DEL FORMULARIO
   // ==========================================
   const formId = useId();
-  const [status, setStatus] = useState<ItemStatus>('encontrado');      // Estado inicial: encontrado
+  const [status, setStatus] = useState<ItemStatus|''>('encontrado');      // Estado inicial: encontrado
   const [title, setTitle] = useState('');                             // Título del objeto
   const [description, setDescription] = useState('');                 // Descripción detallada
-  const [category, setCategory] = useState<Category>('Electrónicos'); // Categoría seleccionada
+  const [category, setCategory] = useState<Category|''>('Electrónicos'); // Categoría seleccionada
   const [date, setDate] = useState(toDateTimeLocal(new Date())); // Fecha y hora local
   const [locationName, setLocationName] = useState(''); // Nombre legible del lugar
   const [lat, setLat] = useState(DEFAULT_CENTER.lat);                 // Coordenada latitud
@@ -80,7 +81,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
   useEffect(() => {
     if (!initialItem) return;
-    setStatus(initialItem.status); setTitle(initialItem.title); setDescription(initialItem.description);
+    setStatus(initialItem.status??''); setTitle(initialItem.title); setDescription(initialItem.description);
     setCategory(initialItem.category); setLocationName(initialItem.locationName);
     const valid = isValidCoordinates(initialItem.lat, initialItem.lng);
     setLat(valid ? initialItem.lat : DEFAULT_CENTER.lat); setLng(valid ? initialItem.lng : DEFAULT_CENTER.lng);
@@ -211,12 +212,13 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting.current) return;
+    if (!isItemCategory(category)||!isItemStatus(status)) {setSubmitError('Selecciona categoría y estado válidos.');return;}
     if (!title.trim() || !description.trim()) {
       alert('Por favor completa el título y la descripción.');
       return;
     }
 
-    if (!initialItem && !imageUrl) { setSubmitError('Selecciona una foto propia o una imagen de muestra de forma explícita.'); return; }
+    if (!imageUrl) { setSubmitError('Selecciona una foto propia o una imagen de muestra de forma explícita.'); return; }
     if (!locationConfirmed || !isValidCoordinates(lat, lng) || !locationName.trim()) {
       setSubmitError('Confirma una ubicación válida tocando el mapa, moviendo el pin o usando tu GPS.');
       return;
@@ -444,7 +446,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
                 onChange={(e) => setCategory(e.target.value as Category)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none"
               >
-                {categories.map((cat) => (
+                {!category&&<option value="" disabled>Selecciona categoría</option>}
+              {categories.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
                   </option>

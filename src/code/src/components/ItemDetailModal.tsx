@@ -162,8 +162,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
         {/* Imagen principal superior con botón de cierre e insignias de estado */}
         <div className="relative aspect-16/10 w-full bg-slate-900 overflow-hidden">
           <img
-            src={item.imageUrl}
-            alt={item.title}
+            src={item.imageUrl||undefined}
+            alt={item.title||'Publicación sin título'}
             className="w-full h-full object-cover"
           />
 
@@ -191,14 +191,14 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-green-600 text-white shadow-lg">
                 <CheckCircle2 className="w-4 h-4" />
-                Objeto Encontrado
+                {item.status==='encontrado'?'Objeto Encontrado':'Estado sin informar'}
               </span>
             )}
 
             {/* Insignia de categoría */}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-900/80 text-white backdrop-blur-md">
               <Tag className="w-3.5 h-3.5" />
-              {item.category}
+              {item.category||'Categoría sin informar'}
             </span>
           </div>
         </div>
@@ -208,7 +208,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           {/* Título y Recompensa */}
           <div>
             <h2 className="font-extrabold text-slate-900 text-xl sm:text-2xl leading-tight">
-              {item.title}
+              {item.title||'Publicación sin título'}
             </h2>
 
             {item.reward && isLost && (

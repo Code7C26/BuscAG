@@ -1,0 +1,1684 @@
+{
+  "source_sha256": "e681be3e3255b9b98c777b1a2b8cbdbdacb309945fb69e373bede71378d8fec6",
+  "server_version": "17.11",
+  "columns": [
+    {
+      "relation_name": "items",
+      "attnum": 1,
+      "column_name": "id",
+      "column_type": "uuid",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "gen_random_uuid()"
+    },
+    {
+      "relation_name": "items",
+      "attnum": 2,
+      "column_name": "created_at",
+      "column_type": "timestamp with time zone",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "now()"
+    },
+    {
+      "relation_name": "items",
+      "attnum": 3,
+      "column_name": "title",
+      "column_type": "text",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 4,
+      "column_name": "description",
+      "column_type": "text",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 5,
+      "column_name": "category",
+      "column_type": "text",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 6,
+      "column_name": "status",
+      "column_type": "text",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 7,
+      "column_name": "location_name",
+      "column_type": "text",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 8,
+      "column_name": "lat",
+      "column_type": "double precision",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 9,
+      "column_name": "lng",
+      "column_type": "double precision",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 10,
+      "column_name": "date",
+      "column_type": "date",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 11,
+      "column_name": "image_url",
+      "column_type": "text",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 12,
+      "column_name": "reward",
+      "column_type": "text",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 13,
+      "column_name": "owner_id",
+      "column_type": "uuid",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "items",
+      "attnum": 14,
+      "column_name": "contact_count",
+      "column_type": "integer",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "0"
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 1,
+      "column_name": "id",
+      "column_type": "uuid",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "gen_random_uuid()"
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 2,
+      "column_name": "item_id",
+      "column_type": "uuid",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 3,
+      "column_name": "sender_id",
+      "column_type": "uuid",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 4,
+      "column_name": "recipient_id",
+      "column_type": "uuid",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 5,
+      "column_name": "sender_name",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 6,
+      "column_name": "sender_avatar",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "[default omitted]"
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 7,
+      "column_name": "item_title",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 8,
+      "column_name": "item_image",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "[default omitted]"
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 9,
+      "column_name": "text",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 10,
+      "column_name": "is_read",
+      "column_type": "boolean",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "false"
+    },
+    {
+      "relation_name": "messages",
+      "attnum": 11,
+      "column_name": "created_at",
+      "column_type": "timestamp with time zone",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "now()"
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 1,
+      "column_name": "id",
+      "column_type": "uuid",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "gen_random_uuid()"
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 2,
+      "column_name": "user_id",
+      "column_type": "uuid",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 3,
+      "column_name": "title",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 4,
+      "column_name": "message",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 5,
+      "column_name": "type",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 6,
+      "column_name": "related_item_id",
+      "column_type": "uuid",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 7,
+      "column_name": "related_user_id",
+      "column_type": "uuid",
+      "not_null": false,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 8,
+      "column_name": "is_read",
+      "column_type": "boolean",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "false"
+    },
+    {
+      "relation_name": "notifications",
+      "attnum": 9,
+      "column_name": "created_at",
+      "column_type": "timestamp with time zone",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "now()"
+    },
+    {
+      "relation_name": "profiles",
+      "attnum": 1,
+      "column_name": "id",
+      "column_type": "uuid",
+      "not_null": true,
+      "has_default": false,
+      "default_expression": null
+    },
+    {
+      "relation_name": "profiles",
+      "attnum": 2,
+      "column_name": "full_name",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "[default omitted]"
+    },
+    {
+      "relation_name": "profiles",
+      "attnum": 3,
+      "column_name": "avatar_url",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "[default omitted]"
+    },
+    {
+      "relation_name": "profiles",
+      "attnum": 4,
+      "column_name": "phone",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "[default omitted]"
+    },
+    {
+      "relation_name": "profiles",
+      "attnum": 5,
+      "column_name": "location",
+      "column_type": "text",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "[default omitted]"
+    },
+    {
+      "relation_name": "profiles",
+      "attnum": 6,
+      "column_name": "rating",
+      "column_type": "numeric(2,1)",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "5.0"
+    },
+    {
+      "relation_name": "profiles",
+      "attnum": 7,
+      "column_name": "created_at",
+      "column_type": "timestamp with time zone",
+      "not_null": true,
+      "has_default": true,
+      "default_expression": "now()"
+    }
+  ],
+  "constraints": [
+    {
+      "conname": "items_owner_id_fkey",
+      "contype": "f",
+      "relname": "items",
+      "definition": "FOREIGN KEY (owner_id) REFERENCES profiles(id) ON DELETE CASCADE",
+      "convalidated": true
+    },
+    {
+      "conname": "items_pkey",
+      "contype": "p",
+      "relname": "items",
+      "definition": "PRIMARY KEY (id)",
+      "convalidated": true
+    },
+    {
+      "conname": "messages_distinct_participants",
+      "contype": "c",
+      "relname": "messages",
+      "definition": "CHECK ((sender_id <> recipient_id))",
+      "convalidated": true
+    },
+    {
+      "conname": "messages_item_id_fkey",
+      "contype": "f",
+      "relname": "messages",
+      "definition": "FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE",
+      "convalidated": true
+    },
+    {
+      "conname": "messages_pkey",
+      "contype": "p",
+      "relname": "messages",
+      "definition": "PRIMARY KEY (id)",
+      "convalidated": true
+    },
+    {
+      "conname": "messages_recipient_id_fkey",
+      "contype": "f",
+      "relname": "messages",
+      "definition": "FOREIGN KEY (recipient_id) REFERENCES profiles(id) ON DELETE CASCADE",
+      "convalidated": true
+    },
+    {
+      "conname": "messages_sender_id_fkey",
+      "contype": "f",
+      "relname": "messages",
+      "definition": "FOREIGN KEY (sender_id) REFERENCES profiles(id) ON DELETE CASCADE",
+      "convalidated": true
+    },
+    {
+      "conname": "messages_text_check",
+      "contype": "c",
+      "relname": "messages",
+      "definition": "CHECK (((char_length(text) >= 1) AND (char_length(text) <= 4000)))",
+      "convalidated": true
+    },
+    {
+      "conname": "notifications_pkey",
+      "contype": "p",
+      "relname": "notifications",
+      "definition": "PRIMARY KEY (id)",
+      "convalidated": true
+    },
+    {
+      "conname": "notifications_related_item_id_fkey",
+      "contype": "f",
+      "relname": "notifications",
+      "definition": "FOREIGN KEY (related_item_id) REFERENCES items(id) ON DELETE SET NULL",
+      "convalidated": true
+    },
+    {
+      "conname": "notifications_related_user_id_fkey",
+      "contype": "f",
+      "relname": "notifications",
+      "definition": "FOREIGN KEY (related_user_id) REFERENCES profiles(id) ON DELETE SET NULL",
+      "convalidated": true
+    },
+    {
+      "conname": "notifications_type_check",
+      "contype": "c",
+      "relname": "notifications",
+      "definition": "CHECK ((type = ANY (ARRAY['message'::text, 'match'::text, 'system'::text, 'recovered'::text])))",
+      "convalidated": true
+    },
+    {
+      "conname": "notifications_user_id_fkey",
+      "contype": "f",
+      "relname": "notifications",
+      "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE",
+      "convalidated": true
+    },
+    {
+      "conname": "profiles_id_fkey",
+      "contype": "f",
+      "relname": "profiles",
+      "definition": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE",
+      "convalidated": true
+    },
+    {
+      "conname": "profiles_pkey",
+      "contype": "p",
+      "relname": "profiles",
+      "definition": "PRIMARY KEY (id)",
+      "convalidated": true
+    }
+  ],
+  "indexes": [
+    {
+      "relname": "items",
+      "definition": "CREATE INDEX items_created_at_idx ON public.items USING btree (created_at DESC)",
+      "index_name": "items_created_at_idx",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "relname": "items",
+      "definition": "CREATE INDEX items_owner_id_idx ON public.items USING btree (owner_id)",
+      "index_name": "items_owner_id_idx",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "relname": "items",
+      "definition": "CREATE UNIQUE INDEX items_pkey ON public.items USING btree (id)",
+      "index_name": "items_pkey",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "relname": "messages",
+      "definition": "CREATE INDEX messages_item_id_created_at_idx ON public.messages USING btree (item_id, created_at)",
+      "index_name": "messages_item_id_created_at_idx",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "relname": "messages",
+      "definition": "CREATE INDEX messages_participants_created_at_idx ON public.messages USING btree (sender_id, recipient_id, created_at DESC)",
+      "index_name": "messages_participants_created_at_idx",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "relname": "messages",
+      "definition": "CREATE UNIQUE INDEX messages_pkey ON public.messages USING btree (id)",
+      "index_name": "messages_pkey",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "relname": "notifications",
+      "definition": "CREATE UNIQUE INDEX notifications_pkey ON public.notifications USING btree (id)",
+      "index_name": "notifications_pkey",
+      "indisvalid": true,
+      "indisunique": true
+    },
+    {
+      "relname": "notifications",
+      "definition": "CREATE INDEX notifications_user_id_created_at_idx ON public.notifications USING btree (user_id, created_at DESC)",
+      "index_name": "notifications_user_id_created_at_idx",
+      "indisvalid": true,
+      "indisunique": false
+    },
+    {
+      "relname": "profiles",
+      "definition": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)",
+      "index_name": "profiles_pkey",
+      "indisvalid": true,
+      "indisunique": true
+    }
+  ],
+  "policies": [
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "anon"
+      ],
+      "tablename": "items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Anon can create items",
+      "schemaname": "public",
+      "with_check": "true"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Authenticated users can create items",
+      "schemaname": "public",
+      "with_check": "true"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "true",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Authenticated users can read items",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "true",
+      "roles": [
+        "anon",
+        "authenticated"
+      ],
+      "tablename": "items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Public can read items",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can create their own items",
+      "schemaname": "public",
+      "with_check": "(owner_id = ( SELECT auth.uid() AS uid))"
+    },
+    {
+      "cmd": "DELETE",
+      "qual": "(owner_id = ( SELECT auth.uid() AS uid))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can delete their own items",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "(owner_id = ( SELECT auth.uid() AS uid))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "items",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can update their own items",
+      "schemaname": "public",
+      "with_check": "(owner_id = ( SELECT auth.uid() AS uid))"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "((sender_id = ( SELECT auth.uid() AS uid)) OR (recipient_id = ( SELECT auth.uid() AS uid)))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "messages",
+      "permissive": "PERMISSIVE",
+      "policyname": "Participants can read their messages",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "(recipient_id = ( SELECT auth.uid() AS uid))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "messages",
+      "permissive": "PERMISSIVE",
+      "policyname": "Recipients can mark messages as read",
+      "schemaname": "public",
+      "with_check": "(recipient_id = ( SELECT auth.uid() AS uid))"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "messages",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can send messages to item owners",
+      "schemaname": "public",
+      "with_check": "((sender_id = ( SELECT auth.uid() AS uid)) AND (recipient_id <> ( SELECT auth.uid() AS uid)) AND ((EXISTS ( SELECT 1\n   FROM items\n  WHERE ((items.id = messages.item_id) AND (items.owner_id = messages.recipient_id)))) OR (EXISTS ( SELECT 1\n   FROM messages existing\n  WHERE ((existing.item_id = existing.item_id) AND (((existing.sender_id = ( SELECT auth.uid() AS uid)) AND (existing.recipient_id = existing.recipient_id)) OR ((existing.sender_id = existing.recipient_id) AND (existing.recipient_id = ( SELECT auth.uid() AS uid)))))))))"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "notifications",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can create their own notifications",
+      "schemaname": "public",
+      "with_check": "(user_id = ( SELECT auth.uid() AS uid))"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(user_id = ( SELECT auth.uid() AS uid))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "notifications",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can read their own notifications",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "(user_id = ( SELECT auth.uid() AS uid))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "notifications",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can update their own notifications",
+      "schemaname": "public",
+      "with_check": "(user_id = ( SELECT auth.uid() AS uid))"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "true",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "profiles",
+      "permissive": "PERMISSIVE",
+      "policyname": "Authenticated users can read profiles",
+      "schemaname": "public",
+      "with_check": null
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "profiles",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can insert their own profile",
+      "schemaname": "public",
+      "with_check": "(id = ( SELECT auth.uid() AS uid))"
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "(id = ( SELECT auth.uid() AS uid))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "profiles",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can update their own profile",
+      "schemaname": "public",
+      "with_check": "(id = ( SELECT auth.uid() AS uid))"
+    },
+    {
+      "cmd": "SELECT",
+      "qual": "(bucket_id = 'item-images'::text)",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "objects",
+      "permissive": "PERMISSIVE",
+      "policyname": "Authenticated users can view item images",
+      "schemaname": "storage",
+      "with_check": null
+    },
+    {
+      "cmd": "DELETE",
+      "qual": "((bucket_id = 'item-images'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "objects",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can delete their own item images",
+      "schemaname": "storage",
+      "with_check": null
+    },
+    {
+      "cmd": "UPDATE",
+      "qual": "((bucket_id = 'item-images'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))",
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "objects",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can update their own item images",
+      "schemaname": "storage",
+      "with_check": "((bucket_id = 'item-images'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))"
+    },
+    {
+      "cmd": "INSERT",
+      "qual": null,
+      "roles": [
+        "authenticated"
+      ],
+      "tablename": "objects",
+      "permissive": "PERMISSIVE",
+      "policyname": "Users can upload their own item images",
+      "schemaname": "storage",
+      "with_check": "((bucket_id = 'item-images'::text) AND ((storage.foldername(name))[1] = (( SELECT auth.uid() AS uid))::text))"
+    }
+  ],
+  "permissions": [
+    {
+      "relname": "items",
+      "rolname": "anon",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "items",
+      "rolname": "authenticated",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "items",
+      "rolname": "service_role",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "messages",
+      "rolname": "anon",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": false,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": false
+    },
+    {
+      "relname": "messages",
+      "rolname": "authenticated",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": false,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "messages",
+      "rolname": "service_role",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "notifications",
+      "rolname": "anon",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "notifications",
+      "rolname": "authenticated",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "notifications",
+      "rolname": "service_role",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "profiles",
+      "rolname": "anon",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "profiles",
+      "rolname": "authenticated",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    },
+    {
+      "relname": "profiles",
+      "rolname": "service_role",
+      "can_delete": true,
+      "schema_usage": true,
+      "can_insert_table": true,
+      "can_select_table": true,
+      "can_update_table": true,
+      "can_insert_any_column": true,
+      "can_select_any_column": true,
+      "can_update_any_column": true
+    }
+  ],
+  "column_permissions": [
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "category",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "category",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "contact_count",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "contact_count",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "created_at",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "created_at",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "date",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "date",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "description",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "description",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "id",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "id",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "image_url",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "image_url",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "lat",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "lat",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "lng",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "lng",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "location_name",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "location_name",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "owner_id",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "owner_id",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "reward",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "reward",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "status",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "status",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "title",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "title",
+      "relation_name": "items"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "created_at",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "created_at",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "id",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "id",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "is_read",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "is_read",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "item_id",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "item_id",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "item_image",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "item_image",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "item_title",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "item_title",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "recipient_id",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "recipient_id",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "sender_avatar",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "sender_avatar",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "sender_id",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "sender_id",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "sender_name",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "sender_name",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "text",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": false,
+      "column_name": "text",
+      "relation_name": "messages"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "created_at",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "created_at",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "id",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "id",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "is_read",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "is_read",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "message",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "message",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "related_item_id",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "related_item_id",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "related_user_id",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "related_user_id",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "title",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "title",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "type",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "type",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "user_id",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "user_id",
+      "relation_name": "notifications"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "avatar_url",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "avatar_url",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "created_at",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "created_at",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "full_name",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "full_name",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "id",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "id",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "location",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "location",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "phone",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "phone",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "anon",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "rating",
+      "relation_name": "profiles"
+    },
+    {
+      "rolname": "authenticated",
+      "can_insert": true,
+      "can_select": true,
+      "can_update": true,
+      "column_name": "rating",
+      "relation_name": "profiles"
+    }
+  ],
+  "function_metadata": [
+    {
+      "owner": "postgres",
+      "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "nspname": "public",
+      "proname": "handle_new_auth_user",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "prosecdef": true,
+      "return_type": "trigger",
+      "argument_types": "",
+      "source_fingerprint": "28a0df0c683983bcc33400f9a0495175"
+    },
+    {
+      "owner": "postgres",
+      "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "nspname": "public",
+      "proname": "notify_message_recipient",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "prosecdef": true,
+      "return_type": "trigger",
+      "argument_types": "",
+      "source_fingerprint": "e3a6b4f85e30b4b5bbd616f4901b20c3"
+    },
+    {
+      "owner": "postgres",
+      "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}",
+      "nspname": "public",
+      "proname": "notify_item_recovered",
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "prosecdef": true,
+      "return_type": "trigger",
+      "argument_types": "",
+      "source_fingerprint": "93915c4bdeddfd7b2bce1bc380507b0f"
+    }
+  ],
+  "triggers": [
+    {
+      "tgname": "on_auth_user_created",
+      "nspname": "auth",
+      "relname": "users",
+      "tgenabled": "O",
+      "function_name": "handle_new_auth_user",
+      "function_schema": "public"
+    },
+    {
+      "tgname": "on_message_created",
+      "nspname": "public",
+      "relname": "messages",
+      "tgenabled": "O",
+      "function_name": "notify_message_recipient",
+      "function_schema": "public"
+    },
+    {
+      "tgname": "on_item_recovered",
+      "nspname": "public",
+      "relname": "items",
+      "tgenabled": "O",
+      "function_name": "notify_item_recovered",
+      "function_schema": "public"
+    }
+  ],
+  "realtime": [
+    {
+      "table": "items",
+      "schema": "public",
+      "publication": "supabase_realtime"
+    },
+    {
+      "table": "messages",
+      "schema": "public",
+      "publication": "supabase_realtime"
+    },
+    {
+      "table": "notifications",
+      "schema": "public",
+      "publication": "supabase_realtime"
+    }
+  ],
+  "table_acls": {
+    "items": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+    "messages": "{postgres=arwdDxtm/postgres,anon=ardDxtm/postgres,authenticated=ardDxtm/postgres,service_role=arwdDxtm/postgres}",
+    "notifications": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}",
+    "profiles": "{postgres=arwdDxtm/postgres,anon=arwdDxtm/postgres,authenticated=arwdDxtm/postgres,service_role=arwdDxtm/postgres}"
+  }
+}

@@ -2,6 +2,8 @@
 
 **Ensayo adicional de recuperación:** [RECOVERY_REHEARSAL.md](RECOVERY_REHEARSAL.md), con pg_dump/pg_restore nativos y verificación reforzada del respaldo de imágenes.
 
+Lista operativa actual: [ACTIVATION_CHECKLIST.md](ACTIVATION_CHECKLIST.md), con criterios por migración, publicación manual del cliente y bloqueos de servicios reales.
+
 Estado: código en Alexis; **ningún cambio aplicado a Supabase/Firebase reales**.
 El diagnóstico real ya fue recibido y analizado. Ver
 [REAL_SUPABASE_RECONCILIATION.md](REAL_SUPABASE_RECONCILIATION.md): hay reproducción
@@ -195,7 +197,7 @@ reintentos de webhooks pueden volver a entregar una misma notificación.
 
 ## Resultado local de esta revisión
 
-- 92/92 pruebas de aplicación/herramientas; 16/16 de cliente/privacidad/Storage simulado.
+- 102/102 pruebas de aplicación/herramientas (revisión de compatibilidad actual); 16/16 de cliente/privacidad/Storage simulado.
 - PostgreSQL 17: 61/61 con DATE del repositorio, 61/61 con timestamptz y 64/64 con la estructura observada; ensayo adicional del orden completo: correcto.
 - PGlite: 58/58, 58/58 y 61/61 respectivamente; ensayo del orden completo correcto. Las tres multiconexión sólo corren en PostgreSQL.
 - TypeScript, build Vite, Deno check --frozen de ambas funciones y lockfile Bun correctos.

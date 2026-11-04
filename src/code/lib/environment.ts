@@ -1,5 +1,10 @@
-type Environment = { VITE_SUPABASE_URL?: string; VITE_SUPABASE_PUBLISHABLE_KEY?: string; VITE_APP_URL?: string };
+type Environment = { VITE_SUPABASE_URL?: string; VITE_SUPABASE_PUBLISHABLE_KEY?: string; VITE_APP_URL?: string; [name:string]: unknown };
 export function validateEnvironment(env: Environment, production: boolean): string | null {
+  // Vite exposes VITE_* values to client modules; server credentials never belong here.
+  if (Object.entries(env).some(([name,value]) => name.startsWith('VITE_') &&
+      /(?:SECRET|PRIVATE|PASSWORD|SERVICE_ROLE)/i.test(name) && value !== undefined && value !== '')) {
+    return 'Hay una variable privada con prefijo VITE_. Retírala de la configuración del frontend.';
+  }
   const url = env.VITE_SUPABASE_URL?.trim(); const key = env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
   if (!url || !key) return 'Faltan VITE_SUPABASE_URL o VITE_SUPABASE_PUBLISHABLE_KEY.';
   for (const [name, value] of [['VITE_SUPABASE_URL', url], ['VITE_APP_URL', env.VITE_APP_URL?.trim()]] as const) {

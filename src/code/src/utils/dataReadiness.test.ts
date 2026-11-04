@@ -61,3 +61,13 @@ test('Firebase configuration preserves SPA routing and distinguishes hashed asse
   assert.equal(value('/sw.js','Cache-Control'),'no-cache');assert.match(value('/assets/**','Cache-Control'),/immutable/);
   assert.equal(value('**','Referrer-Policy'),'strict-origin-when-cross-origin');
 });
+
+test('Vite configuration rejects server-only variable names without revealing their values',async()=>{
+  const {validateEnvironment}=await import('../../lib/environment');
+  const base={VITE_SUPABASE_URL:'https://project.supabase.co',VITE_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_synthetic'};
+  for(const name of ['VITE_SUPABASE_SERVICE_ROLE_KEY','VITE_PUSH_VAPID_PRIVATE_KEY','VITE_MATCH_WORKER_SECRET','VITE_DATABASE_PASSWORD']){
+    const error=validateEnvironment({...base,[name]:'DO_NOT_PRINT'},true);
+    assert.match(error!,/privada/);assert.equal(error!.includes('DO_NOT_PRINT'),false);
+  }
+  assert.equal(validateEnvironment({...base,VITE_VAPID_PUBLIC_KEY:'synthetic-public',SUPABASE_SERVICE_ROLE_KEY:'server-only'},true),null);
+});

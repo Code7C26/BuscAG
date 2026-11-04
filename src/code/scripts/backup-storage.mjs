@@ -1,5 +1,5 @@
 // Operator-only Storage export: read APIs only. Never deletes/uploads/updates.
-import {mkdir,writeFile,readFile,realpath,lstat} from 'node:fs/promises';
+import {mkdir,writeFile,readFile,realpath,lstat,readdir} from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {pathToFileURL,fileURLToPath} from 'node:url';
@@ -59,17 +59,27 @@ export async function exportStorage(client,target,buckets,options={}) {
   return {buckets:manifest.buckets.length,objects:manifest.objects.length,bytes:manifest.objects.reduce((sum,row)=>sum+row.size,0),snapshot_consistent:false};
 }
 export async function verifyStorage(target) {
-  const manifest=JSON.parse(await readFile(path.join(target,'manifest.json'),'utf8'));
-  if(manifest.version!==1||manifest.state!=='complete'||!Array.isArray(manifest.objects)||!Array.isArray(manifest.buckets))throw Error('Incomplete manifest');
+  target=path.resolve(target);
+  const root=await lstat(target),objects=await lstat(path.join(target,'objects')),manifestFile=path.join(target,'manifest.json');
+  if(!root.isDirectory()||root.isSymbolicLink()||!objects.isDirectory()||objects.isSymbolicLink())throw Error('Backup and object directory must be real directories');
+  const manifestInfo=await lstat(manifestFile);
+  if(!manifestInfo.isFile()||manifestInfo.isSymbolicLink())throw Error('Manifest must be a regular file');
+  const manifest=JSON.parse(await readFile(manifestFile,'utf8'));
+  if(manifest.version!==1||manifest.state!=='complete'||manifest.coverage!=='selected-buckets'||!Array.isArray(manifest.objects)||!Array.isArray(manifest.buckets)||!manifest.buckets.length)throw Error('Incomplete manifest or bucket coverage');
+  const buckets=new Set();
+  for(const row of manifest.buckets){if(!row||typeof row.id!=='string'||!row.id||buckets.has(row.id))throw Error('Invalid manifest buckets');buckets.add(row.id);}
   const files=new Set();let total=0;
   for(const row of manifest.objects){
-    if(typeof row.bucket!=='string'||typeof row.name!=='string'||row.file!==localName(row.bucket,row.name)||!/^objects\/[a-f0-9]{64}\.bin$/.test(row.file)||files.has(row.file))throw Error('Invalid manifest path');
-    files.add(row.file);const file=path.join(target,row.file);
-    if((await lstat(file)).isSymbolicLink())throw Error('Symlinks are not accepted');
+    if(!row||typeof row.bucket!=='string'||!buckets.has(row.bucket)||typeof row.name!=='string'||!row.name||row.file!==localName(row.bucket,row.name)||!/^objects\/[a-f0-9]{64}\.bin$/.test(row.file)||files.has(row.file))throw Error('Invalid manifest bucket or path');
+    files.add(row.file);const file=path.join(target,row.file),info=await lstat(file);
+    if(!info.isFile()||info.isSymbolicLink())throw Error('Object must be a regular file');
     const bytes=await readFile(file);if(bytes.length!==row.size||hash(bytes)!==row.sha256)throw Error('Backup checksum mismatch');total+=bytes.length;
   }
-  return {buckets:manifest.buckets.length,objects:files.size,bytes:total,verified:true,coverage:'selected-buckets'};
+  const inventory=await readdir(path.join(target,'objects'));
+  if(inventory.length!==files.size||inventory.some(name=>!files.has('objects/'+name)))throw Error('Backup inventory contains unexpected files');
+  return {buckets:buckets.size,objects:files.size,bytes:total,verified:true,coverage:'selected-buckets',snapshot_consistent:false};
 }
+
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   try {
     const args=process.argv.slice(2);

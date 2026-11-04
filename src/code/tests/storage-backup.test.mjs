@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
+import {mkdtemp,readFile,writeFile,rm,rename,symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {exportStorage,verifyStorage,backupConfiguration} from '../scripts/backup-storage.mjs';
@@ -38,4 +38,26 @@ test('backup credentials cannot be sent to a foreign origin or confused with a c
   for(const url of ['https://foreign.invalid','https://synthetic.supabase.co.evil.invalid','https://user:pass@synthetic.supabase.co','http://synthetic.supabase.co'])assert.throws(()=>backupConfiguration(url,fake));
   assert.throws(()=>backupConfiguration('https://synthetic.supabase.co','client-key'));
   assert.equal(backupConfiguration('https://synthetic.supabase.co',fake),'https://synthetic.supabase.co');
+});
+
+test('a backup with an external objects directory must not verify as self-contained',async()=>{
+  const directory=await mkdtemp(path.join(tmpdir(),'buscag-backup-'));const target=path.join(directory,'export');
+  try {
+    await exportStorage(fixture().client,target,['item-images']);
+    const external=path.join(directory,'external-objects');await rename(path.join(target,'objects'),external);
+    await symlink(external,path.join(target,'objects'),process.platform==='win32'?'junction':'dir');
+    await assert.rejects(verifyStorage(target),/directory|Symlink/i);
+  }finally {await rm(directory,{recursive:true,force:true});}
+});
+test('manifest bucket coverage and unexpected object files cannot be silently ignored',async()=>{
+  const directory=await mkdtemp(path.join(tmpdir(),'buscag-backup-'));const target=path.join(directory,'export');
+  try {
+    await exportStorage(fixture().client,target,['item-images']);
+    const manifestFile=path.join(target,'manifest.json');const original=JSON.parse(await readFile(manifestFile,'utf8'));
+    for(const buckets of [[],[{id:'different-bucket'}],[{id:'item-images'},{id:'item-images'}]]){
+      await writeFile(manifestFile,JSON.stringify({...original,buckets}));await assert.rejects(verifyStorage(target),/bucket|manifest/i);
+    }
+    await writeFile(manifestFile,JSON.stringify(original));
+    await writeFile(path.join(target,'objects','unreferenced.bin'),'synthetic');await assert.rejects(verifyStorage(target),/inventory|unexpected/i);
+  }finally {await rm(directory,{recursive:true,force:true});}
 });

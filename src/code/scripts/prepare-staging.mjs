@@ -2,6 +2,8 @@
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
+import {checkServerIdentity} from 'node:tls';
+import {loadStagingCa,publicError,stagingDiagnostic} from './staging-tls.mjs';
 export const PRODUCTION_REF='hczcqtodcnurdrroczle';
 export const files=[
   'migrations/20261016000000_notification_permissions.sql',
@@ -16,10 +18,10 @@ export const files=[
 ];
 const read=path=>readFile(new URL('../supabase/'+path,import.meta.url),'utf8');
 const hash=text=>createHash('sha256').update(text).digest('hex');
-const requireState=(condition,message)=>{if(!condition)throw Error(message);};
-export function connectionConfig(value,ref){
+const requireState=(condition,message)=>{if(!condition)throw publicError('BUSCAG_PREFLIGHT',message);};
+export function connectionConfig(value,ref,ca){
   requireState(/^[a-z0-9]{20}$/.test(ref??'')&&ref!==PRODUCTION_REF,'Referencia staging inválida o de producción.');
-  let url;try{url=new URL(value);}catch{throw Error('Configura BUSCAG_STAGING_DATABASE_URL fuera de Git.');}
+  let url;try{url=new URL(value);}catch{throw publicError('BUSCAG_PREFLIGHT','Configura BUSCAG_STAGING_DATABASE_URL fuera de Git.');}
   const direct=url.hostname===`db.${ref}.supabase.co`;
   const pooler=/^[a-z0-9-]+\.pooler\.supabase\.com$/.test(url.hostname);
   const user=decodeURIComponent(url.username);
@@ -29,7 +31,7 @@ export function connectionConfig(value,ref){
   requireState(!url.port||url.port==='5432','Usa conexión directa o pooler de sesión, puerto 5432; no transaction pooler.');
   requireState([...url.searchParams.keys()].every(k=>k==='sslmode')&&(!url.searchParams.has('sslmode')||['require','verify-full'].includes(url.searchParams.get('sslmode'))),'Parámetros de conexión no admitidos.');
   url.search='';
-  return {connectionString:url.toString(),ssl:{rejectUnauthorized:true},connectionTimeoutMillis:15000,query_timeout:120000,application_name:'buscag-staging-preparation'};
+  return {connectionString:url.toString(),ssl:{...(ca?{ca}:{}),rejectUnauthorized:true,servername:url.hostname,checkServerIdentity,minVersion:'TLSv1.2'},connectionTimeoutMillis:15000,query_timeout:120000,application_name:'buscag-staging-preparation'};
 }
 function functionBody(sql,name){
   const start=sql.indexOf(`function public.${name}()`);requireState(start>=0,'Función de referencia ausente.');
@@ -177,7 +179,9 @@ async function main(){
   const args=process.argv.slice(2),refIndex=args.indexOf('--project-ref'),ref=args[refIndex+1];
   const mode=args.includes('--apply')?'apply':args.includes('--verify')?'verify':args.includes('--smoke')?'smoke':'plan';
   requireState(refIndex>=0&&args.length===3&&['--plan','--apply','--verify','--smoke'].some(x=>args.includes(x)),'Uso: npm run prepare:staging -- --project-ref REF --plan|--apply|--verify|--smoke');
-  const config=connectionConfig(process.env.BUSCAG_STAGING_DATABASE_URL,ref);
+  const trust=await loadStagingCa();
+  const config=connectionConfig(process.env.BUSCAG_STAGING_DATABASE_URL,ref,trust.ca);
+  if(trust.fingerprint256)console.log('CA configurada SHA-256: '+trust.fingerprint256);
   const {Client}=await import('pg');const db=new Client(config);
   try{
     await db.connect();await db.query("set statement_timeout='120s';set lock_timeout='10s'");
@@ -187,4 +191,8 @@ async function main(){
     else {const plan=await installStaging(db,{apply:mode==='apply',onStep:(file,state)=>console.log(`${state}: ${file}`)});console.log(JSON.stringify(plan.map(({file,sha256,applied})=>({file,sha256,applied})),null,2));}
   }finally{await db.end();}
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{console.error(`Preparación detenida. SQLSTATE: ${/^[0-9A-Z]{5}$/.test(error?.code??'')?error.code:'n/a'}. ${error?.code?'Revisar conexión/esquema de staging; no se imprimen detalles privados.':error.message}`);process.exitCode=1;});
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
+  const diagnostic=stagingDiagnostic(error);
+  console.error(`Preparación detenida [${diagnostic.category}] ${diagnostic.code}. ${diagnostic.message}`);
+  process.exitCode=1;
+});

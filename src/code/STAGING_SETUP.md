@@ -16,7 +16,8 @@ un proyecto distinto al indicado, usuario distinto de postgres, parámetros extr
 puerto de transaction pooler (6543). Permite conexión directa db.REF.supabase.co o
 pooler de **sesión**, usuario postgres.REF, puerto 5432. Siempre verifica certificado
 TLS; sslmode=require en la URL no desactiva esa verificación. Ante un fallo de CA,
-configurar el certificado oficial de confianza mediante NODE_EXTRA_CA_CERTS; no usar
+configurar el certificado oficial mediante BUSCAG_STAGING_CA_FILE, como se explica
+abajo; no usar
 sslmode=disable ni NODE_TLS_REJECT_UNAUTHORIZED=0.
 
 Esto reduce equivocaciones, pero no descubre el nombre del proyecto desde PostgreSQL:
@@ -29,6 +30,80 @@ No tolera cuerpos personalizados de esas tres funciones sin revisión previa ni
 triggers adicionales de aplicación que puedan tener efectos externos. No demuestra
 igualdad completa de todos los índices, defaults, políticas o servicios administrados.
 Si algo difiere, se detiene; no reinstala silenciosamente los dos bootstrap.
+
+## Resolver SELF_SIGNED_CERT_IN_CHAIN en Windows
+
+Este error corresponde a TLS, antes de autenticar o consultar el esquema. Si la
+cadena termina en Supabase Root 2021 CA y esa raíz no está en el almacén utilizado
+por Node, ni tener un puerto abierto ni una contraseña correcta soluciona el fallo.
+`--use-system-ca` sólo ayuda si el almacén del sistema ya confía en esa raíz.
+
+La documentación oficial indica descargar el certificado de Database Settings y
+usarlo para verificación completa de CA y nombre:
+
+- https://supabase.com/docs/guides/database/psql
+- https://supabase.com/docs/guides/platform/ssl-enforcement
+
+El código oficial del Dashboard publica la URL en:
+https://github.com/supabase/supabase/blob/f1b8af12b8019069245266f3546600b37ce06651/apps/studio/hooks/custom-content/custom-content.json
+
+La plantilla para la plataforma alojada resuelve a:
+https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt
+
+`prod` en ese nombre identifica la infraestructura alojada de Supabase, no una
+conexión a la base de producción de BuscAG. El archivo es un certificado público,
+no una contraseña. **Descargarlo desde el Dashboard HTTPS autenticado de
+BuscAG-Staging, Database Settings > SSL Configuration > Download certificate.**
+No exportar la raíz presentada por una conexión con validación desactivada para
+convertirla automáticamente en confiable. No instalar raíces globales en Windows
+para resolver sólo esta herramienta.
+
+Se verificó la procedencia de la URL mediante el repositorio oficial, pero la
+política de red de este entorno bloqueó descargar el archivo CA. Por eso no se
+certifica aquí la huella del archivo oficial. La huella informada por el operador:
+
+```
+80:70:25:AD:50:D4:ED:21:9D:2C:9C:7D:29:9C:00:4F:82:4E:B0:0C:F7:F6:5A:FE:F6:07:D0:7B:72:E6:CA:FA
+```
+
+es un dato para comparar, **no una prueba independiente de autenticidad**. La fuente
+confiable es la descarga oficial por HTTPS. Si el certificado descargado allí no
+coincide, detenerse y consultar a Supabase; no aceptar el recibido del servidor sólo
+porque tenga un nombre familiar. Para ver la huella del archivo descargado en
+PowerShell (huella del certificado DER, no hash de los bytes del archivo PEM):
+
+```powershell
+$env:BUSCAG_STAGING_CA_FILE = Join-Path $env:USERPROFILE 'Downloads\prod-ca-2021.crt'
+node --input-type=module -e "import{readFileSync}from'node:fs';import{X509Certificate}from'node:crypto';console.log(new X509Certificate(readFileSync(process.env.BUSCAG_STAGING_CA_FILE)).fingerprint256)"
+```
+
+Cambiar sólo la ruta si el Dashboard lo guardó con otro nombre. La herramienta
+comprueba que sea un único PEM de hasta 64 KiB, CA raíz autofirmada y vigente;
+rechaza archivos con claves privadas o contenido adicional. La confianza en su
+procedencia se establece al descargarlo por el canal oficial, no por su autofirma.
+Opcionalmente BUSCAG_STAGING_CA_SHA256 fija una huella contrastada por ese canal;
+una discrepancia detiene la ejecución. No copiar como pin una huella obtenida sólo
+con TLS desactivado.
+
+Con la URI temporal y `$stagingRef` configurados mediante la entrada oculta del bloque
+siguiente, ejecutar **sólo diagnóstico, sin migraciones**:
+
+```powershell
+npm run prepare:staging -- --project-ref $stagingRef --plan
+```
+
+No ejecutar --apply para probar TLS. Sólo continuar con la instalación en una operación posterior autorizada, cuando
+el plan termine correctamente. El bloque siguiente también ejecuta sólo --plan.
+`rejectUnauthorized:true`, SNI con el host real del pooler, verificación estándar de
+hostname y TLS mínimo 1.2 permanecen activos. La URL no puede sobreescribir esas
+opciones con sslmode, sslrootcert o parámetros extra. La CA explícita se usa sólo en
+el cliente PostgreSQL del instalador, sin modificar la confianza del navegador o
+Firebase. Sin BUSCAG_STAGING_CA_FILE se conserva el almacén de confianza de Node.
+
+Los errores muestran categoría y código: TLS (incluido SELF_SIGNED_CERT_IN_CHAIN),
+autenticación (28P01), conexión/DNS, permisos (42501) o estructura/SQL. No imprimen
+URI, contraseña, host privado, mensajes crudos del servidor ni stack. La huella de
+la CA configurada sí es pública y se muestra para revisión.
 
 ## Orden automático
 
@@ -78,24 +153,20 @@ guardarla en el historial de PowerShell; queda temporalmente en el entorno del
 proceso. La referencia no es secreta. No activar transcripciones ni logs de entorno.
 
 ```powershell
+$env:BUSCAG_STAGING_CA_FILE = Join-Path $env:USERPROFILE 'Downloads\prod-ca-2021.crt'
 $stagingRef = Read-Host 'Project ref de BuscAG-Staging (no producción)'
 $stagingSecret = Read-Host 'URI PostgreSQL privada de staging' -AsSecureString
 try {
   $env:BUSCAG_STAGING_DATABASE_URL = [System.Net.NetworkCredential]::new('', $stagingSecret).Password
   npm run prepare:staging -- --project-ref $stagingRef --plan
   if ($LASTEXITCODE -ne 0) { throw 'Plan detenido; no aplicar.' }
-  npm run prepare:staging -- --project-ref $stagingRef --apply
-  if ($LASTEXITCODE -ne 0) { throw 'Instalación detenida; revisar pasos confirmados.' }
-  npm run prepare:staging -- --project-ref $stagingRef --verify
-  if ($LASTEXITCODE -ne 0) { throw 'Verificación pendiente; no activar servicios.' }
-  npm run prepare:staging -- --project-ref $stagingRef --smoke
-  if ($LASTEXITCODE -ne 0) { throw 'Prueba DB pendiente; no declarar staging listo.' }
 } finally {
   Remove-Item Env:BUSCAG_STAGING_DATABASE_URL -ErrorAction SilentlyContinue
   $stagingSecret.Dispose()
 }
 ```
 
+**El bloque anterior no aplica migraciones ni hace pruebas con escrituras.**
 `--plan` sólo consulta catálogo; `--apply` instala y comprueba; `--verify` revisa RLS,
 ACL, inventario de políticas, RPC y modo de coincidencias deshabilitado; `--smoke`
 prueba datos ficticios con ROLLBACK. Se pueden ejecutar por separado, manteniendo la
@@ -153,3 +224,18 @@ Resultados de esta ejecución (sin conexiones remotas):
 - El nuevo instalador se ensayó con el esquema timestamptz de los dos bootstrap
   indicados; las pruebas existentes cubren además DATE. Servicios reales, login,
   correo, Storage y Realtime de BuscAG-Staging siguen pendientes.
+
+
+Corrección TLS (esta revisión, sin ejecutar migraciones):
+
+- Node.js v24.22.1, igual a la versión informada por el operador.
+- `npm run test:staging-tls`: 3/3 correctas; prueba CA/huella/vigencia, handshake real sólo en
+  127.0.0.1, rechazo de CA desconocida y hostname incorrecto, opciones efectivas de
+  node-postgres y diagnóstico sin secretos. Usa certificados ficticios temporales.
+- Requiere OpenSSL para generar las identidades ficticias del test; el instalador
+  real no depende de OpenSSL ni requiere claves privadas.
+- No se ejecuta test:staging-tools en esta revisión porque instala SQL en sus bases
+  descartables. No se probó el TLS real de la computadora Windows ni de staging.
+
+Pruebas adicionales de esta revisión: aplicación 102/102, cliente 16/16, TypeScript
+y build correctos. No se ejecutaron migraciones ni conexiones a bases reales.

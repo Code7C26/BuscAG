@@ -1,5 +1,7 @@
 # Desarrollo unificado en Alexis
 
+**Ensayo adicional de recuperación:** [RECOVERY_REHEARSAL.md](RECOVERY_REHEARSAL.md), con pg_dump/pg_restore nativos y verificación reforzada del respaldo de imágenes.
+
 **Diagnóstico real recibido:** [reconciliación y cambios vigentes](REAL_SUPABASE_RECONCILIATION.md). Las referencias históricas a un adjunto ausente ya no describen el estado actual.
 
 **Procedimiento vigente de backend:** [BACKEND_ACTIVATION.md](BACKEND_ACTIVATION.md), con instalación deshabilitada y activación separada. Los pasos anteriores de activación inmediata quedan reemplazados.

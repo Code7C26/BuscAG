@@ -1,5 +1,7 @@
 # Backend: preparación y activación segura
 
+**Ensayo adicional de recuperación:** [RECOVERY_REHEARSAL.md](RECOVERY_REHEARSAL.md), con pg_dump/pg_restore nativos y verificación reforzada del respaldo de imágenes.
+
 Estado: código en Alexis; **ningún cambio aplicado a Supabase/Firebase reales**.
 El diagnóstico real ya fue recibido y analizado. Ver
 [REAL_SUPABASE_RECONCILIATION.md](REAL_SUPABASE_RECONCILIATION.md): hay reproducción

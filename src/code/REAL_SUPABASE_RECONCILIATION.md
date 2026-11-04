@@ -1,5 +1,7 @@
 # Reconciliación con el diagnóstico real de Supabase
 
+**Ensayo adicional de recuperación:** [RECOVERY_REHEARSAL.md](RECOVERY_REHEARSAL.md), con pg_dump/pg_restore nativos y verificación reforzada del respaldo de imágenes.
+
 Fuente: buscag_production_diagnostic.json, analizado completo de forma local.
 Se conserva sólo una selección técnica sin OID, datos de usuarios, claves ni cuerpos
 de funciones en tests/fixtures/observed-production-contract.json. Su SHA-256 identifica

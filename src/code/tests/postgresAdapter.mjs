@@ -4,11 +4,11 @@ import {randomBytes} from 'node:crypto';
 const pg=await import(process.env.PG_TEST_MODULE||'pg');
 const Client=pg.Client||pg.default.Client;
 const socket=process.env.LOCAL_PG_SOCKET;
-if(!socket?.startsWith('/')||socket.includes('\0')) throw new Error('LOCAL_PG_SOCKET must be a local socket directory');
+if(process.env.BUSCAG_TEST_CLUSTER!=='disposable'||!socket?.startsWith('/')||socket.includes('\0')) throw new Error('LOCAL_PG_SOCKET and BUSCAG_TEST_CLUSTER=disposable are required');
 export class PGlite {
   constructor(){
     this.name='buscag_test_'+randomBytes(8).toString('hex');
-    this.admin=new Client({host:socket,user:'postgres',database:'postgres'});
+    this.admin=new Client({host:socket,user:'postgres',database:'postgres',port:5432,ssl:false,password:'',connectionTimeoutMillis:5000});
     this.ready=this.initialize();
   }
   async initialize(){
@@ -16,7 +16,7 @@ export class PGlite {
     this.client=await this.fork();
   }
   async fork(){
-    const client=new Client({host:socket,user:'postgres',database:this.name});
+    const client=new Client({host:socket,user:'postgres',database:this.name,port:5432,ssl:false,password:'',connectionTimeoutMillis:5000});
     await client.connect();return client;
   }
   async exec(sql){await this.ready;return this.client.query(sql);}

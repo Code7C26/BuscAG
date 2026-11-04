@@ -70,5 +70,6 @@ test('captured structure: all eight SQL files install before activation, then bo
     assert.equal((await db.query("select count(*)::int n from public.notifications where type='message'")).rows[0].n,2);
     await as('authenticated',users[1],"update public.items set status='recuperado' where id=$1",[found.id]);
     assert.equal((await db.query('select count(*)::int n from public.messages')).rows[0].n,2);
+    if(process.env.TEST_BACKUP_RESTORE==='1'){const {backupRestoreDrill}=await import('./backupRestoreDrill.mjs');await backupRestoreDrill(db,{users,found,first,payload});}
   }finally {await db.close();}
 });

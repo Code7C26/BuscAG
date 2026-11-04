@@ -116,7 +116,7 @@ language plpgsql stable set search_path='' set timezone='UTC' as $$
 declare shared integer; distance_km numeric; geo integer; timing integer; hours double precision;
   hav double precision;
 begin
-  if l.status is distinct from 'perdido' or f.status is distinct from 'encontrado' or l.category is distinct from f.category
+  if l.category is null or btrim(l.category)='' or l.status is distinct from 'perdido' or f.status is distinct from 'encontrado' or l.category is distinct from f.category
     or l.owner_id is null or f.owner_id is null or l.owner_id=f.owner_id
     or l.lat is null or l.lng is null or f.lat is null or f.lng is null
     or not(l.lat between -90 and 90 and f.lat between -90 and 90 and l.lng between -180 and 180 and f.lng between -180 and 180)

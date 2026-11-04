@@ -81,8 +81,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
 
   useEffect(() => {
     if (!initialItem) return;
-    setStatus(initialItem.status??''); setTitle(initialItem.title); setDescription(initialItem.description);
-    setCategory(initialItem.category); setLocationName(initialItem.locationName);
+    setStatus(isItemStatus(initialItem.status)?initialItem.status:''); setTitle(initialItem.title); setDescription(initialItem.description);
+    setCategory(isItemCategory(initialItem.category)?initialItem.category:''); setLocationName(initialItem.locationName);
     const valid = isValidCoordinates(initialItem.lat, initialItem.lng);
     setLat(valid ? initialItem.lat : DEFAULT_CENTER.lat); setLng(valid ? initialItem.lng : DEFAULT_CENTER.lng);
     setLocationConfirmed(valid); setImageUrl(initialItem.imageUrl); setReward(initialItem.reward ?? '');

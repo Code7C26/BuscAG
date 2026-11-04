@@ -256,6 +256,7 @@ try {
     const backup=JSON.parse((await db.query(await read('../supabase/audit/backup_counts.sql'))).rows[0].backup_counts);
     assert.equal(backup.auth_users,3);assert.equal(backup.auth_identities,0);
     await db.exec(await read('../supabase/audit/security_preflight.sql'));
+    await db.query(await read('../supabase/audit/storage_configuration.sql'));
     await db.query(await read('../supabase/audit/production_diagnostic.sql'));
   })();
   await check('push owner can read/upsert/delete; other users cannot read or hijack the endpoint', async () => {
@@ -400,10 +401,12 @@ try {
     assert.equal((await db.query('select public.process_match_jobs(5) result')).rows[0].result.notifications,0);
   })();
   await check('matching excludes invalid coordinates, same owner, weak text and incompatible dates',async()=>{
-    const score=async(extra)=> (await db.query(`select buscag_private.match_score(
-      jsonb_populate_record(null::public.items,(select to_jsonb(i) from public.items i where id='${lost}')||'{"status":"perdido"}'),
-      jsonb_populate_record(null::public.items,(select to_jsonb(i) from public.items i where id='${foundItem}')||$1::jsonb)) score`,[JSON.stringify(extra)])).rows[0].score;
+    const score=async(extra,lostExtra={})=> (await db.query(`select buscag_private.match_score(
+      jsonb_populate_record(null::public.items,(select to_jsonb(i) from public.items i where id='${lost}')||'{"status":"perdido"}'||$2::jsonb),
+      jsonb_populate_record(null::public.items,(select to_jsonb(i) from public.items i where id='${foundItem}')||$1::jsonb)) score`,[JSON.stringify(extra),JSON.stringify(lostExtra)])).rows[0].score;
     assert.equal(await score({}),100);
+    assert.equal(await score({category:null},{category:null}),null);
+    assert.equal(await score({category:'   '},{category:'   '}),null);
     for(const extra of [{lat:91},{lng:181},{lat:null},{owner_id:ids.a},{owner_id:null},{title:'Keys',description:'Different'},{date:'2026-10-29T00:00:00Z'}]) assert.equal(await score(extra),null);
   })();
   await check('publication date values retain the selected calendar day without changing the column type',async()=>{

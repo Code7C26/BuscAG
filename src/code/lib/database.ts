@@ -1,4 +1,3 @@
-import {isItemCategory,isItemStatus} from '../src/utils/itemContract';
 import type { User as AuthUser } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import { Item, Message, NotificationItem, User } from '../src/types';
@@ -33,11 +32,11 @@ export const mapItem = (row: ItemRow, owner: User): Item => ({
   id: row.id,
   title: row.title ?? '',
   description: row.description ?? '',
-  category: isItemCategory(row.category)?row.category:'',
-  status: isItemStatus(row.status)?row.status:null,
+  category: row.category??'',
+  status: row.status,
   locationName: row.location_name??'',
-  lat: row.lat??NaN,
-  lng: row.lng??NaN,
+  lat: typeof row.lat==='number'?row.lat:NaN,
+  lng: typeof row.lng==='number'?row.lng:NaN,
   date: row.date ?? '',
   imageUrl: row.image_url??'',
   user: owner,

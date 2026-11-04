@@ -46,8 +46,8 @@ export interface Item {
   id: string;              // Identificador único de la publicación
   title: string;           // Título descriptivo (ej: "Mochila Jansport Negra")
   description: string;     // Detalle completo del objeto y circunstancias
-  category: Category | '';       // Categoría a la que pertenece
-  status: ItemStatus | null;      // Estado actual: perdido, encontrado o recuperado
+  category: string;       // Categoría a la que pertenece
+  status: string | null;      // Estado actual: perdido, encontrado o recuperado
   locationName: string;    // Nombre legible del lugar (ej: "Plaza Italia, Palermo")
   lat: number;             // Coordenada de latitud para el mapa
   lng: number;             // Coordenada de longitud para el mapa

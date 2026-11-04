@@ -183,6 +183,8 @@ try {
     assert.equal(mapped.title,'');assert.equal(mapped.description,'');assert.equal(mapped.category,'');assert.equal(mapped.status,null);
     assert.equal(mapped.date,'');assert.equal(mapped.imageUrl,'');assert.equal(mapped.locationName,'');assert.ok(Number.isNaN(mapped.lat));assert.ok(Number.isNaN(mapped.lng));
     assert.doesNotThrow(()=>mapped.title.toLowerCase()+mapped.category.toLowerCase());
+    const custom=module.mapItem({...item,category:'Clasificación anterior',status:'pendiente'},{id:'synthetic'});
+    assert.equal(custom.category,'Clasificación anterior');assert.equal(custom.status,'pendiente');
   });
   console.log(`PASS: ${passed} offline client security checks`);
 } finally {

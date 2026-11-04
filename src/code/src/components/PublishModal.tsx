@@ -1,4 +1,4 @@
-import {isItemCategory,isItemStatus} from '../utils/itemContract';
+import {isItemCategory,isItemStatus,publicationTextError} from '../utils/itemContract';
 import { itemDateInput, parseItemDate } from '../utils/itemDate';
 import { reportError } from '../../lib/reportError';
 import { useDialogFocus } from '../utils/useDialogFocus';
@@ -213,16 +213,14 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     e.preventDefault();
     if (submitting.current) return;
     if (!isItemCategory(category)||!isItemStatus(status)) {setSubmitError('Selecciona categoría y estado válidos.');return;}
-    if (!title.trim() || !description.trim()) {
-      alert('Por favor completa el título y la descripción.');
-      return;
-    }
 
     if (!imageUrl) { setSubmitError('Selecciona una foto propia o una imagen de muestra de forma explícita.'); return; }
     if (!locationConfirmed || !isValidCoordinates(lat, lng) || !locationName.trim()) {
       setSubmitError('Confirma una ubicación válida tocando el mapa, moviendo el pin o usando tu GPS.');
       return;
     }
+    const textError = publicationTextError({title,description,locationName,reward},initialItem??undefined);
+    if (textError) {setSubmitError(textError);return;}
     if (!parseItemDate(date)) {
       setSubmitError('Selecciona una fecha válida.');
       return;

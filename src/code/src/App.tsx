@@ -1,4 +1,4 @@
-import {isItemCategory,isItemStatus} from './utils/itemContract';
+import {isItemCategory,isItemStatus,publicationTextError} from './utils/itemContract';
 import { createPublicationPublisher } from '../lib/publicationDelivery';
 import { reportError } from '../lib/reportError';
 /**
@@ -419,6 +419,9 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
     if (!current()) throw new Error('La sesión cambió.');
     if (!isItemCategory(newItemData.category)||!isItemStatus(newItemData.status)) throw new Error('Selecciona categoría y estado válidos.');
     if (!isValidCoordinates(newItemData.lat, newItemData.lng)) throw new Error('Selecciona una ubicación válida.');
+    if (newItemData.status==='recuperado') throw new Error('Publica el objeto como perdido o encontrado.');
+    const textError = publicationTextError(newItemData);
+    if (textError) throw new Error(textError);
     const date = serializeItemDate(newItemData.date);
     const data = await publications.current.publish({
       owner_id:currentUser.id,title:newItemData.title,description:newItemData.description,
@@ -473,6 +476,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
     if (!supabase || !currentUser || !editingItem || editingItem.user.id !== currentUser.id) throw new Error('No tienes permiso para editar esta publicación.');
     if (!isItemCategory(changes.category)||!isItemStatus(changes.status)) throw new Error('Selecciona categoría y estado válidos.');
     if (!isValidCoordinates(changes.lat,changes.lng)) throw new Error('Selecciona una ubicación válida.');
+    const textError = publicationTextError(changes,editingItem);
+    if (textError) throw new Error(textError);
     const current = captureOperation();
     const date = serializeItemDate(changes.date === itemDateInput(editingItem.date) ? editingItem.date : changes.date);
     const imageUrl = changes.imageUrl === editingItem.imageUrl ? editingItem.imageUrl

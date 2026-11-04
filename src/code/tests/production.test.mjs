@@ -427,9 +427,19 @@ test('new publications never silently use a demo photo and successful saves clea
 test('dropping a file validates it and reads a real selected image without navigation',async()=>{
   const {host}=await mount(PublishModal,{isOpen:true,currentUser:user('a'),onClose:()=>{},onSubmit:async()=>{}},false,false);
   const target=host.querySelector('[aria-label="Subir foto"]');
-  const drop=async file=>act(async()=>{const event=new window.Event('drop',{bubbles:true,cancelable:true});Object.defineProperty(event,'dataTransfer',{value:{files:[file]}});target.dispatchEvent(event);await new Promise(resolve=>setTimeout(resolve,10));assert.equal(event.defaultPrevented,true);});
+  const OriginalReader=globalThis.FileReader;
+  let readFinished=Promise.resolve();
+  globalThis.FileReader=class extends OriginalReader {
+    readAsDataURL(file) {
+      readFinished=new Promise(resolve=>this.addEventListener('loadend',resolve,{once:true}));
+      super.readAsDataURL(file);
+    }
+  };
+  const drop=async file=>act(async()=>{const event=new window.Event('drop',{bubbles:true,cancelable:true});Object.defineProperty(event,'dataTransfer',{value:{files:[file]}});target.dispatchEvent(event);await readFinished;assert.equal(event.defaultPrevented,true);});
+  try {
   await drop(new window.File(['not-image'],'bad.txt',{type:'text/plain'}));assert.match(host.textContent,/JPG, PNG o WebP/);assert.equal(host.querySelector('img'),null);
   await drop(new window.File(['synthetic-image'],'photo.png',{type:'image/png'}));assert.match(host.querySelector('img').src,/^data:image\/png/);
+  } finally {globalThis.FileReader=OriginalReader;}
 });
 
 
@@ -503,4 +513,33 @@ test('legacy missing content is labelled honestly and editing requires explicit 
   assert.match(card.host.textContent,/Publicación sin título/);assert.match(card.host.textContent,/Estado sin informar/);assert.match(card.host.textContent,/Categoría sin informar/);
   let saves=0;const form=await mount(PublishModal,{isOpen:true,initialItem:legacy,currentUser:user('a'),onClose:()=>{},onSubmit:async()=>{saves++;}});
   assert.equal(form.host.querySelector('select').value,'');await submit(form.host);assert.equal(saves,0);assert.match(form.host.textContent,/categoría y estado válidos/);
+});
+
+test('publish and edit reject SQL-incompatible text before image upload or backend writes',async()=>{
+  let uploads=0;mock.data.uploadItemImage=async()=>{uploads++;return 'https://images.invalid/new';};
+  await mount(App);await emit('a');
+  for(const changes of [{title:'x'.repeat(201)},{description:'x'.repeat(10001)},{locationName:'x'.repeat(301)},{reward:'x'.repeat(201)},{title:'bad\u0000title'},{status:'recuperado'}]){
+    await act(async()=>assert.rejects(mock.views.PublishModal.onSubmit({...item(),...changes})));
+  }
+  assert.equal(uploads,0);assert.equal(mock.queries.length,0);
+  await act(async()=>mock.views.Header.onOpenProfile());
+  await act(async()=>mock.views.ProfileView.onEditItem(item()));
+  await act(async()=>assert.rejects(mock.views.PublishModal.onSubmit({...item(),title:'x'.repeat(201),imageUrl:'data:image/png;base64,AA=='}),/200/));
+  assert.equal(uploads,0);assert.equal(mock.queries.length,0);
+});
+
+test('publication dialog preserves over-limit draft and displays error without submitting',async()=>{
+  let calls=0;const {host}=await mount(PublishModal,{isOpen:true,initialItem:item(),currentUser:user('a'),onClose:()=>{},onSubmit:async()=>{calls++;}});
+  const title=host.querySelector('input[placeholder^="Ej: Mochila"]');
+  await change(title,'x'.repeat(201));await submit(host);
+  assert.equal(calls,0);assert.equal(title.value.length,201);assert.match(host.textContent,/200 caracteres/);
+});
+
+test('editing another field preserves unchanged legacy over-limit text accepted by SQL',async()=>{
+  const legacy={...item(),description:'x'.repeat(10001)};
+  mock.data.loadItems=async()=>[legacy];mock.result=async query=>({data:{...legacy,...query.payload},error:null});
+  await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+  await act(async()=>mock.views.ProfileView.onEditItem(legacy));
+  await act(async()=>mock.views.PublishModal.onSubmit({...legacy,title:'Updated'}));
+  const update=mock.queries.find(q=>q.operation==='update');assert.equal(update.payload.description,legacy.description);
 });

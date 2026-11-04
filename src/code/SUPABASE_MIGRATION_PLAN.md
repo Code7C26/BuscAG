@@ -1,5 +1,7 @@
 # Diagnóstico y aplicación de seguridad: pendiente de evidencia remota
 
+**Diagnóstico real recibido:** [reconciliación y cambios vigentes](REAL_SUPABASE_RECONCILIATION.md). Las referencias históricas a un adjunto ausente ya no describen el estado actual.
+
 **Procedimiento vigente de backend:** [BACKEND_ACTIVATION.md](BACKEND_ACTIVATION.md), con instalación deshabilitada y activación separada. Los pasos anteriores de activación inmediata quedan reemplazados.
 
 Estado conocido por el titular: cuatro tablas principales con RLS, policies INSERT

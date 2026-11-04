@@ -1,5 +1,7 @@
 # Avances sobre PR #25: candidatos y operación segura
 
+**Diagnóstico real recibido:** [reconciliación y cambios vigentes](REAL_SUPABASE_RECONCILIATION.md). Las referencias históricas a un adjunto ausente ya no describen el estado actual.
+
 **Procedimiento vigente de backend:** [BACKEND_ACTIVATION.md](BACKEND_ACTIVATION.md), con instalación deshabilitada y activación separada. Los pasos anteriores de activación inmediata quedan reemplazados.
 
 **Organización vigente:** desarrollo directo en [Alexis](ALEXIS_DEVELOPMENT.md). Las referencias a ramas/PR inferiores son históricas.

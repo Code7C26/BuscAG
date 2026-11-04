@@ -1,9 +1,10 @@
 # Backend: preparación y activación segura
 
 Estado: código en Alexis; **ningún cambio aplicado a Supabase/Firebase reales**.
-El diagnóstico anunciado no estuvo disponible. No se afirma haber clonado ni validado
-el catálogo remoto completo. DATE de items.date y la deriva descrita por el titular
-son datos confirmados; el resto del fixture procede del repositorio.
+El diagnóstico real ya fue recibido y analizado. Ver
+[REAL_SUPABASE_RECONCILIATION.md](REAL_SUPABASE_RECONCILIATION.md): hay reproducción
+estructural de las cuatro tablas, con datos ficticios. Los cuerpos de triggers y
+algunos defaults no están en el JSON, por lo que sigue pendiente su revisión privada.
 
 Esta guía reemplaza los pasos antiguos de activación inmediata de coincidencias.
 Se mantiene la organización de AGENTS.md: sólo Alexis, sin ramas ni PR nuevos.
@@ -27,7 +28,7 @@ ciertos bloqueos de contrato, **no autorización de producción**. Funciones/tri
 pueden diferir aunque sus firmas coincidan; cotejar definiciones de forma privada.
 No pegar dumps ni secretos en el chat. Compartir sólo el diagnóstico de metadatos.
 
-Sin este paso queda bloqueada la adaptación final al esquema real. No ejecutar todos
+Este análisis ya se realizó para el export recibido. Repetir el SELECT antes de aplicar para detectar cambios concurrentes; completar revisión de funciones y Storage. No ejecutar todos
 los archivos históricos para crear un historial de migraciones ausente.
 
 ## 2. Respaldo antes de aplicar cualquier SQL
@@ -91,7 +92,7 @@ los archivos históricos para crear un historial de migraciones ausente.
 npm run test:backend
 ```
 
-Ejecuta fixtures sintéticos completos con DATE y timestamptz en PGlite. Para
+Ejecuta DATE y timestamptz del repositorio, más la estructura observada con DATE, en PGlite; añade un ensayo del orden completo de instalación. Para
 PostgreSQL nativo usar un clúster **descartable**, sin red/puertos ni secretos/datos
 reales, configurar LOCAL_PG_SOCKET a su directorio Unix y BUSCAG_TEST_CLUSTER=disposable:
 
@@ -106,10 +107,11 @@ conexiones concurrentes, avisos de ambos propietarios, contacto recíproco, terc
 sin acceso, recibos y recuperación que conserva mensajes. No prueba los servicios
 remotos Auth/PostgREST/Storage/Realtime ni correo ni entrega push.
 
-Para reproducir el esquema **real** se necesita el diagnóstico y exportación de
-esquema revisada. No generar DDL a partir de expresiones no confiables ni restaurar
+El diagnóstico recibido ya se usa para reproducir columnas, constraints, índices,
+políticas y grants de las cuatro tablas. Para clonar funciones/servicios completos
+se necesita exportación de esquema revisada. No generar DDL a partir de expresiones no confiables ni restaurar
 triggers/cron/webhooks que apunten a producción. Aislar red y no montar credenciales.
-El fixture actual no sustituye esa validación pendiente.
+Los sustitutos de funciones/Auth/Storage no equivalen a una restauración completa ni a pruebas de servicios remotos.
 
 ## 4. Orden de instalación manual, después de revisión y respaldo probado
 
@@ -123,8 +125,9 @@ El fixture actual no sustituye esa validación pendiente.
 | proposals/20261104000000_message_receipts.sql | RPC de mensajes, recibos y cuota 120/min; revoca INSERT directo. |
 | proposals/20261104001000_trusted_matches.sql | Cola, ledger, restricciones adicionales y control **deshabilitado por defecto**. No interrumpe el modo de avisos propios de clientes actualizados. |
 | proposals/20261104002000_publication_receipts.sql | RPC de publicaciones, recibos y cuota 30/h; revoca INSERT directo de items. |
+| proposals/20261104003000_validate_legacy_compatible_writes.sql | Validar nuevas/alteradas columnas sin reescribir datos antiguos; proteger texto de avisos recovered para título NULL. |
 
-Los cuatro primeros archivos de seguridad están en supabase/migrations; los tres
+Los cuatro primeros archivos de seguridad están en supabase/migrations; los cuatro
 últimos en supabase/proposals. Cada archivo tiene su propia transacción: un fallo
 posterior no revierte archivos ya confirmados. No reejecutar baseline después de las
 propuestas: reemplaza políticas completas. Guardar el orden y SHA en registro privado,
@@ -190,12 +193,11 @@ reintentos de webhooks pueden volver a entregar una misma notificación.
 
 ## Resultado local de esta revisión
 
-- 89/89 pruebas de aplicación/herramientas; 15/15 de cliente/privacidad/Storage simulado.
-- 57/57 SQL en PostgreSQL 17 con DATE y 57/57 con timestamptz.
-- 54/54 SQL en PGlite con cada tipo (las tres multiconexión sólo corren en PostgreSQL).
+- 92/92 pruebas de aplicación/herramientas; 16/16 de cliente/privacidad/Storage simulado.
+- PostgreSQL 17: 61/61 con DATE del repositorio, 61/61 con timestamptz y 64/64 con la estructura observada; ensayo adicional del orden completo: correcto.
+- PGlite: 58/58, 58/58 y 61/61 respectivamente; ensayo del orden completo correcto. Las tres multiconexión sólo corren en PostgreSQL.
 - TypeScript, build Vite, Deno check --frozen de ambas funciones y lockfile Bun correctos.
 - npm audit: cero vulnerabilidades detectadas.
 - Exportador probado con archivos ficticios; no se descargaron imágenes reales ni se
-  ejecutó backup, restauración o SQL contra Supabase real. El catálogo completo sigue
-  pendiente del diagnóstico ausente. Estas comprobaciones no equivalen a aprobación
+  ejecutó backup, restauración o SQL contra Supabase real. La revisión completa de cuerpos de triggers y servicios sigue pendiente; el diagnóstico de metadatos sí fue analizado. Estas comprobaciones no equivalen a aprobación
   de producción, pruebas de correo, PostgREST/Realtime remoto o entrega push real.

@@ -1,5 +1,7 @@
 # Backend: preparación y activación segura
 
+**Proyecto de pruebas separado:** [STAGING_SETUP.md](STAGING_SETUP.md) automatiza la instalación pendiente en BuscAG-Staging, con guardas de destino y pruebas ficticias revertidas. No usar esa herramienta para producción.
+
 **Ensayo adicional de recuperación:** [RECOVERY_REHEARSAL.md](RECOVERY_REHEARSAL.md), con pg_dump/pg_restore nativos y verificación reforzada del respaldo de imágenes.
 
 Lista operativa actual: [ACTIVATION_CHECKLIST.md](ACTIVATION_CHECKLIST.md), con criterios por migración, publicación manual del cliente y bloqueos de servicios reales.

@@ -14,7 +14,9 @@
     "test:backend": "node scripts/test-backend-matrix.mjs pglite",
     "test:backend:postgres": "node scripts/test-backend-matrix.mjs postgres",
     "backup:storage": "node scripts/backup-storage.mjs",
-    "test:restore:postgres": "node scripts/test-backup-restore.mjs"
+    "test:restore:postgres": "node scripts/test-backup-restore.mjs",
+    "prepare:staging": "node scripts/prepare-staging.mjs",
+    "test:staging-tools": "node --test tests/staging-prepare.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

@@ -34,7 +34,8 @@
     "test:presentation": "tsx --test tests/presentation.test.ts",
     "test:presentation-browser": "node tests/presentation-browser.mjs",
     "demo:worker": "node scripts/staging-match-worker.mjs",
-    "test:staging-worker-tools": "node --test tests/staging-worker-tools.test.mjs"
+    "test:staging-worker-tools": "node --test tests/staging-worker-tools.test.mjs",
+    "test:visitors": "node --test tests/visitor-auth.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

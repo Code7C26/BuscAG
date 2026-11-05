@@ -5,19 +5,25 @@ import { pathToFileURL } from "node:url";
 import {
   STAGING_URL,
   STAGING_REF,
-  STAGING_APP_URL,
   stagingKeyError,
 } from "../lib/stagingEnvironment.mjs";
 import { checkStagingPublic } from "./check-staging-public.mjs";
+import {
+  visitorSettingsError,
+  stagingMailOrigin,
+  verifyPublicStagingArtifact,
+} from "../lib/visitorAuth.mjs";
 class LiveCheckError extends Error {}
 export function liveConfiguration(env, args) {
   const mode = args[0];
   if (
     args.length !== 1 ||
-    !["--probe", "--email-requests", "--run"].includes(mode)
+    !["--probe", "--visitor-preflight", "--email-requests", "--run"].includes(
+      mode,
+    )
   )
     throw new LiveCheckError(
-      "Usar --probe, --email-requests o --run. Destino fijo: BuscAG-Staging.",
+      "Usar --probe, --visitor-preflight, --email-requests o --run. Destino fijo: BuscAG-Staging.",
     );
   if (stagingKeyError(env.BUSCAG_STAGING_PUBLISHABLE_KEY))
     throw new LiveCheckError(
@@ -28,11 +34,12 @@ export function liveConfiguration(env, args) {
     env.BUSCAG_STAGING_PROJECT_REF !== STAGING_REF
   )
     throw new LiveCheckError("Proyecto rechazado: sólo BuscAG-Staging.");
-  if (mode === "--probe")
+  if (["--probe", "--visitor-preflight"].includes(mode))
     return {
       mode,
       key: env.BUSCAG_STAGING_PUBLISHABLE_KEY.trim(),
       accounts: [],
+      mailOrigin: stagingMailOrigin(env),
     };
   if (env.BUSCAG_STAGING_TEST_ACCOUNTS_CONFIRMED !== "dedicated-test-accounts")
     throw new LiveCheckError(
@@ -61,7 +68,12 @@ export function liveConfiguration(env, args) {
     throw new LiveCheckError(
       "Se requieren dos o tres cuentas de prueba diferentes y sus contraseñas de prueba. Supabase aplica su política de contraseña.",
     );
-  return { mode, key: env.BUSCAG_STAGING_PUBLISHABLE_KEY.trim(), accounts };
+  return {
+    mode,
+    key: env.BUSCAG_STAGING_PUBLISHABLE_KEY.trim(),
+    accounts,
+    mailOrigin: stagingMailOrigin(env),
+  };
 }
 export function pinnedStagingFetch(fetchImpl = fetch) {
   return (input, options = {}) => {
@@ -89,6 +101,26 @@ const accepted = (result, name) => {
   return result.data;
 };
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export async function requestVisitorSignups(accounts, makeClient, mailOrigin) {
+  for (const account of accounts) {
+    const data = accepted(
+      await makeClient().auth.signUp({
+        email: account.email,
+        password: account.password,
+        options: {
+          emailRedirectTo: mailOrigin + "/",
+          data: { full_name: "BuscAG QA dedicada" },
+        },
+      }),
+      "Registro rechazado: revisar Auth/SMTP/cuotas de staging.",
+    );
+    check(
+      data && !data.session,
+      "Signup devolvió sesión inmediata: revisar confirmación de correo antes de continuar.",
+    );
+  }
+  return { requests_accepted: accounts.length, delivery_verified: false };
+}
 export async function runLiveChecks(config, report = console.log) {
   const clients = [];
   const channels = [];
@@ -106,35 +138,43 @@ export async function runLiveChecks(config, report = console.log) {
     return c;
   };
   try {
-    if (config.mode === "--probe") {
-      await checkStagingPublic(config.key, pinnedStagingFetch());
+    if (["--probe", "--visitor-preflight"].includes(config.mode)) {
+      const settings = await checkStagingPublic(
+        config.key,
+        pinnedStagingFetch(),
+      );
+      if (config.mode === "--visitor-preflight") {
+        const error = visitorSettingsError(settings);
+        if (error) throw new LiveCheckError(error);
+        report(
+          "PASS: email activo, registro abierto y confirmación obligatoria según Auth público. SMTP, Site URL, allowlist y recepción real siguen pendientes de verificación.",
+        );
+        return;
+      }
       report(
         "PASS: acceso público Auth y restricciones anónimas de staging. Correo, sesión y servicios autenticados: pendientes.",
       );
       return;
     }
     if (config.mode === "--email-requests") {
-      for (const account of config.accounts) {
-        accepted(
-          await make().auth.signUp({
-            email: account.email,
-            password: account.password,
-            options: {
-              emailRedirectTo: STAGING_APP_URL + "/",
-              data: { full_name: "BuscAG QA dedicada" },
-            },
-          }),
-          "Registro rechazado: revisar Auth/SMTP/cuotas de staging.",
-        );
+      if (config.mailOrigin === "https://buscag-2677c.web.app") {
+        try {
+          await verifyPublicStagingArtifact();
+        } catch {
+          throw new LiveCheckError(
+            "El Hosting público no acredita todavía el artefacto de staging. No se envían enlaces allí. Ensayar localmente con BUSCAG_STAGING_TEST_APP_ORIGIN=http://127.0.0.1:3001 o publicar el cliente autorizado primero.",
+          );
+        }
       }
-      accepted(
-        await make().auth.resetPasswordForEmail(config.accounts[0].email, {
-          redirectTo: STAGING_APP_URL + "/?auth=recovery",
-        }),
-        "Solicitud de recuperación rechazada.",
+      const settings = await checkStagingPublic(
+        config.key,
+        pinnedStagingFetch(),
       );
+      const error = visitorSettingsError(settings);
+      if (error) throw new LiveCheckError(error);
+      await requestVisitorSignups(config.accounts, make, config.mailOrigin);
       report(
-        "SOLICITUDES ACEPTADAS: registro y recuperación. Entrega, confirmación, enlace y cambio de contraseña NO verificados. No repetir para forzar reenvíos.",
+        "SOLICITUDES DE REGISTRO ACEPTADAS. Entrega, creación nueva y confirmación NO verificadas. Confirmar los enlaces recibidos antes de probar recuperación desde la web. No repetir para forzar reenvíos.",
       );
       return;
     }

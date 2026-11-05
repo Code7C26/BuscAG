@@ -13,3 +13,5 @@ test('success responses never assert mail delivery and resend explains confirmed
  assert.match(authMailMessage('resend'),/ya confirmaste/);
  assert.match(authErrorMessage({code:'email_rate_limit_exceeded'}),/Espera/);
 });
+
+test('mail provider restrictions are actionable without reflecting arbitrary server details',()=>{assert.match(authErrorMessage({code:'email_address_not_authorized',message:'PRIVATE'}),/servicio de correo/);assert.doesNotMatch(authErrorMessage({code:'email_address_not_authorized',message:'PRIVATE'}),/PRIVATE/);assert.match(authErrorMessage({code:'email_address_invalid'}),/dirección/);});

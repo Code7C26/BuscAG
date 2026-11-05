@@ -28,6 +28,7 @@ const steps = [
   "test:staging-frontend",
   "test:release",
   "test:staging-live-tools",
+  "test:visitors",
   "test:staging-worker-tools",
   "test:presentation",
   "test:staging-tools",

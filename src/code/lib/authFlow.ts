@@ -32,6 +32,10 @@ export function authErrorMessage(error: unknown): string {
   const code = (error as { code?: string })?.code;
   if (code === "auth_redirect_mismatch")
     return "Abre la dirección configurada de BuscAG para solicitar un correo; el origen actual no coincide.";
+  if (code === "email_address_not_authorized")
+    return "El servicio de correo de este entorno no permite enviar a esa dirección. Contactá al responsable de BuscAG; repetir el envío no resuelve esta configuración.";
+  if (code === "email_address_invalid")
+    return "Revisá que la dirección de correo sea válida.";
   if (code === "invalid_credentials")
     return "El correo o la contraseña no son correctos.";
   if (code === "email_not_confirmed")

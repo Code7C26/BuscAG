@@ -1,0 +1,36 @@
+{
+  "purpose": "MANUAL_REVIEW_ONLY_NOT_AN_EXECUTABLE_MANAGEMENT_API_PAYLOAD",
+  "project_ref": "yiarlhpbgkofhhipkfha",
+  "site_url": "https://buscag-2677c.web.app",
+  "redirect_urls": [
+    "https://buscag-2677c.web.app/",
+    "https://buscag-2677c.web.app/?auth=recovery"
+  ],
+  "email_provider_enabled": true,
+  "new_users_allowed": true,
+  "confirm_email": true,
+  "smtp_recommended_for_small_school_session": {
+    "provider": "Dedicated Gmail account with 2-Step Verification and App Password",
+    "host": "smtp.gmail.com",
+    "port": 465,
+    "transport": "Implicit TLS with certificate verification",
+    "from_address": "Configure privately in staging Dashboard: same Gmail account as SMTP username",
+    "credentials_location": "Only staging Dashboard SMTP settings. Never VITE_*, Git, chat or browser."
+  },
+  "email_templates": {
+    "confirmation": "supabase/templates/confirmation.html",
+    "recovery": "supabase/templates/recovery.html",
+    "signed_link_placeholder": "{{ .ConfirmationURL }}"
+  },
+  "approval_requires": [
+    "actual receipt in independent Gmail and Outlook/school inboxes",
+    "confirmation and password reset on the public staging-backed website",
+    "quota budget for signups, retries and recovery",
+    "independent users pass staging functional rehearsal"
+  ],
+  "production_changes_allowed": false,
+  "local_rehearsal_redirect_urls": [
+    "http://127.0.0.1:3001/",
+    "http://127.0.0.1:3001/?auth=recovery"
+  ]
+}

@@ -1,4 +1,5 @@
 // No .env files or production client settings are loaded by this launcher.
+import {visitorSettingsError} from '../lib/visitorAuth.mjs';
 import {spawn} from 'node:child_process';
 import {checkStagingPublic} from './check-staging-public.mjs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
@@ -9,12 +10,17 @@ export function stagingProcessEnvironment(source){
   delete result.BUSCAG_STAGING_DATABASE_URL;
   return {...result,...selected};
 }
+export function stagingArguments(args){
+  if(args.some(x=>!['--build','--visitors'].includes(x))||new Set(args).size!==args.length)throw Error('Sólo se admite --build y --visitors opcionales.');
+  return {build:args.includes('--build'),visitors:args.includes('--visitors')};
+}
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   try{
-    const args=process.argv.slice(2);if(args.length>1||args.some(x=>x!=='--build'))throw Error('Sólo se admite --build opcional.');
+    const args=process.argv.slice(2);const options=stagingArguments(args);
     const env=stagingProcessEnvironment(process.env);
     if(!args.includes('--build')){
       const readiness=await checkStagingPublic(env.VITE_SUPABASE_PUBLISHABLE_KEY);
+      if(options.visitors){const error=visitorSettingsError(readiness);if(error)throw Error(error);console.log('Registro de visitantes y confirmación obligatoria verificados en Auth. La entrega SMTP debe probarse en un buzón real.');}
       console.log('Preflight público de staging correcto: Auth accesible y acceso anónimo bloqueado.');
       if(!readiness.email_enabled||readiness.signup_disabled)console.warn('Revisar Auth de staging: email deshabilitado o registro bloqueado.');
       if(readiness.email_autoconfirm)console.warn('Auth confirma emails automáticamente: la verificación por correo no podrá darse por probada.');

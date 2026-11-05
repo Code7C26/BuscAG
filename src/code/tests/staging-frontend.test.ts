@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {STAGING_REF,STAGING_URL,STAGING_APP_URL,STAGING_CSP,stagingEnvironment,validateStagingEnvironment} from '../lib/stagingEnvironment.mjs';
-import {stagingProcessEnvironment} from '../scripts/run-staging.mjs';
+import {stagingProcessEnvironment,stagingArguments} from '../scripts/run-staging.mjs';
 import {checkStagingPublic} from '../scripts/check-staging-public.mjs';
 const publicKey='sb_publishable_synthetic';
 const token=(role:string,ref:string)=>'synthetic.'+btoa(JSON.stringify({role,ref}))+'.signature';
@@ -63,3 +63,5 @@ test('real Vite staging server ignores env files, serves pinned variables and re
     Object.assign(process.env,previous);
   }
 });
+
+test('visitor launcher explicitly requests strict signup checks without changing the offline build mode',()=>{assert.deepEqual(stagingArguments(['--visitors']),{build:false,visitors:true});assert.deepEqual(stagingArguments(['--build','--visitors']),{build:true,visitors:true});for(const args of [['--production'],['--visitors','--visitors'],['--force']])assert.throws(()=>stagingArguments(args));});

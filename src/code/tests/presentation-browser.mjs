@@ -107,7 +107,7 @@ try {
       await page
         .getByRole("complementary", { name: "Entorno de presentación" })
         .innerText(),
-      "Presentación escolar · Supabase-Staging · datos de prueba",
+      "Presentación escolar · Supabase-Staging",
     );
     await login(page);
     await page.getByRole("heading", { name: /Lo importante/ }).waitFor();

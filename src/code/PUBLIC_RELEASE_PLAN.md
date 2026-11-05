@@ -1,5 +1,10 @@
 # Lanzamiento público: decisión y procedimiento reproducible
 
+**Cambio de alcance:** el objetivo vigente es una presentación escolar, no este
+lanzamiento masivo. Consultar SCHOOL_PRESENTATION.md: ruta con staging real, cuentas
+confirmadas y sin exigir SMTP comercial. Este documento conserva el plan de
+producción para cuando se decida activarlo.
+
 Revisión del 5 de noviembre de 2026. Actualización: dominio confirmado por el titular
 https://buscag-2677c.web.app; SMTP predeterminado sigue bloqueando el registro público.
 Ver [SMTP_LAUNCH.md](SMTP_LAUNCH.md) y [STAGING_LIVE_QA.md](STAGING_LIVE_QA.md).

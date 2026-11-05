@@ -4,6 +4,10 @@
 
 # BuscAG
 
+**Objetivo actual: presentación escolar**, sin lanzamiento masivo ni SMTP comercial.
+Ver [SCHOOL_PRESENTATION.md](SCHOOL_PRESENTATION.md) para los mínimos, build separado
+con staging real y autorizaciones; [DEMO_SCRIPT.md](DEMO_SCRIPT.md) para el guion de dos cuentas.
+
 Aplicación comunitaria de objetos perdidos y encontrados. La app usa Supabase para autenticación, perfiles, publicaciones, mensajes, notificaciones, fotos y actualizaciones en tiempo real.
 
 ## Estado de preparación para producción

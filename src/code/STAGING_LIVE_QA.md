@@ -1,5 +1,9 @@
 # Pruebas reales de staging en un comando
 
+**Presentación escolar:** dos cuentas confirmadas bastan para el recorrido. No es
+obligatorio contratar SMTP ni ejecutar Register. Ver SCHOOL_PRESENTATION.md.
+`-AccountCount 3` en el wrapper agrega un observador de privacidad opcional.
+
 Destino fijo: yiarlhpbgkofhhipkfha. No usa .env ni VITE_* para seleccionar backend,
 ni acepta URL libre, service_role, migraciones o borrado. `scripts/staging-live.mjs`
 usará APIs reales cuando el operador lo ejecute con acceso. **Esta entrega sólo probó
@@ -17,7 +21,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-StagingQA.
 
 La política Bypass afecta sólo ese proceso; no cambia la configuración de Windows.
 El wrapper solicita la clave PUBLICABLE de staging si no está vinculada en el entorno.
-Tras configurar SMTP, el modo Register solicita tres correos/contraseñas FICTICIAS
+Tras configurar SMTP, el modo Register solicita dos correos/contraseñas FICTICIAS
 exclusivas del ensayo. No usar contraseñas ni cuentas personales. Las mantiene sólo
 en memoria del proceso y restaura las variables al terminar; no crea archivos secretos:
 
@@ -25,7 +29,7 @@ en memoria del proceso y restaura las variables al terminar; no crea archivos se
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-StagingQA.ps1 -Mode Register
 ```
 
-Crea/solicita registro de esas tres cuentas y recuperación para la primera. **No valida
+Crea/solicita registro de esas dos cuentas y recuperación para la primera. **No valida
 entrega, confirmación ni cambio de contraseña.** Confirmar los correos y probar el
 cambio en la cuenta ficticia; luego usar su nueva contraseña en Run. No repetir
 Register como mecanismo de reenvío ni usarlo sobre cuentas existentes personales.
@@ -35,7 +39,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-StagingQA.
 ```
 
 Si el gestor de secretos ya proporciona BUSCAG_STAGING_PUBLISHABLE_KEY,
-BUSCAG_STAGING_TEST_ACCOUNTS_JSON (array de tres objetos email/password) y
+BUSCAG_STAGING_TEST_ACCOUNTS_JSON (array de dos o tres objetos email/password) y
 BUSCAG_STAGING_TEST_ACCOUNTS_CONFIRMED=dedicated-test-accounts, basta:
 
 ```
@@ -48,10 +52,10 @@ en el entorno de desarrollo de esta entrega; el wrapper no se declaró probado a
 
 ## Cobertura implementada y límites
 
-Run: login de tres cuentas confirmadas; perfil propio/privacidad ajena y directorio;
+Run: login de dos o tres cuentas confirmadas; perfil propio/privacidad ajena y directorio;
 Storage PNG ficticio y bytes de vuelta, escritura en carpeta ajena rechazada;
 publicar/reintentar por RPC con mismo ID, edición propia y UPDATE ajeno rechazado;
-mensaje/reintento mismo ID, evento postgres_changes recibido, tercero sin lectura,
+mensaje/reintento mismo ID, evento postgres_changes recibido, tercero sin lectura si se configuró una tercera cuenta,
 recibo, respuesta, notificación interna y is_read; resync REST tras desconexión;
 recuperación del objeto ficticio conserva la conversación. Si el backend matching
 está activo, espera hasta 90 s avisos de ambos dueños; no lo activa. Esa observación

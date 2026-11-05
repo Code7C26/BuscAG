@@ -1,5 +1,10 @@
 # Pruebas reales de staging en un comando
 
+**Actualización de alcance:** se requiere registro real de visitantes con su propio
+correo y confirmación activa. Ver [VISITOR_REGISTRATION.md](VISITOR_REGISTRATION.md).
+Las cuentas preconfirmadas son sólo contingencia y no prueban recepción de email.
+No se desactivó la confirmación ni se modificó producción.
+
 **Presentación escolar:** dos cuentas confirmadas bastan para el recorrido. No es
 obligatorio contratar SMTP ni ejecutar Register. Ver SCHOOL_PRESENTATION.md.
 `-AccountCount 3` en el wrapper agrega un observador de privacidad opcional.
@@ -29,7 +34,7 @@ en memoria del proceso y restaura las variables al terminar; no crea archivos se
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-StagingQA.ps1 -Mode Register
 ```
 
-Crea/solicita registro de esas dos cuentas y recuperación para la primera. **No valida
+Crea/solicita registro de esas dos cuentas sin solicitar recuperación antes de la confirmación. **No valida
 entrega, confirmación ni cambio de contraseña.** Confirmar los correos y probar el
 cambio en la cuenta ficticia; luego usar su nueva contraseña en Run. No repetir
 Register como mecanismo de reenvío ni usarlo sobre cuentas existentes personales.

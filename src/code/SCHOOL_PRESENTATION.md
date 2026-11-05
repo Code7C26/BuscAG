@@ -1,5 +1,10 @@
 # BuscAG: presentación escolar, sin infraestructura comercial
 
+**Actualización de alcance:** se requiere registro real de visitantes con su propio
+correo y confirmación activa. Ver [VISITOR_REGISTRATION.md](VISITOR_REGISTRATION.md).
+Las cuentas preconfirmadas son sólo contingencia y no prueban recepción de email.
+No se desactivó la confirmación ni se modificó producción.
+
 Esta es la prioridad vigente. No es un lanzamiento público general. No se exige
 comprar dominio, contratar SMTP, instalar cron comercial, certificar push o compilar
 Android/iOS para aprobar la demostración. Los planes anteriores de lanzamiento masivo
@@ -11,7 +16,7 @@ Preparada una opción explícita: la web en https://buscag-2677c.web.app usando
 **BuscAG-Staging REAL** (yiarlhpbgkofhhipkfha) y dos cuentas ficticias confirmadas.
 No contiene mocks ni un dataset incrustado: datos, imágenes, mensajes y avisos usan
 las APIs reales del proyecto de pruebas. La franja «Presentación escolar ·
-Supabase-Staging · datos de prueba» identifica el entorno sin fingir producción.
+Supabase-Staging» identifica el entorno sin fingir producción.
 
 Esta opción está preparada, **no desplegada ni elegida en tu nombre para el sitio
 publicado**. La autorización posterior debe decir expresamente que el Hosting

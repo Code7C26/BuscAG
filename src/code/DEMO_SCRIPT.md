@@ -1,5 +1,10 @@
 # Guion de demostración de BuscAG — 6 a 8 minutos
 
+**Actualización de alcance:** se requiere registro real de visitantes con su propio
+correo y confirmación activa. Ver [VISITOR_REGISTRATION.md](VISITOR_REGISTRATION.md).
+Las cuentas preconfirmadas son sólo contingencia y no prueban recepción de email.
+No se desactivó la confirmación ni se modificó producción.
+
 Usar dos cuentas ficticias confirmadas: **Cuenta A** (pierde) y **Cuenta B** (encuentra).
 No incluir ni proyectar credenciales. A en navegador normal; B en otro navegador o
 ventana privada. Iniciar sesión antes de compartir pantalla y tener una foto propia

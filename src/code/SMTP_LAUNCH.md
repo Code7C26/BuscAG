@@ -1,5 +1,10 @@
 # Correo de lanzamiento: bloqueo, solución y comprobación
 
+**Actualización de alcance:** se requiere registro real de visitantes con su propio
+correo y confirmación activa. Ver [VISITOR_REGISTRATION.md](VISITOR_REGISTRATION.md).
+Las cuentas preconfirmadas son sólo contingencia y no prueban recepción de email.
+No se desactivó la confirmación ni se modificó producción.
+
 Revisión de fuentes oficiales: 5 de noviembre de 2026. No se cambió SMTP remoto.
 El operador confirmó Site URL https://buscag-2677c.web.app, Confirm email activo y
 Custom SMTP desactivado. Con esa combinación todavía NO aprobar el registro público.

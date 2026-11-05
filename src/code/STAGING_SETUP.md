@@ -1,5 +1,7 @@
 # BuscAG-Staging: instalación automática desde la computadora del operador
 
+**Frontend tras instalar:** ver [STAGING_FRONTEND_TESTS.md](STAGING_FRONTEND_TESTS.md). El operador confirmó las nueve migraciones, verify y smoke correctos; no repetir instalación para empezar esas pruebas.
+
 No se conectó a staging en esta ejecución: el entorno sólo identifica variables del
 cliente y no tiene credenciales/referencia autorizadas de BuscAG-Staging. Los dos
 bootstrap figuran aplicados por declaración del operador, todavía no por inspección

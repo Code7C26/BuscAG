@@ -429,6 +429,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
       lat:newItemData.lat,lng:newItemData.lng,date,image_url:newItemData.imageUrl,reward:newItemData.reward
     },{
       upload:key=>uploadItemImage(newItemData.imageUrl,currentUser.id,current,key),
+      allowLegacy:import.meta.env?.MODE!=='staging',
       rpc:args=>supabase.rpc('publish_item_once',args).single(),
       legacy:input=>supabase.from('items').insert(input).select('*').single(),isCurrent:current
     }).catch(error=>{
@@ -577,6 +578,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
           sender_avatar:currentUser.avatar,item_title:item.title,item_image:item.imageUrl,text:body
         };
         const data = await deliverMessage(input,messageIntents.current.key(key),{
+          allowLegacy:import.meta.env?.MODE!=='staging',
           rpc:args=>supabase.rpc('send_message_once',args).single(),
           legacy:payload=>supabase.from('messages').insert(payload).select('*').single(),isCurrent:current
         });

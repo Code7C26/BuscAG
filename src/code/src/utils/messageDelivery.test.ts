@@ -35,3 +35,12 @@ test('late RPC response cannot update a changed account or invoke legacy fallbac
   await assert.rejects(deliverMessage(input,'key',{rpc:async()=>{current=false;return {data:null,error:{code:'PGRST202'}};},legacy:async()=>{legacy=true;return {data:null,error:null};},isCurrent:()=>current}),/sesión/);
   assert.equal(legacy,false);
 });
+
+test('staging rejects missing RPC without hiding incompatibility through legacy INSERT',async()=>{
+  let inserts=0;
+  await assert.rejects(deliverMessage(input,'same-key',{
+    allowLegacy:false,isCurrent:()=>true,rpc:async()=>({data:null,error:{code:'PGRST202'}}),
+    legacy:async()=>{inserts++;return {data:{id:'unexpected'},error:null};}
+  }));
+  assert.equal(inserts,0);
+});

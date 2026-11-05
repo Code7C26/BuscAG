@@ -12,6 +12,7 @@ export function createPublicationPublisher<Row>() {
       upload:(key:string)=>Promise<string>;
       rpc:(args:{p_request_key:string;p_payload:Payload})=>PromiseLike<Result<Row>>;
       legacy:(input:PublicationInput)=>PromiseLike<Result<Row>>;
+      allowLegacy?:boolean;
       isCurrent:()=>boolean;
     }):Promise<Row> {
       if(!transport.isCurrent()) return Promise.reject(new Error('La sesión cambió.'));
@@ -28,7 +29,7 @@ export function createPublicationPublisher<Row>() {
           const {owner_id:_,...payload}=prepared;
           let result=await transport.rpc({p_request_key:selected.requestKey,p_payload:payload});
           if(!transport.isCurrent()) throw new Error('La sesión cambió.');
-          if(result.error?.code==='PGRST202') result=await transport.legacy(prepared);
+          if(result.error?.code==='PGRST202'&&transport.allowLegacy!==false) result=await transport.legacy(prepared);
           if(!transport.isCurrent()) throw new Error('La sesión cambió.');
           if(result.error) throw result.error;
           if(!result.data) throw new Error('No se pudo confirmar la publicación.');

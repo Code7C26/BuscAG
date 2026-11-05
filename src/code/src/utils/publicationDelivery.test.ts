@@ -32,3 +32,12 @@ test('an unacknowledged publication never shares intent or upload keys with anot
   await assert.rejects(createPublicationPublisher().publish({...input,owner_id:'b'},transport));
   assert.notEqual(requests[0],requests[1]);assert.notEqual(uploads[0],uploads[1]);
 });
+
+test('staging publication requires its RPC and preserves intent on a missing-function error',async()=>{
+  const publisher=createPublicationPublisher();let inserts=0;const keys:string[]=[];
+  const transport={allowLegacy:false,isCurrent:()=>true,upload:async()=>input.image_url,
+    rpc:async(args:{p_request_key:string})=>{keys.push(args.p_request_key);return {data:null,error:{code:'PGRST202'}};},
+    legacy:async()=>{inserts++;return {data:{id:'unexpected'},error:null};}};
+  await assert.rejects(publisher.publish(input,transport));await assert.rejects(publisher.publish(input,transport));
+  assert.equal(inserts,0);assert.equal(keys[0],keys[1]);
+});

@@ -13,6 +13,7 @@ type Result<Row> = {data:Row|null;error:{code?:string;message?:string}|null};
 export async function deliverMessage<Row>(input:MessageInput,requestKey:string,transport:{
   rpc:(args:{p_request_key:string;p_item_id:string;p_recipient_id:string;p_text:string})=>PromiseLike<Result<Row>>;
   legacy:(input:MessageInput)=>PromiseLike<Result<Row>>;
+  allowLegacy?:boolean;
   isCurrent:()=>boolean;
 }):Promise<Row> {
   if (!transport.isCurrent()) throw new Error('La sesión cambió.');
@@ -20,7 +21,7 @@ export async function deliverMessage<Row>(input:MessageInput,requestKey:string,t
   if (!transport.isCurrent()) throw new Error('La sesión cambió.');
   // PGRST202 means no matching function was executed. Never fall back on a timeout,
   // HTTP error, RLS failure or a lost response: the transaction might have committed.
-  if (result.error?.code==='PGRST202') result=await transport.legacy(input);
+  if (result.error?.code==='PGRST202'&&transport.allowLegacy!==false) result=await transport.legacy(input);
   if (!transport.isCurrent()) throw new Error('La sesión cambió.');
   if (result.error) {
     if (result.error.message==='message_rate_limited') throw new Error('Espera un momento antes de enviar más mensajes.');

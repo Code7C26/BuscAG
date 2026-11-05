@@ -1,3 +1,4 @@
+import {validateStagingEnvironment,STAGING_REF} from './stagingEnvironment.mjs';
 import { validateEnvironment } from './environment';
 import { createClient } from '@supabase/supabase-js'
 
@@ -163,9 +164,10 @@ export interface Database {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-export const configurationError = validateEnvironment({ VITE_SUPABASE_URL: supabaseUrl, VITE_SUPABASE_PUBLISHABLE_KEY: supabasePublishableKey, VITE_APP_URL: import.meta.env.VITE_APP_URL }, import.meta.env.PROD);
+const staging=import.meta.env.MODE==='staging';
+export const configurationError = (staging?validateStagingEnvironment(import.meta.env):null) || validateEnvironment(import.meta.env, import.meta.env.PROD&&!staging);
 export const isSupabaseConfigured = !configurationError
 
 export const supabase = isSupabaseConfigured
-  ? createClient<Database>(supabaseUrl, supabasePublishableKey)
+  ? createClient<Database>(supabaseUrl, supabasePublishableKey,staging?{auth:{storageKey:`buscag-staging-${STAGING_REF}-auth`}}:undefined)
   : null

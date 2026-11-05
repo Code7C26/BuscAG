@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
+    "dev:staging": "node scripts/run-staging.mjs",
+    "build:staging": "node scripts/run-staging.mjs --build",
+    "check:staging-public": "node scripts/check-staging-public.mjs",
+    "test:staging-frontend": "tsx --test tests/staging-frontend.test.ts",
     "build": "vite build",
     "test": "tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs tests/storage-backup.test.mjs tests/restore-safety.test.mjs",
     "preview": "vite preview",

@@ -1,5 +1,7 @@
 # Backend: preparación y activación segura
 
+**Correo público:** [SMTP_LAUNCH.md](SMTP_LAUNCH.md). **Pruebas reales automatizadas:** [STAGING_LIVE_QA.md](STAGING_LIVE_QA.md).
+
 **Decisión de lanzamiento actual:** [PUBLIC_RELEASE_PLAN.md](PUBLIC_RELEASE_PLAN.md),
 con evidencia real de sólo lectura, guardas de release y bloqueos de integración.
 

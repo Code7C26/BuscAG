@@ -6,6 +6,10 @@ La autorización nueva del usuario permite rediseñar; AGENTS.md refleja esa dec
 La actualización de perfil y sesión, con resultados actuales (112 pruebas y 28 E2E),
 se detalla en [PROFILE_SESSION_REVIEW.md](PROFILE_SESSION_REVIEW.md).
 
+La nueva paleta solicitada y el avance actual de lanzamiento se documentan en
+[PALETTE_AND_LAUNCH_PROGRESS.md](PALETTE_AND_LAUNCH_PROGRESS.md). Las cifras debajo
+conservan el contexto de sus revisiones anteriores.
+
 ## Implementado
 
 - Sistema visual verde profundo, papel claro y acento cálido. Nueva entrada de Auth

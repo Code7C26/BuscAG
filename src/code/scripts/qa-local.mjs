@@ -27,6 +27,7 @@ const steps = [
   "lint",
   "test:staging-frontend",
   "test:release",
+  "test:staging-live-tools",
   "test:backend",
   "build",
   "test:e2e",

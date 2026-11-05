@@ -1,6 +1,9 @@
 # Lanzamiento público: decisión y procedimiento reproducible
 
-Revisión del 5 de noviembre de 2026. **NO GO: no integrar a main ni desplegar aún.**
+Revisión del 5 de noviembre de 2026. Actualización: dominio confirmado por el titular
+https://buscag-2677c.web.app; SMTP predeterminado sigue bloqueando el registro público.
+Ver [SMTP_LAUNCH.md](SMTP_LAUNCH.md) y [STAGING_LIVE_QA.md](STAGING_LIVE_QA.md).
+ **NO GO: no integrar a main ni desplegar aún.**
 La autorización del usuario para fast-forward es condicional a aprobar requisitos
 críticos. Las pruebas aisladas no certifican los servicios de Supabase reales.
 Este documento actualiza la decisión operativa; las auditorías anteriores son históricas.
@@ -165,7 +168,8 @@ Ante objetos existentes, fallo o diferencias de filas: parar y preparar delta es
 
 ## Intervenciones humanas indispensables
 
-1. Confirmar dominio Firebase canónico y revisar Site URL/Redirect URLs/SMTP de producción.
+1. Dominio Firebase confirmado: revisar entrega SMTP y destinos exactos de correo;
+   Site URL/allowlist fueron informados por el titular, no leídos por API de operador.
 2. Facilitar acceso seguro separado a staging o aportar evidencia de los flujos reales
    pendientes (incluida recepción de email); no enviar contraseñas ni tokens en chat.
 3. Ejecutar/entregar el diagnóstico de sólo lectura actualizado y revisar privadamente
@@ -184,8 +188,9 @@ instalador staging y 3 TLS (handshake real en loopback con certificados ficticio
 `npm audit --omit=dev` informó cero vulnerabilidades conocidas de ejecución.
 No se repitió en esta entrega PostgreSQL nativo ni Deno: no se modificaron SQL/Edge.
 
-El launcher release y su resolución Vite se probaron sin credenciales privadas;
-no se generó un release aprobado de producción: falta el origen público confirmado.
+El launcher release y su resolución Vite se probaron sin credenciales privadas.
+El origen público ya fue confirmado por el titular y ahora está fijado en el launcher;
+un artefacto compilado no constituye aprobación de producción.
 La asociación de la clave pública disponible con el proyecto de producción sí pudo
 usarse para consultar Auth /settings, sin que ello pruebe los flujos de correo.
 El informe local de QA indica production:not_contacted porque esa batería no contacta

@@ -14,7 +14,7 @@
     "check:staging-public": "node scripts/check-staging-public.mjs",
     "test:staging-frontend": "tsx --test tests/staging-frontend.test.ts",
     "build": "vite build",
-    "test": "tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs tests/storage-backup.test.mjs tests/restore-safety.test.mjs",
+    "test": "tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs tests/storage-backup.test.mjs tests/restore-safety.test.mjs tests/mail-templates.test.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
@@ -27,7 +27,9 @@
     "test:staging-tools": "node --test tests/staging-prepare.test.mjs",
     "test:staging-tls": "node --test tests/staging-tls.test.mjs",
     "build:release": "node scripts/prepare-release.mjs",
-    "test:release": "tsx --test tests/release.test.ts"
+    "test:release": "tsx --test tests/release.test.ts",
+    "qa:staging:live": "node scripts/staging-live.mjs",
+    "test:staging-live-tools": "node --test tests/staging-live.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

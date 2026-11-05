@@ -1,3 +1,4 @@
+import {validateReleaseEnvironment} from './releaseEnvironment.mjs';
 import {validateStagingEnvironment,STAGING_REF} from './stagingEnvironment.mjs';
 import { validateEnvironment } from './environment';
 import { createClient } from '@supabase/supabase-js'
@@ -165,7 +166,7 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
 const staging=import.meta.env.MODE==='staging';
-export const configurationError = (staging?validateStagingEnvironment(import.meta.env):null) || validateEnvironment(import.meta.env, import.meta.env.PROD&&!staging);
+export const configurationError = (staging?validateStagingEnvironment(import.meta.env):import.meta.env.MODE==='release'?validateReleaseEnvironment(import.meta.env):null) || validateEnvironment(import.meta.env, import.meta.env.PROD&&!staging);
 export const isSupabaseConfigured = !configurationError
 
 export const supabase = isSupabaseConfigured

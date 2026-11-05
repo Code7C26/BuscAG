@@ -1,5 +1,8 @@
 # Backend: preparación y activación segura
 
+**Decisión de lanzamiento actual:** [PUBLIC_RELEASE_PLAN.md](PUBLIC_RELEASE_PLAN.md),
+con evidencia real de sólo lectura, guardas de release y bloqueos de integración.
+
 **Revisión Auth/UI/QA actual:** [LAUNCH_PROGRESS.md](LAUNCH_PROGRESS.md), con automatización de navegador y límites reales de entrega de correo/PWA/nativo.
 
 **Proyecto de pruebas separado:** [STAGING_SETUP.md](STAGING_SETUP.md) automatiza la instalación pendiente en BuscAG-Staging, con guardas de destino y pruebas ficticias revertidas. No usar esa herramienta para producción.

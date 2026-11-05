@@ -25,7 +25,9 @@
     "test:restore:postgres": "node scripts/test-backup-restore.mjs",
     "prepare:staging": "node scripts/prepare-staging.mjs",
     "test:staging-tools": "node --test tests/staging-prepare.test.mjs",
-    "test:staging-tls": "node --test tests/staging-tls.test.mjs"
+    "test:staging-tls": "node --test tests/staging-tls.test.mjs",
+    "build:release": "node scripts/prepare-release.mjs",
+    "test:release": "tsx --test tests/release.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

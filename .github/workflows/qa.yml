@@ -1,7 +1,7 @@
 name: BuscAG local QA
 on:
   push:
-    branches: [Alexis]
+    branches: [Alexis, main]
   workflow_dispatch:
 permissions:
   contents: read

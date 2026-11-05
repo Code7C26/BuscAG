@@ -12,8 +12,15 @@ export function useDialogFocus(open: boolean, ref: RefObject<HTMLElement | null>
     )).filter(node => !node.closest('[hidden]') && window.getComputedStyle(node).display !== 'none');
     (controls()[0] ?? dialog).focus();
     const keydown = (event: KeyboardEvent) => {
-      if (!dialog.contains(document.activeElement)) return;
-      if (event.key === 'Escape') { event.preventDefault(); close.current(); }
+      // Disabled controls may drop focus to body (notably on mobile). The top
+      // modal must still handle Escape, while background dialogs remain inert.
+      const top = Array.from(document.querySelectorAll('[role="dialog"][aria-modal="true"]')).at(-1);
+      if (top !== dialog) return;
+      if (event.key === 'Escape') { event.preventDefault(); close.current(); return; }
+      if (!dialog.contains(document.activeElement)) {
+        if(event.key==='Tab'){event.preventDefault();(controls()[0]??dialog).focus();}
+        return;
+      }
       if (event.key !== 'Tab') return;
       const nodes = controls(), first = nodes[0], last = nodes.at(-1);
       if (!first) { event.preventDefault(); dialog.focus(); }

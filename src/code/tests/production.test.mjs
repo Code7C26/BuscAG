@@ -31,7 +31,7 @@ const sources = {
 async function bundle(entry, app = false) {
   const outfile = path.join(dir, path.basename(entry) + '.mjs');
   await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'esm',
-    external: ['react', 'react-dom', 'react-dom/*', 'lucide-react'], plugins: [{ name: 'offline', setup(p) {
+    external: ['react', 'react-dom', 'react-dom/*', 'lucide-react', 'qrcode'], plugins: [{ name: 'offline', setup(p) {
       p.onResolve({ filter: /(^|\/)supabase(\.ts)?$/ }, () => ({ path: 'auth', namespace: 'mock' }));
       p.onResolve({ filter: /^leaflet$/ }, () => ({ path: 'leaflet', namespace: 'mock' }));
       if (app) {
@@ -581,4 +581,15 @@ test('public profile deliberately omits email, phone, locality and account actio
  const {host}=await mount(PublicProfileModal,{user:owner,items:[item('public-item','other')],onClose:()=>{},onViewItem:()=>{}});
  for(const privateValue of ['private@example.invalid','PRIVATE_PHONE','PRIVATE_LOCALITY','Cerrar sesión','Cambiar contraseña'])assert.ok(!host.textContent.includes(privateValue));
  assert.match(host.textContent,/Perfil público/);
+});
+
+test('detail keeps legacy items without images usable instead of rendering a broken image',async()=>{
+ const target={...item(),imageUrl:''};const {host}=await mount(ItemDetailModal,{item:target,currentUser:user('a'),onClose:()=>{},onContact:()=>{},allItems:[]});
+ assert.ok(host.textContent.includes('Foto no disponible'));assert.equal(host.querySelector('img[alt="Synthetic"]'),null);
+});
+
+test('top modal still handles Escape when an asynchronous disabled control drops focus to body',async()=>{
+ let closed=0;await mount(ItemDetailModal,{item:item(),currentUser:user('a'),onClose:()=>{closed++;},onContact:()=>{},allItems:[]});
+ document.activeElement?.blur();assert.equal(document.activeElement,document.body);
+ await act(async()=>document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true})));assert.equal(closed,1);
 });

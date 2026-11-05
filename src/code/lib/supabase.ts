@@ -148,6 +148,18 @@ export interface Database {
       }
     }
     Functions: {
+      school_features:{Args:Record<string,never>;Returns:{version:number;matching_enabled:boolean}}
+      get_item_watch:{Args:{p_item:string};Returns:import('./schoolFeatures').Watch|null}
+      set_item_watch:{Args:{p_item:string;p_enabled:boolean;p_lat:number;p_lng:number;p_radius:number};Returns:import('./schoolFeatures').Watch}
+      get_match_preference:{Args:Record<string,never>;Returns:boolean}
+      set_match_preference:{Args:{p_enabled:boolean};Returns:boolean}
+      manage_object_tag:{Args:{p_item:string;p_enabled:boolean;p_rotate:boolean};Returns:{token:string;enabled:boolean}}
+      resolve_object_tag:{Args:{p_token:string};Returns:import('./schoolFeatures').PublicTag|null}
+      list_recovery_confirmations:{Args:{p_item:string};Returns:import('./schoolFeatures').Recovery[]}
+      request_item_recovery:{Args:{p_item:string;p_partner:string};Returns:string}
+      resolve_item_recovery:{Args:{p_request:string;p_accept:boolean};Returns:string}
+      community_statistics:{Args:Record<string,never>;Returns:import('./schoolFeatures').CommunityStats}
+
       publish_item_once: {
         Args:{p_request_key:string;p_payload:Omit<import('./publicationDelivery').PublicationInput,'owner_id'>}
         Returns:Database['public']['Tables']['items']['Row'][]

@@ -210,7 +210,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                       }`}
                     >
                       <Sparkles className="w-3 h-3 fill-current" />
-                      {score}% Coincidencia
+                      Índice {score}/100
                     </span>
 
                     <span className="text-xs font-semibold text-slate-700 hidden sm:inline">

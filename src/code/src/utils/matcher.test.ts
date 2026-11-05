@@ -32,7 +32,7 @@ const createItem = (overrides: Partial<Item> = {}): Item => ({
 const createPair = (lostOverrides: Partial<Item> = {}, foundOverrides: Partial<Item> = {}) =>
   [
     createItem(lostOverrides),
-    createItem({ id: 'item-2', status: 'encontrado', date: '2026-10-01T11:00:00.000Z', ...foundOverrides })
+    createItem({ id: 'item-2', user:{...createItem().user,id:'user-2'}, status: 'encontrado', date: '2026-10-01T11:00:00.000Z', ...foundOverrides })
   ] as const;
 
 describe('matcher', () => {
@@ -70,7 +70,7 @@ describe('matcher', () => {
     assert.deepEqual(findAllMatches([lost, found, unrelated]).map(match => match.id), ['match_item-1_item-2']);
   });
   it('keeps location-only suggestions at medium confidence and invalidates cached text', () => {
-    const [lost,found] = createPair({title:'roble caracol',description:'montaña naranja'}, {title:'lámpara violeta',description:'bicicleta azul'});
+    const [lost,found] = createPair({title:'roble caracol',description:'montaña sendero'}, {title:'lámpara linterna',description:'bicicleta rueda'});
     assert.equal(compareTwoItems(lost,found)?.confidence,'media');
     lost.title=found.title;lost.description=found.description;
     assert.ok((compareTwoItems(lost,found)?.matchedKeywords.length ?? 0)>0);
@@ -81,3 +81,13 @@ it('does not match unclassified or status-less legacy records',()=>{
   const [lost,found]=createPair({category:''},{category:''});assert.equal(compareTwoItems(lost,found),null);
   const [unclassified,normal]=createPair({status:null});assert.equal(compareTwoItems(unclassified,normal),null);
 });
+it('rejects mutually conflicting explicit colors rather than inflating generic matches',()=>{
+ const [lost,found]=createPair({title:'Mochila negra',description:'Mochila negra cierre bolsillo'},{title:'Mochila roja',description:'Mochila roja cierre bolsillo'});
+ assert.equal(compareTwoItems(lost,found),null);
+});
+it('recognizes plural/gender colors and explains the uncertainty of every suggestion',()=>{
+ const [lost,found]=createPair({title:'Bolso negro',description:'Bolso negro cierre plateado'},{title:'Bolso negros',description:'Bolso negros cierre plateado'});
+ const match=compareTwoItems(lost,found);assert.ok(match);assert.ok(match.reasons.some(r=>r.includes('no es una probabilidad')));assert.ok(match.reasons.some(r=>r.includes('Colores descritos')));
+});
+
+it('does not suggest contacting oneself for two reports owned by the same account',()=>{const [lost,found]=createPair();found.user=lost.user;assert.equal(compareTwoItems(lost,found),null);});

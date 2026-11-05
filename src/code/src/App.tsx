@@ -1,3 +1,6 @@
+import {CommunityStats} from './components/CommunityStats';
+import {PublicObjectTag} from './components/PublicObjectTag';
+import {tagFromUrl} from '../lib/schoolFeatures';
 import {isItemCategory,isItemStatus,publicationTextError} from './utils/itemContract';
 import { createPublicationPublisher } from '../lib/publicationDelivery';
 import { reportError } from '../lib/reportError';
@@ -46,6 +49,7 @@ const MatchComparisonModal = lazy(() => import('./components/MatchComparisonModa
 import { FaqChat } from './components/FaqChat';
 
 export default function App() {
+  const [tagContinue,setTagContinue]=useState(false);
   const [identity, setIdentity] = useState<{ user: AuthUser; guard: SessionGuard; key: number } | null>(null);
   const identityRef = useRef<typeof identity>(null);
   const [isLoadingSession, setIsLoadingSession] = useState(true);
@@ -113,6 +117,8 @@ export default function App() {
       </main>
     );
   }
+  const publicTag=tagFromUrl(window.location.href);
+  if(!identity&&publicTag&&!tagContinue)return <PublicObjectTag token={publicTag} onContinue={()=>setTagContinue(true)}/>;
   if (!identity) return <AuthView notice={authNotice} />;
   if (recovery) return <AuthView recovery notice={authNotice} onRecovered={() => {
     setRecovery(false); setAuthNotice('');
@@ -313,6 +319,14 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   }, [authUser.id,authUser.email,authUser.email_confirmed_at,currentUser?.id]);
 
   // Cuenta la cantidad de notificaciones que el usuario todavía no ha leído
+  useEffect(()=>{
+    const token=tagFromUrl(window.location.href);if(!token||isLoadingData||!supabase)return;
+    let active=true;const current=captureOperation();
+    Promise.resolve(supabase.rpc('resolve_object_tag',{p_token:token})).then(({data,error})=>{
+      if(!active||!current()||error||!data)return;
+      const item=items.find(i=>i.id===data.item_id);if(item){setSelectedDetailItem(item);const url=new URL(window.location.href);url.searchParams.delete('tag');window.history.replaceState(null,'',url.pathname+url.search+url.hash);}
+    }).catch(()=>{/* An unavailable QR never authorizes or opens a private record. */});return()=>{active=false;};
+  },[isLoadingData,items]);
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
   /**
@@ -456,15 +470,18 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
     if (potentialMatches.length > 0) {
       const best = potentialMatches[0];
       const otherTitle = newItem.status === 'perdido' ? best.foundItem.title : best.lostItem.title;
-      triggerToast(`✨ ¡Coincidencia del ${best.score}% detectada con "${otherTitle}"!`);
+      triggerToast(`Posible coincidencia: índice ${best.score}/100 con "${otherTitle}". Verificá los detalles.`);
 
       // Registra una notificación en el historial de alertas
       try {
         const legacy = await needsLegacyMatchNotice(()=>supabase.rpc('buscag_capabilities',{}).single());
         if (!current()) return;
-        if (legacy) await createNotification(
-          `✨ ¡Coincidencia del ${best.score}% encontrada!`,
-          `El sistema detectó que "${newItem.title}" coincide con "${otherTitle}".`,
+        const school=legacy?await supabase.rpc('school_features'):null;
+        // The optional backend owns all persistent match alerts, even while paused.
+        if (!current()) return;
+        if (legacy && school?.data?.version!==1 && (!school?.error || school.error.code==='PGRST202')) await createNotification(
+          `Posible coincidencia · índice ${best.score}/100`,
+          `"${newItem.title}" y "${otherTitle}" tienen características compatibles. No confirma que sean el mismo objeto.`,
           'match',
           newItem.status === 'perdido' ? best.foundItem.id : best.lostItem.id
         );
@@ -854,6 +871,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
                 <div className="community-hero__actions"><button onClick={()=>setIsPublishOpen(true)}>Publicar un objeto <Plus size={17}/></button><button onClick={()=>setActiveTab('map')}>Explorar el mapa <MapPin size={16}/></button></div>
               </div><div className="community-hero__art" aria-hidden="true"><CompassRose/><span>CADA ENCUENTRO CUENTA</span></div>
             </section>
+            <CommunityStats/>
             {/* Alerta de coincidencias para el usuario actual */}
             {userMatchesCount > 0 && (
               <div className="rounded-xl bg-slate-900 p-3.5 text-white flex items-center justify-between gap-3 border border-white/10">
@@ -1123,6 +1141,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
         onViewProfile={user=>{if(user.id===currentUser.id){setSelectedDetailItem(null);setActiveTab('profile');}else setViewingPublicUser(user);}}
         onMarkAsRecovered={handleMarkAsRecovered}
         onDeleteItem={handleDeleteItem}
+        messages={messages}
+        onRecoveryChanged={()=>{const current=captureOperation();if(supabase)loadItems(current).then(rows=>{if(current())setItems(rows);}).catch(()=>{if(current())triggerToast('No se pudo actualizar el listado. Volvé a cargar.');});}}
         allItems={items}
         onOpenMatchComparison={(match) => {
           setSelectedDetailItem(null);

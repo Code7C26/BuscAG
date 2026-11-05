@@ -77,7 +77,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                   Comparación de Coincidencia
                 </h2>
                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeInfo.bg}`}>
-                  {score}% Match
+                  Índice {score}/100
                 </span>
               </div>
               <p className="text-xs text-slate-500">
@@ -106,7 +106,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                 Nivel de Probabilidad de Match
               </span>
               <span className="text-xs font-extrabold text-slate-900">
-                {score}% - {badgeInfo.label}
+                {score}/100 - {badgeInfo.label}
               </span>
             </div>
 

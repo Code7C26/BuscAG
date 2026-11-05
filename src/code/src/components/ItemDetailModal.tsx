@@ -1,3 +1,4 @@
+import {ItemSchoolTools} from './ItemSchoolTools';
 import {Avatar} from './Avatar';
 import { formatItemDate } from '../utils/itemDate';
 import { useDialogFocus } from '../utils/useDialogFocus';
@@ -14,7 +15,7 @@ import { useDialogFocus } from '../utils/useDialogFocus';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { X, MapPin, Clock, Tag, ShieldCheck, MessageCircle, Phone, Share2, CheckCircle2, AlertCircle, Trash2, PartyPopper, Sparkles, ChevronRight } from 'lucide-react';
 import L from 'leaflet';
-import { Item, User, MatchResult } from '../types';
+import { Item, User, MatchResult, Message } from '../types';
 import { formatTimeAgo, isValidCoordinates } from '../utils/geo';
 import { findMatchesForSingleItem } from '../utils/matcher';
 
@@ -28,6 +29,8 @@ interface ItemDetailModalProps {
   currentUser: User;                             // Usuario que está utilizando la app actualmente
   onMarkAsRecovered?: (itemId: string) => Promise<boolean>;  // Cambia el estado a 'recuperado'
   onDeleteItem?: (itemId: string) => Promise<boolean>;       // Elimina la publicación de la lista
+  messages?: Message[];
+  onRecoveryChanged?:()=>void;
   allItems?: Item[];                             // Catálogo completo de publicaciones para calcular matches
   onOpenMatchComparison?: (match: MatchResult) => void; // Abre la vista de comparación lado a lado
 }
@@ -41,6 +44,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   onViewProfile,
   onMarkAsRecovered,
   onDeleteItem,
+  messages = [],
+  onRecoveryChanged = ()=>{},
   allItems = [],
   onOpenMatchComparison
 }) => {
@@ -52,6 +57,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   const leafletMiniMapRef = useRef<L.Map | null>(null);
 
   // Estado para mostrar un banner de celebración festiva al recuperar el objeto
+  const [failedImage,setFailedImage]=useState<string|null>(null);
   const [showRecoveredConfetti, setShowRecoveredConfetti] = useState(false);
   const recovering = useRef(false);
   const recoveryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -163,12 +169,13 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
         )}
 
         {/* Imagen principal superior con botón de cierre e insignias de estado */}
-        <div className="relative aspect-16/10 w-full bg-slate-900 overflow-hidden">
-          <img
-            src={item.imageUrl||undefined}
+        <div className="relative aspect-16/10 max-h-[30vh] shrink-0 w-full bg-slate-900 overflow-hidden">
+          {item.imageUrl&&failedImage!==item.imageUrl?<img
+            src={item.imageUrl}
             alt={item.title||'Publicación sin título'}
+            onError={()=>setFailedImage(item.imageUrl)}
             className="w-full h-full object-cover"
-          />
+          />:<div className="image-placeholder bg-slate-50"><Tag size={36} aria-hidden="true"/><span>Foto no disponible</span></div>}
 
           {/* Botón flotante para cerrar el modal */}
           <button
@@ -207,7 +214,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
         </div>
 
         {/* Cuerpo del modal con información detallada */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1">
+        <div className="p-5 min-h-0 overflow-y-auto space-y-5 flex-1">
           {/* Título y Recompensa */}
           <div>
             <h2 className="font-extrabold text-slate-900 text-xl sm:text-2xl leading-tight">
@@ -304,7 +311,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                             <span className={`px-2 py-0.2 rounded-full text-[10px] font-extrabold ${
                               match.score >= 75 ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'
                             }`}>
-                              {match.score}% Match
+                              Índice {match.score}/100
                             </span>
                             <span className="text-[10px] font-semibold text-slate-500">
                               {counterpart.status === 'encontrado' ? '🟢 Encontrado' : '🔴 Perdido'}
@@ -339,6 +346,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           )}
 
           {/* Tarjeta del usuario que publicó el objeto */}
+          <ItemSchoolTools key={item.id+currentUser.id} item={item} userId={currentUser.id} messages={messages} onRecovered={onRecoveryChanged}/>
           <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Avatar src={item.user.avatar} name={item.user.name} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs"/>
@@ -372,7 +380,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
         </div>
 
         {/* Barra inferior de acciones (depende de si es el dueño o no) */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
+        <div className="p-4 shrink-0 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
           {/* Si el usuario actual es el autor de la publicación */}
           {isOwner ? (
             <div className="w-full flex gap-2">

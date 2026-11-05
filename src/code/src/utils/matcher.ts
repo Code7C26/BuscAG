@@ -29,6 +29,8 @@ const STOP_WORDS = new Set([
   'av', 'avenida', 'calle', 'plaza'
 ]);
 
+const COLORS=new Set(['negro','negra','negros','negras','blanco','blanca','blancos','blancas','rojo','roja','rojos','rojas','azul','azules','verde','verdes','amarillo','amarilla','amarillos','amarillas','violeta','violetas','gris','grises','rosa','rosas','naranja','naranjas']);
+
 /**
  * Normaliza y divide una cadena en palabras clave relevantes
  */
@@ -75,6 +77,7 @@ function itemKeywords(item: Item): string[] {
  * Si la puntuación mínima no se alcanza, devuelve null.
  */
 export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | null {
+  if(lostItem.user.id && lostItem.user.id===foundItem.user.id)return null;
   // 1. REGLA FUNDAMENTAL: Ambos deben pertenecer a la misma categoría
   if (!lostItem.category.trim() || lostItem.category !== foundItem.category) {
     return null;
@@ -104,12 +107,18 @@ export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | 
   const reasons: string[] = [];
 
   // Categoría idéntica confirmada
+  reasons.push('Sugerencia orientativa: el índice no es una probabilidad ni una prueba de propiedad');
   reasons.push(`Misma categoría: ${lostItem.category}`);
 
   // 2. SIMILITUD DE TEXTO (TÍTULO Y DESCRIPCIÓN)
   const lostKeywords = itemKeywords(lostItem);
   const foundKeywords = itemKeywords(foundItem);
 
+  const canonical=(word:string)=>word==='azules'?'azul':word==='grises'?'gris':word.replace(/s$/,'').replace(/a$/,'o');
+  const lostColors=new Set(lostKeywords.filter(w=>COLORS.has(w)).map(canonical));
+  const foundColors=new Set(foundKeywords.filter(w=>COLORS.has(w)).map(canonical));
+  if(lostColors.size&&foundColors.size&&![...lostColors].some(c=>foundColors.has(c)))return null;
+  if(lostColors.size&&foundColors.size)reasons.push('Colores descritos compatibles; verificá las características en persona');
   const { matchedWords } = calculateKeywordOverlap(lostKeywords, foundKeywords);
 
   let textScore = 0;

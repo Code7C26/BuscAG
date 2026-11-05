@@ -4,6 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:pwa-browser": "node tests/pwa-browser.mjs",
+    "qa:local": "node scripts/qa-local.mjs",
+    "test:e2e": "playwright test",
+    "qa:browser:install": "playwright install chromium",
     "dev": "vite --port=3000 --host=0.0.0.0",
     "dev:staging": "node scripts/run-staging.mjs",
     "build:staging": "node scripts/run-staging.mjs --build",
@@ -31,7 +35,9 @@
     "react-dom": "^19.0.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.11.1",
     "@electric-sql/pglite": "0.5.15",
+    "@playwright/test": "1.58.2",
     "@tailwindcss/vite": "^4.1.14",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^22.14.0",

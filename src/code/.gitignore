@@ -8,3 +8,8 @@ coverage/
 !.env.example
 
 dist-staging/
+
+playwright-report/
+test-results/
+
+dist-pwa-test/

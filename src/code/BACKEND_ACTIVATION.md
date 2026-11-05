@@ -1,5 +1,7 @@
 # Backend: preparación y activación segura
 
+**Revisión Auth/UI/QA actual:** [LAUNCH_PROGRESS.md](LAUNCH_PROGRESS.md), con automatización de navegador y límites reales de entrega de correo/PWA/nativo.
+
 **Proyecto de pruebas separado:** [STAGING_SETUP.md](STAGING_SETUP.md) automatiza la instalación pendiente en BuscAG-Staging, con guardas de destino y pruebas ficticias revertidas. No usar esa herramienta para producción.
 
 **Ensayo adicional de recuperación:** [RECOVERY_REHEARSAL.md](RECOVERY_REHEARSAL.md), con pg_dump/pg_restore nativos y verificación reforzada del respaldo de imágenes.

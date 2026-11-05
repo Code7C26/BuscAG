@@ -1,4 +1,4 @@
-param([ValidateSet('Probe','Register','Run')][string]$Mode = 'Probe')
+param([ValidateSet('Probe','Register','Run')][string]$Mode = 'Probe', [ValidateRange(2,3)][int]$AccountCount = 2)
 $ErrorActionPreference = 'Stop'
 $names = @('BUSCAG_STAGING_PUBLISHABLE_KEY','BUSCAG_STAGING_TEST_ACCOUNTS_CONFIRMED','BUSCAG_STAGING_TEST_ACCOUNTS_JSON')
 $previous = @{}
@@ -11,7 +11,7 @@ try {
     Write-Host 'Solo cuentas FICTICIAS dedicadas en BuscAG-Staging. Se conservaran publicaciones e imagenes QA.'
     if (-not $env:BUSCAG_STAGING_TEST_ACCOUNTS_JSON) {
       $accounts = @()
-      foreach ($number in 1..3) {
+      foreach ($number in 1..$AccountCount) {
         $email = Read-Host "Correo de cuenta ficticia $number"
         $secure = Read-Host "Contrasena de PRUEBA $number (no cuenta personal)" -AsSecureString
         $accounts += @{email=$email; password=([Net.NetworkCredential]::new('', $secure)).Password}

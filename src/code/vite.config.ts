@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
+import {validatePresentationEnvironment} from './lib/presentationEnvironment.mjs';
 import {validateEnvironment} from './lib/environment';
 import {validateReleaseEnvironment} from './lib/releaseEnvironment.mjs';
 import {validateStagingEnvironment,STAGING_CSP} from './lib/stagingEnvironment.mjs';
@@ -9,7 +10,9 @@ import {validateStagingEnvironment,STAGING_CSP} from './lib/stagingEnvironment.m
 export default defineConfig(({ command, mode }) => {
   const staging=mode==='staging';
   const release=mode==='release';
-  const env = (staging||release)?process.env:{ ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env };
+  const presentation=mode==='presentation';
+  const env = (staging||release||presentation)?process.env:{ ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env };
+  if(presentation){const error=validatePresentationEnvironment(env);if(error)throw new Error(error);}
   if(release){const error=validateReleaseEnvironment(env);if(error)throw new Error(error);}
   if(staging){const error=validateStagingEnvironment(env);if(error)throw new Error(error);}
   if (command === 'build' || env.VITE_SUPABASE_PUBLISHABLE_KEY) {
@@ -17,9 +20,9 @@ export default defineConfig(({ command, mode }) => {
     if (error) throw new Error(error); // Never print variable values or credentials.
   }
   return {
-    envDir:(staging||release)?false:undefined,
+    envDir:(staging||release||presentation)?false:undefined,
     plugins: [react(), tailwindcss()],
-    build: {outDir:staging?'dist-staging':'dist', rollupOptions: { output: { manualChunks(id) {
+    build: {outDir:presentation?'dist-presentation':staging?'dist-staging':'dist', rollupOptions: { output: { manualChunks(id) {
       if (id.includes('/node_modules/@supabase/')) return 'supabase';
     } } } },
     resolve: {

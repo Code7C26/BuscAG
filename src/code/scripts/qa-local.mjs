@@ -28,10 +28,14 @@ const steps = [
   "test:staging-frontend",
   "test:release",
   "test:staging-live-tools",
+  "test:staging-worker-tools",
+  "test:presentation",
+  "test:staging-tools",
   "test:backend",
   "build",
   "test:e2e",
   "test:pwa-browser",
+  "test:presentation-browser",
 ];
 const results = [];
 for (const step of steps) {

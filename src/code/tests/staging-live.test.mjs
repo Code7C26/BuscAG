@@ -26,7 +26,7 @@ test("live tools never inherit a production destination or accept private keys",
   for (const args of [[], ["--run", "--force"], ["--production"]])
     assert.throws(() => liveConfiguration(env, args));
 });
-test("writing modes require three explicitly dedicated accounts and never echo bad input", () => {
+test("writing modes require two or three explicitly dedicated accounts and never echo bad input", () => {
   assert.throws(() => liveConfiguration(env, ["--run"]));
   const input = {
     ...env,
@@ -76,3 +76,17 @@ test("pinned real-service transport rejects foreign destinations before fetch an
   assert.equal(calls[0].options.redirect, "error");
   assert.ok(calls[0].options.signal instanceof AbortSignal);
 });
+
+test("school rehearsal accepts two accounts without requiring a third privacy observer", () => {
+  const selected = liveConfiguration(
+    {
+      ...env,
+      BUSCAG_STAGING_TEST_ACCOUNTS_CONFIRMED: "dedicated-test-accounts",
+      BUSCAG_STAGING_TEST_ACCOUNTS_JSON: JSON.stringify(accounts.slice(0, 2)),
+    },
+    ["--run"],
+  );
+  assert.equal(selected.accounts.length, 2);
+});
+
+test('existing confirmed school accounts are not forced through an invented password rotation',()=>{const selected=liveConfiguration({...env,BUSCAG_STAGING_TEST_ACCOUNTS_CONFIRMED:'dedicated-test-accounts',BUSCAG_STAGING_TEST_ACCOUNTS_JSON:JSON.stringify(accounts.slice(0,2).map(a=>({...a,password:'demo-8ok'})))},['--run']);assert.equal(selected.accounts.length,2);assert.equal(selected.accounts[0].password,'demo-8ok');});

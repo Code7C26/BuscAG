@@ -1,3 +1,4 @@
+import {validatePresentationEnvironment,PRESENTATION_STORAGE_KEY} from './presentationEnvironment.mjs';
 import {validateReleaseEnvironment} from './releaseEnvironment.mjs';
 import {validateStagingEnvironment,STAGING_REF} from './stagingEnvironment.mjs';
 import { validateEnvironment } from './environment';
@@ -166,9 +167,10 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
 const staging=import.meta.env.MODE==='staging';
-export const configurationError = (staging?validateStagingEnvironment(import.meta.env):import.meta.env.MODE==='release'?validateReleaseEnvironment(import.meta.env):null) || validateEnvironment(import.meta.env, import.meta.env.PROD&&!staging);
+const presentation=import.meta.env.MODE==='presentation';
+export const configurationError = (presentation?validatePresentationEnvironment(import.meta.env):staging?validateStagingEnvironment(import.meta.env):import.meta.env.MODE==='release'?validateReleaseEnvironment(import.meta.env):null) || validateEnvironment(import.meta.env, import.meta.env.PROD&&!staging);
 export const isSupabaseConfigured = !configurationError
 
 export const supabase = isSupabaseConfigured
-  ? createClient<Database>(supabaseUrl, supabasePublishableKey,staging?{auth:{storageKey:`buscag-staging-${STAGING_REF}-auth`}}:undefined)
+  ? createClient<Database>(supabaseUrl, supabasePublishableKey,presentation?{auth:{storageKey:PRESENTATION_STORAGE_KEY}}:staging?{auth:{storageKey:`buscag-staging-${STAGING_REF}-auth`}}:undefined)
   : null

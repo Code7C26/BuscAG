@@ -19,7 +19,11 @@ export function createStore() {
     receipts: new Map<string, any>(),
   };
 }
-export async function mockBackend(page: Page, store = createStore()) {
+export async function mockBackend(
+  page: Page,
+  store = createStore(),
+  appOrigin = "http://127.0.0.1:3001",
+) {
   await page.routeWebSocket("wss://*.supabase.co/**", (socket) => {
     socket.onMessage((message) => {
       try {
@@ -80,7 +84,7 @@ export async function mockBackend(page: Page, store = createStore()) {
   await page.route("**/*", async (route) => {
     const request = route.request(),
       url = new URL(request.url());
-    if (url.origin === "http://127.0.0.1:3001") return route.continue();
+    if (url.origin === appOrigin) return route.continue();
     if (url.origin !== origin) {
       return route.abort();
     }

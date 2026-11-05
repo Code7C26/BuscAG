@@ -43,23 +43,23 @@ export function liveConfiguration(env, args) {
     accounts = JSON.parse(env.BUSCAG_STAGING_TEST_ACCOUNTS_JSON);
   } catch {
     throw new LiveCheckError(
-      "Configurar tres cuentas ficticias en una variable privada de servidor, nunca VITE_ ni archivos Git.",
+      "Configurar dos o tres cuentas ficticias en una variable privada de servidor, nunca VITE_ ni archivos Git.",
     );
   }
   if (
     !Array.isArray(accounts) ||
-    accounts.length !== 3 ||
+    ![2, 3].includes(accounts.length) ||
     accounts.some(
       (a) =>
         typeof a?.email !== "string" ||
         !a.email.includes("@") ||
         typeof a.password !== "string" ||
-        a.password.length < 12,
+        a.password.length === 0,
     ) ||
-    new Set(accounts.map((a) => a.email.toLowerCase())).size !== 3
+    new Set(accounts.map((a) => a.email.toLowerCase())).size !== accounts.length
   )
     throw new LiveCheckError(
-      "Se requieren tres cuentas de prueba diferentes y contraseñas de prueba de al menos 12 caracteres.",
+      "Se requieren dos o tres cuentas de prueba diferentes y sus contraseñas de prueba. Supabase aplica su política de contraseña.",
     );
   return { mode, key: env.BUSCAG_STAGING_PUBLISHABLE_KEY.trim(), accounts };
 }
@@ -152,13 +152,13 @@ export async function runLiveChecks(config, report = console.log) {
       users.push(data.user);
     }
     check(
-      new Set(users.map((user) => user.id)).size === 3,
-      "Las tres cuentas ficticias deben tener identidades diferentes.",
+      new Set(users.map((user) => user.id)).size === config.accounts.length,
+      "Las cuentas ficticias deben tener identidades diferentes.",
     );
     const [a, b, c] = clients;
-    const [ua, ub, uc] = users;
+    const [ua, ub] = users;
     report(
-      "PASS: login de tres cuentas confirmadas (no demuestra recepción del correo).",
+      "PASS: login de cuentas confirmadas (no demuestra recepción del correo).",
     );
     const capabilities = accepted(
       await a.rpc("buscag_capabilities"),
@@ -257,14 +257,14 @@ export async function runLiveChecks(config, report = console.log) {
     const found = await publish(b, { ...payload, status: "encontrado" });
     check(
       accepted(
-        await c
+        await (c ?? b)
           .from("items")
           .update({ title: "No autorizado" })
           .eq("id", item.id)
           .select("id"),
         "UPDATE ajeno no pudo comprobarse.",
       ).length === 0,
-      "Un tercero modificó publicación ajena.",
+      "Otro usuario modificó publicación ajena.",
     );
     accepted(
       await a
@@ -330,13 +330,18 @@ export async function runLiveChecks(config, report = console.log) {
     const deadline = Date.now() + 15000;
     while (!received && Date.now() < deadline) await wait(250);
     check(received, "Mensaje no recibido por Realtime.");
-    check(
-      accepted(
-        await c.from("messages").select("id").eq("id", first.id),
-        "Privacidad de mensajes no comprobada.",
-      ).length === 0,
-      "Tercero puede leer mensaje.",
-    );
+    if (c) {
+      check(
+        accepted(
+          await c.from("messages").select("id").eq("id", first.id),
+          "Privacidad de mensajes no comprobada.",
+        ).length === 0,
+        "Tercero puede leer mensaje.",
+      );
+    } else
+      report(
+        "PENDIENTE: aislamiento de chat frente a tercero requiere una tercera cuenta; no se simula esa prueba.",
+      );
     accepted(
       await b
         .from("messages")
@@ -371,19 +376,21 @@ export async function runLiveChecks(config, report = console.log) {
       "Avisos de chat no accesibles.",
     );
     check(notices.length > 0, "Trigger no generó notificación de mensaje.");
-    check(
-      accepted(
-        await c
-          .from("notifications")
-          .select("id")
-          .in(
-            "id",
-            notices.map((n) => n.id),
-          ),
-        "Privacidad de avisos no comprobada.",
-      ).length === 0,
-      "Avisos ajenos expuestos.",
-    );
+    if (c) {
+      check(
+        accepted(
+          await c
+            .from("notifications")
+            .select("id")
+            .in(
+              "id",
+              notices.map((n) => n.id),
+            ),
+          "Privacidad de avisos no comprobada.",
+        ).length === 0,
+        "Avisos ajenos expuestos.",
+      );
+    }
     accepted(
       await b
         .from("notifications")
@@ -403,7 +410,7 @@ export async function runLiveChecks(config, report = console.log) {
       "Mensaje ausente tras desconexión.",
     );
     report(
-      "PASS: chat idempotente, evento Realtime, recibos, respuesta, aviso y privacidad de tercero; resync REST tras desconexión. Reconexión WebSocket prolongada: pendiente.",
+      "PASS: chat idempotente, evento Realtime, recibos, respuesta y aviso; privacidad de tercero sólo si se configuró; resync REST tras desconexión. Reconexión WebSocket prolongada: pendiente.",
     );
     if (capabilities[0].queued_match_notifications) {
       const end = Date.now() + 90000;
@@ -460,6 +467,35 @@ export async function runLiveChecks(config, report = console.log) {
     );
     report(
       "PASS: recuperación del objeto ficticio propio conserva conversación.",
+    );
+    accepted(
+      await a.auth.signOut({ scope: "local" }),
+      "Logout A no confirmado por Auth.",
+    );
+    check(
+      (await a.auth.getSession()).data.session === null,
+      "La sesión A no se limpió.",
+    );
+    const switched = accepted(
+      await a.auth.signInWithPassword(config.accounts[1]),
+      "Cambio de cuenta rechazado.",
+    );
+    check(
+      switched.user?.id === ub.id,
+      "El cliente conservó la identidad anterior.",
+    );
+    for (const client of clients) {
+      accepted(
+        await client.auth.signOut({ scope: "local" }),
+        "Logout no confirmado por Auth.",
+      );
+      check(
+        (await client.auth.getSession()).data.session === null,
+        "La sesión no se limpió.",
+      );
+    }
+    report(
+      "PASS: logout, sesión local vacía y cambio de cuenta por Auth API; estado visual se certifica aparte.",
     );
     report(
       `ENSAYO COMPLETO API. Run ${runId}. Filas/imágenes ficticias conservadas; no se borró ningún objeto. Push, entrega email y E2E frontend real: pendientes.`,

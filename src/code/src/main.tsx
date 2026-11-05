@@ -1,6 +1,7 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
+import {PresentationNotice} from './components/PresentationNotice';
 import {reportError} from '../lib/reportError';
 import {AppErrorBoundary} from './components/AppErrorBoundary';
 import 'leaflet/dist/leaflet.css';
@@ -11,7 +12,7 @@ createRoot(document.getElementById('root')!, {
   onUncaughtError: () => reportError('app_uncaught_error'),
 }).render(
   <StrictMode>
-    <AppErrorBoundary><App /></AppErrorBoundary>
+    <AppErrorBoundary><PresentationNotice enabled={import.meta.env.MODE==='presentation'}/><App /></AppErrorBoundary>
   </StrictMode>,
 );
 

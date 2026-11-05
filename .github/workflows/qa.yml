@@ -29,4 +29,5 @@ jobs:
           path: |
             src/code/test-results/
             src/code/playwright-report/
+            src/code/presentation-test-results/
           retention-days: 7

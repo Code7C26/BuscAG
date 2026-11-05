@@ -8,7 +8,7 @@ Conservar `main` y `German` intactas. No modificar ni borrar ramas de compañero
 Sólo retirar ramas temporales explícitamente autorizadas tras comprobar que sus
 avances están en Alexis y que no contienen trabajo ajeno pendiente.
 
-No rediseñar la interfaz ni cambiar estilos. No eliminar funcionalidades ni datos.
+El usuario autorizó el rediseño integral: mantener una identidad coherente, accesibilidad y compatibilidad móvil. No eliminar funcionalidades ni datos.
 No ejecutar SQL de escritura/migraciones en Supabase real, ni desplegar Firebase.
 Preparar y probar SQL exclusivamente en bases aisladas; cualquier aplicación en
 producción requiere autorización específica. No introducir secretos en Git.

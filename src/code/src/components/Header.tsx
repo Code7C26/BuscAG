@@ -1,3 +1,4 @@
+import {Avatar} from './Avatar';
 import React from 'react';
 import { Bell, Compass, Sparkles } from 'lucide-react';
 import { User, TabType } from '../types';
@@ -34,9 +35,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <span className="font-semibold text-lg tracking-tight text-slate-900 block leading-none">
-              Objetos <span className="text-blue-800">Perdidos</span>
+              Busc<span className="text-blue-800">AG</span>
             </span>
-            <span className="text-[11px] text-slate-500 font-medium tracking-wide">Red comunitaria</span>
+            <span className="text-[11px] text-slate-500 font-medium tracking-wide">Encontrarnos hace la diferencia</span>
           </div>
         </button>
 
@@ -53,7 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
             title="Ver coincidencias automáticas"
           >
             <Sparkles className={`w-3.5 h-3.5 ${activeTab === 'matches' ? 'text-amber-300 fill-amber-300' : 'text-blue-600'}`} />
-            <span>Matches</span>
+            <span>Coincidencias</span>
             {matchesCount > 0 && (
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                 activeTab === 'matches' ? 'bg-white/20 text-white' : 'bg-amber-500 text-white'
@@ -91,11 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
                 : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
             }`}
           >
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="w-7 h-7 rounded-full object-cover border border-slate-300"
-            />
+            <Avatar src={currentUser.avatar} name={currentUser.name} className="w-7 h-7 rounded-full object-cover border border-slate-300"/>
             <span className="text-xs font-semibold hidden sm:inline truncate max-w-[100px]">
               {currentUser.name.split(' ')[0]}
             </span>

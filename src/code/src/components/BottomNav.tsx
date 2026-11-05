@@ -18,10 +18,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   matchesCount = 0
 }) => {
   return (
-    <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t px-2 py-1.5 sm:py-2">
+    <nav aria-label="Navegación principal" className="bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t px-2 py-1.5 sm:py-2">
       <div className="bottom-nav__content mx-auto flex items-center justify-around relative">
         {/* 🏠 Inicio */}
         <button
+          aria-current={activeTab==='home'?'page':undefined}
           onClick={() => onSelectTab('home')}
           className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition cursor-pointer ${
             activeTab === 'home' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800'
@@ -69,7 +70,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               </span>
             )}
           </div>
-          <span className="text-[11px] mt-0.5">Matches</span>
+          <span className="text-[11px] mt-0.5">Coincidencias</span>
         </button>
 
         {/* 👤 Perfil */}

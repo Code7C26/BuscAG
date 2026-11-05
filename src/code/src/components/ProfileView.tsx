@@ -1,3 +1,4 @@
+import {Avatar} from './Avatar';
 import React, { useState } from 'react';
 import { User, Item } from '../types';
 import { ShieldCheck, CheckCircle2, Package, LogOut, Trash2, Plus, ChevronRight, Sparkles } from 'lucide-react';
@@ -48,11 +49,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="relative pt-4 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
           {/* Avatar */}
           <div className="relative">
-            <img
-              src={currentUser.avatar}
-              alt={currentUser.name}
-              className="profile-view__avatar w-20 h-20 rounded-full object-cover border-4 border-white bg-white"
-            />
+            <Avatar src={currentUser.avatar} name={currentUser.name} className="profile-view__avatar w-20 h-20 rounded-full object-cover border-4 border-white bg-white"/>
             {currentUser.verified && (
               <div className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full border-2 border-white shadow-xs">
                 <ShieldCheck className="w-4 h-4" />
@@ -96,7 +93,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
       </div>
 
       {/* Sub-tabs Navigation */}
-      <div className="flex border-b border-slate-200">
+      <div className="profile-tabs flex border-b border-slate-200">
         <button
           onClick={() => setActiveSubTab('published')}
           className={`py-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${

@@ -23,11 +23,11 @@ const faqEntries = [
   },
   {
     keywords: ['sin foto', 'subir foto', 'foto', 'fotografia', 'imagen'],
-    answer: 'El formulario muestra una foto de ejemplo preseleccionada y actualmente no ofrece una opción visible para quitarla. Cámbiala por una foto clara del objeto; puedes subir una imagen JPG, PNG o WebP de hasta 5 MB.'
+    answer: 'Elegí una foto propia o seleccioná una muestra de forma explícita. No se publica una foto automáticamente. Podés subir una imagen JPG, PNG o WebP de hasta 5 MB.'
   },
   {
     keywords: ['encontre un objeto', 'objeto que encontre', 'hallado', 'halle un objeto', 'publique encontrado', 'publicar encontrado'],
-    answer: 'Inicia sesión, pulsa el botón + «Publicar» y selecciona «Lo encontré (Encontrado)». Completa el nombre y la descripción, elige categoría y fecha, indica dónde lo hallaste y reemplaza la foto de muestra por una imagen clara. Luego pulsa «Publicar Objeto».'
+    answer: 'Inicia sesión, pulsa el botón + «Publicar» y selecciona «Lo encontré (Encontrado)». Completa el nombre y la descripción, elige categoría y fecha, indica dónde lo hallaste y selecciona una imagen clara y confirma la ubicación en el mapa. Luego pulsa «Publicar Objeto».'
   },
   {
     keywords: ['perdi un objeto', 'perdi algo', 'objeto que perdi', 'objeto perdido', 'perder un objeto', 'se me perdio'],
@@ -39,7 +39,7 @@ const faqEntries = [
   },
   {
     keywords: ['ya recupere', 'recupere mi objeto', 'devolvi', 'marcar resuelto', 'eliminar publicacion', 'borrar publicacion'],
-    answer: 'Abre tu perfil y busca la publicación. Puedes marcarla como «Marcar Recuperado» o eliminarla con el botón de papelera para mantener actualizada la lista.'
+    answer: 'Abre tu perfil y busca la publicación. Podés marcarla como recuperada sin perder la conversación. Si elegís eliminarla, confirmá con cuidado: las conversaciones asociadas también se eliminan.'
   },
   {
     keywords: ['sin cuenta', 'necesito cuenta', 'cuenta para usar', 'crear cuenta', 'registrarme', 'iniciar sesion', 'navegar sin registrarme'],
@@ -51,7 +51,7 @@ const faqEntries = [
   },
   {
     keywords: ['contactar', 'contacto', 'mensaje directo', 'hablar con', 'telefono del usuario', 'llamar al publicador'],
-    answer: 'Abre el detalle del objeto y pulsa «Contactar al Publicador» para enviarle un mensaje. Si la persona configuró un teléfono, también puede aparecer la opción para llamarla.'
+    answer: 'Abre el detalle del objeto y pulsa «Contactar al Publicador» para enviarle un mensaje. El teléfono y la localidad privados sólo se muestran después de que ambas personas hayan intercambiado mensajes sobre el mismo objeto.'
   },
   {
     keywords: ['buscar', 'busco', 'filtro', 'categoria', 'categoría'],

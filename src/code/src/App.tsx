@@ -33,6 +33,7 @@ import { findAllMatches, findMatchesForSingleItem } from './utils/matcher';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { ItemCard } from './components/ItemCard';
+const CompassRose=()=> <svg viewBox="0 0 200 200" fill="none"><circle cx="100" cy="100" r="85" stroke="currentColor" strokeWidth="1"/><circle cx="100" cy="100" r="62" stroke="currentColor" strokeDasharray="2 8"/><path d="m125 65-14 46-46 24 24-46 36-24Z" fill="currentColor"/><circle cx="100" cy="100" r="9" fill="#163f39"/></svg>;
 const MapView = lazy(() => import('./components/MapView').then(module => ({ default: module.MapView })));
 const PublishModal = lazy(() => import('./components/PublishModal').then(module => ({ default: module.PublishModal })));
 const ItemDetailModal = lazy(() => import('./components/ItemDetailModal').then(module => ({ default: module.ItemDetailModal })));
@@ -830,6 +831,13 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
            ========================================== */}
         {activeTab === 'home' && (
           <div className="home-view flex flex-col px-4 pb-5">
+            <section className="community-hero" aria-labelledby="community-heading">
+              <div><span className="eyebrow">TU COMUNIDAD, EN UN MISMO LUGAR</span>
+                <h1 id="community-heading">Lo importante<br/><em>es volver a encontrar.</em></h1>
+                <p>¿Perdiste algo o encontraste un objeto? Conectá con las personas de tu zona.</p>
+                <div className="community-hero__actions"><button onClick={()=>setIsPublishOpen(true)}>Publicar un objeto <Plus size={17}/></button><button onClick={()=>setActiveTab('map')}>Explorar el mapa <MapPin size={16}/></button></div>
+              </div><div className="community-hero__art" aria-hidden="true"><CompassRose/><span>CADA ENCUENTRO CUENTA</span></div>
+            </section>
             {/* Alerta de coincidencias para el usuario actual */}
             {userMatchesCount > 0 && (
               <div className="rounded-xl bg-[#1b3557] p-3.5 text-white flex items-center justify-between gap-3 border border-white/10">

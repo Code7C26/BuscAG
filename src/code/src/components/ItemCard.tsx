@@ -1,3 +1,4 @@
+import {Avatar} from './Avatar';
 /**
  * TARJETA DE PUBLICACIÓN EN LA PANTALLA PRINCIPAL (ItemCard.tsx)
  * Representa visualmente cada objeto en el feed o cuadrícula de inicio.
@@ -10,7 +11,7 @@
  * - 👤 Usuario que publicó con avatar y verificación
  * - Botón interactivo "Ver más"
  */
-import React from 'react';
+import React,{useState} from 'react';
 import { MapPin, Clock, Tag, ChevronRight, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { Item } from '../types';
 import { formatTimeAgo } from '../utils/geo';
@@ -23,6 +24,7 @@ interface ItemCardProps {
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
   // Banderas para simplificar la lógica condicional de colores y estados
+  const [failedImage,setFailedImage]=useState<string|null>(null);
   const isLost = item.status === 'perdido';
   const isRecovered = item.status === 'recuperado';
 
@@ -39,12 +41,12 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
     >
       {/* Contenedor de la Imagen con relación de aspecto 4:3 */}
       <div className="item-card__image relative aspect-4/3 w-full overflow-hidden">
-        <img
+        {item.imageUrl&&failedImage!==item.imageUrl?(<img
           src={item.imageUrl||undefined}
           alt={item.title||'Publicación sin título'}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
+          loading="lazy" onError={()=>setFailedImage(item.imageUrl)}
+        />): <div className="image-placeholder"><Tag size={36} aria-hidden="true"/><span>Foto no disponible</span></div>}
 
         {/* Insignias de Estado superiores: 🔴 Perdido / 🟢 Encontrado / 🟢 Recuperado */}
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
@@ -120,11 +122,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
         <div className="item-card__footer pt-3 border-t flex items-center justify-between gap-2">
           {/* Datos del usuario publicador */}
           <div className="flex items-center gap-2 min-w-0">
-            <img
-              src={item.user.avatar}
-              alt={item.user.name}
-              className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200"
-            />
+            <Avatar src={item.user.avatar} name={item.user.name} className="w-7 h-7 rounded-full object-cover shrink-0 border border-slate-200"/>
             <div className="min-w-0">
               <span className="text-xs font-semibold text-slate-800 truncate block leading-tight flex items-center gap-1">
                 {item.user.name}
@@ -139,16 +137,9 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
           </div>
 
           {/* Botón de acción 'Ver más' */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation(); // Evita doble disparo con el contenedor padre
-              onViewMore(item);
-            }}
-            className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0"
-          >
-            Ver más
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          <span aria-hidden="true" className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition shrink-0">
+            Ver más <ChevronRight className="w-3.5 h-3.5" />
+          </span>
         </div>
       </div>
     </div>

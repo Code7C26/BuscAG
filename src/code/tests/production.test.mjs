@@ -543,3 +543,20 @@ test('editing another field preserves unchanged legacy over-limit text accepted 
   await act(async()=>mock.views.PublishModal.onSubmit({...legacy,title:'Updated'}));
   const update=mock.queries.find(q=>q.operation==='update');assert.equal(update.payload.description,legacy.description);
 });
+
+test('a successful resend does not claim delivery and repeated attempts are locally throttled',async()=>{
+ let requests=0;mock.client.auth.resend=async()=>{requests++;return {error:null};};
+ const {host}=await mount(AuthView);
+ await click([...host.querySelectorAll('button')].find(b=>b.textContent==='Reenviar confirmación'));
+ await change(host.querySelector('input[type=email]'),'confirmed@example.invalid');await submit(host);await submit(host);
+ assert.equal(requests,1);assert.match(host.textContent,/no confirma la entrega/);assert.match(host.textContent,/ya confirmaste/);
+ assert.equal(host.querySelector('button[type=submit]').disabled,true);
+});
+
+test('mail rate limit failures keep the email and apply a retry cooldown',async()=>{
+ let requests=0;mock.client.auth.resend=async()=>{requests++;return {error:{code:'over_email_send_rate_limit',status:429}};};
+ const {host}=await mount(AuthView);await click([...host.querySelectorAll('button')].find(b=>b.textContent==='Reenviar confirmación'));
+ await change(host.querySelector('input[type=email]'),'limited@example.invalid');await submit(host);await submit(host);
+ assert.equal(requests,1);assert.equal(host.querySelector('input[type=email]').value,'limited@example.invalid');assert.equal(host.querySelector('button[type=submit]').disabled,true);
+ assert.match(host.textContent,/Espera/);
+});

@@ -106,6 +106,7 @@ const {AppErrorBoundary}=await bundle('src/components/AppErrorBoundary.tsx');
 const {MapView}=await bundle('src/components/MapView.tsx');
 const {ItemDetailModal}=await bundle('src/components/ItemDetailModal.tsx');
 const {ItemCard}=await bundle('src/components/ItemCard.tsx');
+const {PublicProfileModal}=await bundle('src/components/PublicProfileModal.tsx');
 async function mount(Component, props={}, strict=false, choosePhoto=true) {
   const host=document.createElement('div');document.body.append(host);const root=createRoot(host);roots.push(root);
   const render=async next=>act(async()=>root.render(strict?h(StrictMode,null,h(Component,next)):h(Component,next)));
@@ -559,4 +560,25 @@ test('mail rate limit failures keep the email and apply a retry cooldown',async(
  await change(host.querySelector('input[type=email]'),'limited@example.invalid');await submit(host);await submit(host);
  assert.equal(requests,1);assert.equal(host.querySelector('input[type=email]').value,'limited@example.invalid');assert.equal(host.querySelector('button[type=submit]').disabled,true);
  assert.match(host.textContent,/Espera/);
+});
+
+test('duplicate logout requests share one Auth operation and request only the current-device scope',async()=>{
+ const pending=defer();let requests=0;
+ mock.client.auth.signOut=async options=>{requests++;assert.equal(options.scope,'local');await pending.promise;mock.emit(null);return {error:null};};
+ await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+ await act(async()=>{mock.views.ProfileView.onSignOut();mock.views.ProfileView.onSignOut();});
+ assert.equal(requests,1);assert.equal(mock.views.ProfileView.isSigningOut,true);
+ await act(async()=>pending.resolve());assert.ok(document.querySelector('[data-view="AuthView"]'));
+});
+test('failed Auth signout preserves the honest account state and exposes a sanitized retry message',async()=>{
+ mock.client.auth.signOut=async()=>({error:{message:'PRIVATE_AUTH_RESPONSE',code:'server_error'}});
+ await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+ await act(async()=>mock.views.ProfileView.onSignOut());assert.ok(document.querySelector('[data-view="ProfileView"]'));
+ assert.equal(mock.views.ProfileView.isSigningOut,false);assert.match(mock.views.ProfileView.signOutError,/Tu sesión sigue abierta/);assert.ok(!mock.views.ProfileView.signOutError.includes('PRIVATE_AUTH_RESPONSE'));
+});
+test('public profile deliberately omits email, phone, locality and account actions even when supplied in memory',async()=>{
+ const owner={...user('other'),email:'private@example.invalid',phone:'PRIVATE_PHONE',location:'PRIVATE_LOCALITY'};
+ const {host}=await mount(PublicProfileModal,{user:owner,items:[item('public-item','other')],onClose:()=>{},onViewItem:()=>{}});
+ for(const privateValue of ['private@example.invalid','PRIVATE_PHONE','PRIVATE_LOCALITY','Cerrar sesión','Cambiar contraseña'])assert.ok(!host.textContent.includes(privateValue));
+ assert.match(host.textContent,/Perfil público/);
 });

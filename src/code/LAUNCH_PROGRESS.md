@@ -3,6 +3,9 @@
 Rama de trabajo: Alexis. Sin despliegues, cambios remotos de SQL ni borrado de datos.
 La autorización nueva del usuario permite rediseñar; AGENTS.md refleja esa decisión.
 
+La actualización de perfil y sesión, con resultados actuales (112 pruebas y 28 E2E),
+se detalla en [PROFILE_SESSION_REVIEW.md](PROFILE_SESSION_REVIEW.md).
+
 ## Implementado
 
 - Sistema visual verde profundo, papel claro y acento cálido. Nueva entrada de Auth

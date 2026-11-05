@@ -39,6 +39,7 @@ const PublishModal = lazy(() => import('./components/PublishModal').then(module 
 const ItemDetailModal = lazy(() => import('./components/ItemDetailModal').then(module => ({ default: module.ItemDetailModal })));
 import { ContactModal } from './components/ContactModal';
 import { ProfileView } from './components/ProfileView';
+const PublicProfileModal=lazy(()=>import('./components/PublicProfileModal').then(module=>({default:module.PublicProfileModal})));
 import { NotificationsView } from './components/NotificationsView';
 import { MatchesView } from './components/MatchesView';
 const MatchComparisonModal = lazy(() => import('./components/MatchComparisonModal').then(module => ({ default: module.MatchComparisonModal })));
@@ -67,6 +68,7 @@ export default function App() {
       }
       if (!previous && !user) return;
       previous?.guard.close(); // Before React renders the next account.
+      if(user)setAuthNotice('');
       const next = user ? { user, guard: createSessionGuard(), key: ++sequence.current } : null;
       identityRef.current = next;
       setIdentity(next);
@@ -118,10 +120,10 @@ export default function App() {
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
   }} />;
   // Unmounting also discards child drafts, selections, filters, GPS and timers.
-  return <AccountApp key={identity.key} authUser={identity.user} sessionGuard={identity.guard} onChangePassword={() => setRecovery(true)} onLogoutWarning={() => setAuthNotice('La sesión se cerró, pero no se pudo desactivar push en este navegador. Revisa sus permisos de notificaciones.')} />;
+  return <AccountApp key={identity.key} authUser={identity.user} sessionGuard={identity.guard} onChangePassword={() => setRecovery(true)} onLogoutWarning={() => setAuthNotice('No se pudo desactivar push en este navegador. Revisá sus permisos de notificaciones.')} onSignOutWarning={()=>{if(!identityRef.current)setAuthNotice(previous=>[previous,'Saliste de este dispositivo, pero no se pudo confirmar la revocación en el servidor. Revisá la conexión antes de volver a entrar.'].filter(Boolean).join(' '));}} />;
 }
 
-function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning }: { authUser: AuthUser; sessionGuard: SessionGuard; onChangePassword: () => void; onLogoutWarning: () => void }) {
+function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning, onSignOutWarning }: { authUser: AuthUser; sessionGuard: SessionGuard; onChangePassword: () => void; onLogoutWarning: () => void;onSignOutWarning:()=>void }) {
   const lifetime = useRef(createSessionGuard());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pushRevision = useRef(0);
@@ -184,6 +186,9 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
   // userLocation: Coordenadas GPS del usuario actual para calcular distancias
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const signOutPending=useRef(false);
+  const [isSigningOut,setIsSigningOut]=useState(false);
+  const [signOutError,setSignOutError]=useState('');
 
   // ==========================================
   // ESTADO DE MODALES Y MENSAJES FLOTANTES
@@ -194,6 +199,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
 
   // selectedDetailItem: Objeto seleccionado para ver ficha detallada (null si está cerrado)
   const [selectedDetailItem, setSelectedDetailItem] = useState<Item | null>(null);
+  const [viewingPublicUser,setViewingPublicUser]=useState<User|null>(null);
 
   // contactingItem: Objeto con el que se abrió la ventana de chat directo
   const [contactingItem, setContactingItem] = useState<Item | null>(null);
@@ -709,15 +715,25 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
   };
 
   const handleSignOut = async () => {
-    if (!supabase) return;
+    if (!supabase || signOutPending.current) return;
     const current = captureOperation();
-    try { await disconnectPushDevice(current); }
-    catch { if (current()) onLogoutWarning(); }
-    if (!current()) return;
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      reportError('No se pudo cerrar la sesión:', error);
-      if (current()) triggerToast('No se pudo cerrar la sesión.');
+    if(!current())return;
+    signOutPending.current=true;setIsSigningOut(true);setSignOutError('');
+    try {
+      try { await disconnectPushDevice(current); }
+      catch { if (current()) onLogoutWarning(); }
+      if (!current()) return;
+      // Revoke only this device. SDK clears persisted tokens and emits SIGNED_OUT;
+      // the root closes the old guard and unmounts all account-scoped private state.
+      const { error } = await supabase.auth.signOut({scope:'local'});
+      if(error)throw error;
+    } catch(error) {
+      reportError('No se pudo cerrar la sesión:',error);
+      if(current())setSignOutError('No se pudo cerrar la sesión. Revisá la conexión e intentá de nuevo. Tu sesión sigue abierta.');
+      else onSignOutWarning();
+    } finally {
+      signOutPending.current=false;
+      if(current())setIsSigningOut(false);
     }
   };
 
@@ -1055,6 +1071,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
             onEditItem={openEdit}
             onChangePassword={onChangePassword}
             onSignOut={() => void handleSignOut()}
+            isSigningOut={isSigningOut}
+            signOutError={signOutError}
             onViewItem={(selected) => setSelectedDetailItem(selected)}
             onOpenPublish={() => setIsPublishOpen(true)}
             onMarkAsRecovered={handleMarkAsRecovered}
@@ -1097,11 +1115,12 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
 
       {/* Modal 2: Vista detallada con fotos, descripción completa, mapa y acciones */}
       <ItemDetailModal
-        item={items.find(item => item.id === selectedDetailItem?.id) ?? null}
+        item={viewingPublicUser?null:items.find(item => item.id === selectedDetailItem?.id) ?? null}
         onClose={() => setSelectedDetailItem(null)}
         onContact={openContact}
         currentUser={currentUser}
         onEditItem={openEdit}
+        onViewProfile={user=>{if(user.id===currentUser.id){setSelectedDetailItem(null);setActiveTab('profile');}else setViewingPublicUser(user);}}
         onMarkAsRecovered={handleMarkAsRecovered}
         onDeleteItem={handleDeleteItem}
         allItems={items}
@@ -1110,6 +1129,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning 
           setSelectedMatchComparison(match);
         }}
       />
+
+      {viewingPublicUser&&<PublicProfileModal user={viewingPublicUser} items={items} onClose={()=>setViewingPublicUser(null)} onViewItem={item=>{setViewingPublicUser(null);setSelectedDetailItem(item);}}/>}
 
       {/* Modal 3: Chat directo y opciones de contacto (llamada/WhatsApp) */}
       <ContactModal

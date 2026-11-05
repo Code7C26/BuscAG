@@ -1,30 +1,48 @@
-import {Avatar} from './Avatar';
-import React, { useState } from 'react';
-import { User, Item } from '../types';
-import { ShieldCheck, CheckCircle2, Package, LogOut, Trash2, Plus, ChevronRight, Sparkles } from 'lucide-react';
-import { ItemCard } from './ItemCard';
-
+import React, { useId, useRef, useState, useEffect } from "react";
+import { Avatar } from "./Avatar";
+import { ItemCard } from "./ItemCard";
+import type { User, Item } from "../types";
+import {
+  ShieldCheck,
+  CheckCircle2,
+  Package,
+  LogOut,
+  Trash2,
+  Plus,
+  Sparkles,
+  MapPin,
+  LockKeyhole,
+  Bell,
+  KeyRound,
+  ArrowUpRight,
+  LoaderCircle,
+  Settings2,
+} from "lucide-react";
 interface ProfileViewProps {
-  onEditItem?: (item: Item) => void;
   currentUser: User;
   userItems: Item[];
   onSignOut: () => void;
+  isSigningOut?: boolean;
+  signOutError?: string;
+  onEditItem?: (item: Item) => void;
   onChangePassword?: () => void;
   onViewItem: (item: Item) => void;
   onOpenPublish: () => void;
-  onMarkAsRecovered: (itemId: string) => void;
-  onDeleteItem: (itemId: string) => void;
+  onMarkAsRecovered: (id: string) => void;
+  onDeleteItem: (id: string) => void;
   onGoToMatches?: () => void;
   userMatchesCount?: number;
   pushEnabled: boolean;
   onTogglePush: (enabled: boolean) => void;
 }
-
+type ProfileTab = "published" | "recovered" | "settings";
 export const ProfileView: React.FC<ProfileViewProps> = ({
   currentUser,
-  onEditItem,
   userItems,
   onSignOut,
+  isSigningOut = false,
+  signOutError = "",
+  onEditItem,
   onChangePassword,
   onViewItem,
   onOpenPublish,
@@ -33,250 +51,355 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onGoToMatches,
   userMatchesCount = 0,
   pushEnabled,
-  onTogglePush
+  onTogglePush,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'published' | 'recovered' | 'settings'>('published');
-
-  const publishedItems = userItems.filter(i => i.status !== 'recuperado');
-  const recoveredItems = userItems.filter(i => i.status === 'recuperado');
-
+  const [activeSubTab, setActiveSubTab] = useState<ProfileTab>("published");
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const tabId = useId();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [currentUser.id]);
+  const published = userItems.filter((item) => item.status !== "recuperado");
+  const recovered = userItems.filter((item) => item.status === "recuperado");
+  const tabs: { id: ProfileTab; label: string; count?: number }[] = [
+    { id: "published", label: "Publicaciones", count: published.length },
+    { id: "recovered", label: "Recuperados", count: recovered.length },
+    { id: "settings", label: "Configuración" },
+  ];
+  const tabKey = (event: React.KeyboardEvent, index: number) => {
+    const next =
+      event.key === "ArrowRight"
+        ? (index + 1) % tabs.length
+        : event.key === "ArrowLeft"
+          ? (index + tabs.length - 1) % tabs.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? tabs.length - 1
+              : null;
+    if (next === null) return;
+    event.preventDefault();
+    setActiveSubTab(tabs[next].id);
+    tabsRef.current
+      ?.querySelectorAll<HTMLButtonElement>("[role=tab]")
+      [next]?.focus();
+  };
   return (
-    <div className="profile-view max-w-2xl mx-auto px-4 py-6 pb-24 space-y-6">
-      {/* Profile Header Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs relative overflow-hidden">
-        <div className="profile-view__hero-strip absolute top-0 inset-x-0 h-16" />
-        
-        <div className="relative pt-4 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
-          {/* Avatar */}
-          <div className="relative">
-            <Avatar src={currentUser.avatar} name={currentUser.name} className="profile-view__avatar w-20 h-20 rounded-full object-cover border-4 border-white bg-white"/>
-            {currentUser.verified && (
-              <div className="absolute bottom-0 right-0 bg-blue-600 text-white p-1 rounded-full border-2 border-white shadow-xs">
-                <ShieldCheck className="w-4 h-4" />
-              </div>
-            )}
-          </div>
-
-          {/* User Details */}
-          <div className="flex-1 min-w-0">
-            <h2 className="font-semibold text-slate-900 text-xl flex items-center justify-center sm:justify-start gap-1.5">
-              {currentUser.name}
-            </h2>
-            <p className="text-xs text-slate-500 font-medium">{currentUser.email}</p>
-            <p className="text-xs text-slate-600 mt-1">📍 {currentUser.location}</p>
-
-            {/* Quick Stats */}
-            <div className="mt-4 flex items-center justify-center sm:justify-start gap-6 border-t border-slate-100 pt-3">
-              <div>
-                <span className="font-extrabold text-slate-900 text-base block leading-none">
-                  {userItems.length}
-                </span>
-                <span className="text-[11px] text-slate-500 font-medium">Publicados</span>
-              </div>
-              <div className="border-r border-slate-200 h-6" />
-              <div>
-                <span className="font-extrabold text-emerald-600 text-base block leading-none">
-                  {userItems.filter(item => item.status === 'recuperado').length}
-                </span>
-                <span className="text-[11px] text-slate-500 font-medium">Recuperados</span>
-              </div>
-              <div className="border-r border-slate-200 h-6" />
-              <div>
-                <span className="font-extrabold text-amber-500 text-base block leading-none">
-                  ⭐ {currentUser.rating}
-                </span>
-                <span className="text-[11px] text-slate-500 font-medium">Calificación</span>
-              </div>
-            </div>
-          </div>
+    <section
+      className="profile-view account-workspace"
+      aria-labelledby="account-title"
+    >
+      <header className="workspace-heading">
+        <div>
+          <span className="eyebrow">MI ESPACIO EN BUSCAG</span>
+          <h1 id="account-title">Tu cuenta, tu comunidad.</h1>
+          <p>Gestioná tus publicaciones y elegí cómo querés conectar.</p>
         </div>
-      </div>
-
-      {/* Sub-tabs Navigation */}
-      <div className="profile-tabs flex border-b border-slate-200">
-        <button
-          onClick={() => setActiveSubTab('published')}
-          className={`py-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
-            activeSubTab === 'published'
-              ? 'border-blue-600 text-blue-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          Mis Publicaciones ({publishedItems.length})
+        <button className="button-primary" onClick={onOpenPublish}>
+          <Plus size={18} />
+          Publicar un objeto
         </button>
-
-        <button
-          onClick={() => setActiveSubTab('recovered')}
-          className={`py-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
-            activeSubTab === 'recovered'
-              ? 'border-emerald-600 text-emerald-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          Objetos Recuperados ({recoveredItems.length})
-        </button>
-
-        <button
-          onClick={() => setActiveSubTab('settings')}
-          className={`py-3 px-4 text-xs font-bold transition cursor-pointer border-b-2 ${
-            activeSubTab === 'settings'
-              ? 'border-slate-800 text-slate-800'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          Configuración
-        </button>
-      </div>
-
-      {/* Published Items Tab */}
-      {activeSubTab === 'published' && (
-        <div className="space-y-4">
-          {/* Alerta de coincidencias para el usuario */}
-          {userMatchesCount > 0 && onGoToMatches && (
-            <div className="p-4 rounded-xl bg-[#1b3557] text-white flex items-center justify-between gap-3 border border-white/10">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-4 h-4 text-amber-300 fill-current" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold leading-tight">
-                    ¡Tienes {userMatchesCount} posible{userMatchesCount > 1 ? 's' : ''} coincidencia{userMatchesCount > 1 ? 's' : ''} detectada{userMatchesCount > 1 ? 's' : ''}!
-                  </p>
-                  <p className="text-[11px] text-blue-100 mt-0.5">
-                    El sistema detectó objetos de tu misma categoría con alta similitud.
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={onGoToMatches}
-                className="px-3 py-1.5 rounded-lg bg-white text-slate-800 text-xs font-semibold shrink-0 hover:bg-slate-100 transition cursor-pointer"
-              >
-                Ver matches
-              </button>
+      </header>
+      <div className="account-layout">
+        <aside className="account-sidebar" aria-label="Resumen de tu cuenta">
+          <section className="account-identity">
+            <div className="account-identity__cover">
+              <span>
+                <LockKeyhole size={14} /> Sólo vos ves tus datos privados
+              </span>
             </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <h3 className="font-extrabold text-slate-900 text-sm">Tus objetos activos</h3>
-            <button
-              onClick={onOpenPublish}
-              className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              Publicar otro
-            </button>
-          </div>
-
-          {publishedItems.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center space-y-3">
-              <Package className="w-12 h-12 text-slate-300 mx-auto" />
-              <p className="font-bold text-slate-700 text-sm">No tienes publicaciones activas</p>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                ¿Encontraste o perdiste algo? Publica para conectar con la comunidad.
+            <div className="account-identity__body">
+              <Avatar
+                src={currentUser.avatar}
+                name={currentUser.name}
+                className="account-avatar"
+              />
+              <h2>{currentUser.name || "Tu cuenta"}</h2>
+              <p className="account-email">{currentUser.email}</p>
+              {currentUser.verified && (
+                <span className="account-verification">
+                  <ShieldCheck size={15} />
+                  Correo confirmado
+                </span>
+              )}
+              {currentUser.location && (
+                <p className="account-location">
+                  <MapPin size={15} />
+                  {currentUser.location}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={onSignOut}
+                disabled={isSigningOut}
+                aria-busy={isSigningOut}
+                className="account-signout"
+              >
+                {isSigningOut ? (
+                  <LoaderCircle size={18} className="animate-spin" />
+                ) : (
+                  <LogOut size={18} />
+                )}
+                <span>
+                  {isSigningOut ? "Cerrando sesión…" : "Cerrar sesión"}
+                </span>
+                <ArrowUpRight size={16} />
+              </button>
+              <p className="account-session-note">
+                Salís de este dispositivo. Tus publicaciones y conversaciones se
+                conservan.
               </p>
-              <button
-                onClick={onOpenPublish}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition cursor-pointer"
-              >
-                Publicar ahora
-              </button>
+              {signOutError && (
+                <p role="alert" className="account-error">
+                  {signOutError}
+                </p>
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {publishedItems.map(item => (
-                <div key={item.id} className="relative group">
-                  <ItemCard item={item} onViewMore={onViewItem} />
-                  
-                  {/* Quick Owner Actions overlay */}
-                  <div className="mt-2 flex gap-2">
-                    {onEditItem && <button type="button" onClick={() => onEditItem(item)}
-                      className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0">Editar</button>}
+          </section>
+          <dl className="account-stats">
+            <div>
+              <dt>Publicaciones</dt>
+              <dd>{userItems.length}</dd>
+            </div>
+            <div>
+              <dt>Recuperados</dt>
+              <dd>{recovered.length}</dd>
+            </div>
+            <div>
+              <dt>Calificación</dt>
+              <dd>{currentUser.rating}</dd>
+            </div>
+          </dl>
+          <section className="account-privacy-note">
+            <LockKeyhole size={20} />
+            <div>
+              <h3>Tu privacidad, primero</h3>
+              <p>
+                Tu correo no es público. El teléfono y la localidad se comparten
+                sólo después de intercambiar mensajes sobre un mismo objeto.
+              </p>
+            </div>
+          </section>
+        </aside>
+        <div className="account-content">
+          <div
+            className="account-tabs"
+            role="tablist"
+            aria-label="Secciones de tu perfil"
+            ref={tabsRef}
+          >
+            {tabs.map((tab, index) => (
+              <button
+                key={tab.id}
+                role="tab"
+                id={`${tabId}-${tab.id}`}
+                aria-controls={`${tabId}-panel`}
+                aria-selected={activeSubTab === tab.id}
+                tabIndex={activeSubTab === tab.id ? 0 : -1}
+                onKeyDown={(event) => tabKey(event, index)}
+                onClick={() => setActiveSubTab(tab.id)}
+              >
+                {tab.label}
+                {tab.count !== undefined && <span>{tab.count}</span>}
+              </button>
+            ))}
+          </div>
+          <div
+            role="tabpanel"
+            id={`${tabId}-panel`}
+            aria-labelledby={`${tabId}-${activeSubTab}`}
+            tabIndex={0}
+            className="account-panel"
+          >
+            {activeSubTab === "settings" ? (
+              <>
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">A TU MEDIDA</span>
+                    <h2>Privacidad y configuración</h2>
+                    <p>Opciones claras. Vos tenés el control.</p>
+                  </div>
+                  <Settings2 size={24} />
+                </div>
+                <section
+                  className="settings-group"
+                  aria-labelledby={`${tabId}-notices`}
+                >
+                  <h3 id={`${tabId}-notices`}>Notificaciones</h3>
+                  <label className="settings-row">
+                    <span className="settings-icon">
+                      <Bell size={20} />
+                    </span>
+                    <span className="settings-copy">
+                      <strong>Notificaciones push</strong>
+                      <small>
+                        Avisos en este navegador, cuando el servicio esté
+                        configurado y des permiso.
+                      </small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      aria-label="Activar notificaciones push"
+                      checked={pushEnabled}
+                      onChange={(event) => onTogglePush(event.target.checked)}
+                    />
+                  </label>
+                </section>
+                <section
+                  className="settings-group"
+                  aria-labelledby={`${tabId}-security`}
+                >
+                  <h3 id={`${tabId}-security`}>Seguridad de la cuenta</h3>
+                  {onChangePassword && (
                     <button
-                      onClick={() => onMarkAsRecovered(item.id)}
-                      className="flex-1 py-1.5 px-3 bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 cursor-pointer"
+                      className="settings-row settings-action"
+                      onClick={onChangePassword}
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Marcar Recuperado
+                      <span className="settings-icon">
+                        <KeyRound size={20} />
+                      </span>
+                      <span className="settings-copy">
+                        <strong>Cambiar contraseña</strong>
+                        <small>
+                          Elegí una contraseña única para proteger tu cuenta.
+                        </small>
+                      </span>
+                      <ArrowUpRight size={18} />
                     </button>
-                    <button
-                      onClick={() => onDeleteItem(item.id)}
-                      className="p-1.5 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 rounded-xl transition cursor-pointer"
-                      title="Eliminar"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  )}
+                  <div className="settings-row">
+                    <span className="settings-icon">
+                      <MapPin size={20} />
+                    </span>
+                    <span className="settings-copy">
+                      <strong>Ubicación bajo tu control</strong>
+                      <small>
+                        El GPS se solicita cuando lo usás. No se guarda
+                        automáticamente en tu perfil.
+                      </small>
+                    </span>
+                  </div>
+                </section>
+                <div className="settings-information">
+                  <LockKeyhole size={17} />
+                  <p>
+                    Cerrar sesión no elimina tu cuenta. Para salir, usá el botón
+                    visible en tu tarjeta de perfil.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                {activeSubTab === "published" &&
+                  userMatchesCount > 0 &&
+                  onGoToMatches && (
+                    <div className="account-match-callout">
+                      <Sparkles size={22} />
+                      <div>
+                        <strong>
+                          {userMatchesCount} posibles coincidencias
+                        </strong>
+                        <p>
+                          Revisá objetos que podrían estar relacionados con tus
+                          publicaciones.
+                        </p>
+                      </div>
+                      <button
+                        onClick={onGoToMatches}
+                        aria-label="Ver coincidencias"
+                      >
+                        <ArrowUpRight size={20} />
+                      </button>
+                    </div>
+                  )}
+                <div className="section-heading">
+                  <div>
+                    <span className="eyebrow">
+                      {activeSubTab === "published"
+                        ? "EN TU COMUNIDAD"
+                        : "HISTORIAS QUE VUELVEN"}
+                    </span>
+                    <h2>
+                      {activeSubTab === "published"
+                        ? "Tus publicaciones activas"
+                        : "Objetos recuperados"}
+                    </h2>
+                    <p>
+                      {activeSubTab === "published"
+                        ? "Editá la información o marcá un objeto como recuperado."
+                        : "Cada encuentro cuenta. Tus conversaciones se conservan."}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Recovered Items Tab */}
-      {activeSubTab === 'recovered' && (
-        <div className="space-y-4">
-          <h3 className="font-extrabold text-slate-900 text-sm">Historial de Objetos Devueltos / Recuperados</h3>
-
-          {recoveredItems.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center space-y-2">
-              <CheckCircle2 className="w-12 h-12 text-emerald-300 mx-auto" />
-              <p className="font-bold text-slate-700 text-sm">Aún no hay casos cerrados como recuperados</p>
-              <p className="text-xs text-slate-500">
-                Cuando devuelvas o recuperes un objeto, aparecerá en esta sección de honor.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {recoveredItems.map(item => (
-                <ItemCard key={item.id} item={item} onViewMore={onViewItem} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Settings Tab */}
-      {activeSubTab === 'settings' && (
-        <div className="bg-white rounded-3xl border border-slate-200 divide-y divide-slate-100 overflow-hidden">
-          <label className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
-            <div>
-              <span className="font-bold text-slate-800 text-sm block">Notificaciones push</span>
-              <span className="text-xs text-slate-500">Mensajes, coincidencias y recuperaciones, incluso con la app cerrada</span>
-            </div>
-            <input
-              type="checkbox"
-              checked={pushEnabled}
-              onChange={event => onTogglePush(event.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-              aria-label="Activar notificaciones push"
-            />
-          </label>
-
-          <div className="p-4 flex items-center justify-between">
-            <div>
-              <span className="font-bold text-slate-800 text-sm block">Ubicación del mapa</span>
-              <span className="text-xs text-slate-500">El GPS se solicita al usar “Cerca de mí” y no se guarda en tu perfil</span>
-            </div>
+                {(activeSubTab === "published" ? published : recovered)
+                  .length === 0 ? (
+                  <div className="account-empty">
+                    {activeSubTab === "published" ? (
+                      <Package size={38} />
+                    ) : (
+                      <CheckCircle2 size={38} />
+                    )}
+                    <h3>
+                      {activeSubTab === "published"
+                        ? "Tu próxima conexión empieza acá"
+                        : "Todavía no hay objetos recuperados"}
+                    </h3>
+                    <p>
+                      {activeSubTab === "published"
+                        ? "Publicá lo que encontraste o lo que estás buscando. La comunidad puede ayudarte."
+                        : "Cuando marques un objeto como recuperado, aparecerá en este espacio."}
+                    </p>
+                    {activeSubTab === "published" && (
+                      <button
+                        className="button-primary"
+                        onClick={onOpenPublish}
+                      >
+                        <Plus size={18} />
+                        Crear publicación
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="account-items">
+                    {(activeSubTab === "published" ? published : recovered).map(
+                      (item) => (
+                        <div key={item.id} className="account-item">
+                          <ItemCard item={item} onViewMore={onViewItem} />
+                          {activeSubTab === "published" && (
+                            <div className="account-item-actions">
+                              {onEditItem && (
+                                <button onClick={() => onEditItem(item)}>
+                                  Editar
+                                </button>
+                              )}
+                              <button
+                                className="recover-action"
+                                onClick={() => onMarkAsRecovered(item.id)}
+                              >
+                                <CheckCircle2 size={16} />
+                                Marcar recuperado
+                              </button>
+                              <button
+                                className="delete-action"
+                                onClick={() => onDeleteItem(item.id)}
+                                aria-label={`Eliminar ${item.title || "publicación"}`}
+                                title="Eliminar publicación"
+                              >
+                                <Trash2 size={17} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )}
+              </>
+            )}
           </div>
-
-          {onChangePassword && <button type="button" onClick={onChangePassword}
-            className="p-4 flex items-center justify-between hover:bg-slate-50 transition cursor-pointer">
-            <span className="font-bold text-slate-800 text-sm block">Cambiar contraseña</span>
-          </button>}
-
-          <button 
-            onClick={onSignOut}
-            className="w-full p-4 flex items-center justify-between text-red-600 hover:bg-red-50 transition cursor-pointer font-bold text-sm"
-          >
-            <span className="flex items-center gap-2">
-              <LogOut className="w-4 h-4" />
-              Cerrar sesión
-            </span>
-            <ChevronRight className="w-4 h-4" />
-          </button>
         </div>
-      )}
-    </div>
+      </div>
+    </section>
   );
 };

@@ -1,3 +1,4 @@
+import {Avatar} from './Avatar';
 import { formatItemDate } from '../utils/itemDate';
 import { useDialogFocus } from '../utils/useDialogFocus';
 /**
@@ -23,6 +24,7 @@ interface ItemDetailModalProps {
   onClose: () => void;                           // Cierra este modal
   onContact: (item: Item) => void;               // Inicia el contacto con el publicador
   onEditItem?: (item: Item) => void;
+  onViewProfile?: (user:User)=>void;
   currentUser: User;                             // Usuario que está utilizando la app actualmente
   onMarkAsRecovered?: (itemId: string) => Promise<boolean>;  // Cambia el estado a 'recuperado'
   onDeleteItem?: (itemId: string) => Promise<boolean>;       // Elimina la publicación de la lista
@@ -36,6 +38,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   onContact,
   currentUser,
   onEditItem,
+  onViewProfile,
   onMarkAsRecovered,
   onDeleteItem,
   allItems = [],
@@ -337,12 +340,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
 
           {/* Tarjeta del usuario que publicó el objeto */}
           <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <img
-                src={item.user.avatar}
-                alt={item.user.name}
-                className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs"
-              />
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar src={item.user.avatar} name={item.user.name} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs"/>
               <div>
                 <div className="flex items-center gap-1.5">
                   <span className="font-bold text-slate-900 text-sm">{item.user.name}</span>
@@ -355,6 +354,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                   <span>•</span>
                   <span>{item.user.location}</span>
                 </div>
+                {onViewProfile&&item.user.id&&<button type="button" className="public-profile-link" onClick={()=>onViewProfile(item.user)}>Ver perfil público <ChevronRight size={14}/></button>}
               </div>
             </div>
 

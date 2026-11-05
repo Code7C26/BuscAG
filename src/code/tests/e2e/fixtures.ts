@@ -41,6 +41,7 @@ export async function mockBackend(page: Page, store = createStore()) {
     body: any;
     redirect: string | null;
     method: string;
+    scope: string | null;
   }[] = [];
   let actor = user;
   const secondId = "e0000000-0000-4000-8000-000000000002";
@@ -93,6 +94,7 @@ export async function mockBackend(page: Page, store = createStore()) {
       body,
       redirect: url.searchParams.get("redirect_to"),
       method: request.method(),
+      scope: url.searchParams.get("scope"),
     });
     let data: any = {};
     let status = 200;

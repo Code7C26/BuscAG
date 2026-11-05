@@ -1,0 +1,91 @@
+import React, { useRef } from "react";
+import { X, Users, Package, ArrowLeft, LockKeyhole } from "lucide-react";
+import type { User, Item } from "../types";
+import { Avatar } from "./Avatar";
+import { ItemCard } from "./ItemCard";
+import { useDialogFocus } from "../utils/useDialogFocus";
+/** Deliberately read-only public projection: no email, phone, locality or account controls. */
+export function PublicProfileModal({
+  user,
+  items,
+  onClose,
+  onViewItem,
+}: {
+  user: User | null;
+  items: Item[];
+  onClose: () => void;
+  onViewItem: (item: Item) => void;
+}) {
+  const dialog = useRef<HTMLDivElement>(null);
+  useDialogFocus(Boolean(user), dialog, onClose);
+  if (!user) return null;
+  const publications = items.filter((item) => item.user.id === user.id);
+  return (
+    <div
+      className="public-profile-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="public-profile-title"
+        tabIndex={-1}
+        className="public-profile-dialog"
+      >
+        <header>
+          <button onClick={onClose} aria-label="Volver al objeto">
+            <ArrowLeft size={19} />
+          </button>
+          <span>
+            <Users size={17} />
+            Perfil público
+          </span>
+          <button onClick={onClose} aria-label="Cerrar perfil público">
+            <X size={20} />
+          </button>
+        </header>
+        <div className="public-profile-identity">
+          <Avatar
+            src={user.avatar}
+            name={user.name}
+            className="account-avatar"
+          />
+          <span className="eyebrow">UNA PERSONA DE TU COMUNIDAD</span>
+          <h2 id="public-profile-title">
+            {user.name || "Integrante de BuscAG"}
+          </h2>
+          <p>
+            {publications.length} publicaciones visibles ·{" "}
+            {publications.filter((item) => item.status === "recuperado").length}{" "}
+            objetos recuperados
+          </p>
+        </div>
+        <p className="public-profile-privacy">
+          <LockKeyhole size={17} />
+          Este perfil muestra sólo información pública. Para contactar, abrí una
+          publicación y usá el chat.
+        </p>
+        <section
+          className="public-profile-items"
+          aria-label="Publicaciones de este usuario"
+        >
+          {publications.length ? (
+            <div className="account-items">
+              {publications.map((item) => (
+                <ItemCard key={item.id} item={item} onViewMore={onViewItem} />
+              ))}
+            </div>
+          ) : (
+            <div className="account-empty">
+              <Package size={32} />
+              <p>No hay publicaciones visibles en este momento.</p>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

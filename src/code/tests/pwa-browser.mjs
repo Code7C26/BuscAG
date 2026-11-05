@@ -61,12 +61,16 @@ try {
       ? route.continue()
       : route.abort(),
   );
+  // Seed the previous public fallback cache before the new worker is installed.
+  await page.goto("http://127.0.0.1:3002/offline.html");
+  await page.evaluate(async()=>{const old=await caches.open('buscag-offline-v1');await old.put('/legacy-public-only',new Response('synthetic old fallback'));});
   await page.goto("http://127.0.0.1:3002/");
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+  assert.deepEqual(await page.evaluate(()=>caches.keys()),['buscag-offline-v2']);
   const paths = await page.evaluate(async () => {
-    const cache = await caches.open("buscag-offline-v1");
+    const cache = await caches.open("buscag-offline-v2");
     return (await cache.keys()).map((request) => new URL(request.url).pathname);
   });
   assert.deepEqual(paths, ["/offline.html"]);
@@ -74,7 +78,7 @@ try {
   await page.goto("http://127.0.0.1:3002/?code=synthetic-sensitive-callback");
   assert.match(await page.locator("h1").innerText(), /conexión/);
   const persisted = await page.evaluate(async () => {
-    const cache = await caches.open("buscag-offline-v1");
+    const cache = await caches.open("buscag-offline-v2");
     return (await cache.keys()).map((r) => r.url);
   });
   assert.ok(persisted.every((url) => url.endsWith("/offline.html")));

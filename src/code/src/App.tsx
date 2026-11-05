@@ -33,7 +33,7 @@ import { findAllMatches, findMatchesForSingleItem } from './utils/matcher';
 import { Header } from './components/Header';
 import { BottomNav } from './components/BottomNav';
 import { ItemCard } from './components/ItemCard';
-const CompassRose=()=> <svg viewBox="0 0 200 200" fill="none"><circle cx="100" cy="100" r="85" stroke="currentColor" strokeWidth="1"/><circle cx="100" cy="100" r="62" stroke="currentColor" strokeDasharray="2 8"/><path d="m125 65-14 46-46 24 24-46 36-24Z" fill="currentColor"/><circle cx="100" cy="100" r="9" fill="#163f39"/></svg>;
+const CompassRose=()=> <svg viewBox="0 0 200 200" fill="none"><circle cx="100" cy="100" r="85" stroke="currentColor" strokeWidth="1"/><circle cx="100" cy="100" r="62" stroke="currentColor" strokeDasharray="2 8"/><path d="m125 65-14 46-46 24 24-46 36-24Z" fill="currentColor"/><circle cx="100" cy="100" r="9" fill="var(--brand-petroleum)"/></svg>;
 const MapView = lazy(() => import('./components/MapView').then(module => ({ default: module.MapView })));
 const PublishModal = lazy(() => import('./components/PublishModal').then(module => ({ default: module.PublishModal })));
 const ItemDetailModal = lazy(() => import('./components/ItemDetailModal').then(module => ({ default: module.ItemDetailModal })));
@@ -856,7 +856,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
             </section>
             {/* Alerta de coincidencias para el usuario actual */}
             {userMatchesCount > 0 && (
-              <div className="rounded-xl bg-[#1b3557] p-3.5 text-white flex items-center justify-between gap-3 border border-white/10">
+              <div className="rounded-xl bg-slate-900 p-3.5 text-white flex items-center justify-between gap-3 border border-white/10">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
                     <Sparkles className="w-4 h-4 text-amber-300 fill-current" />

@@ -94,7 +94,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
 
     // Color del marcador según estado (Rojo: Perdido, Verde: Encontrado / Recuperado)
-    const pinColor = isLost ? '#DC2626' : isRecovered ? '#059669' : '#16A34A';
+    const pinColor = isLost ? '#9c3427' : isRecovered ? '#031926' : '#315e65';
     const icon = L.divIcon({
       html: `
         <div style="
@@ -117,7 +117,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     });
 
     // Añade el marcador fijo en la coordenada del objeto
-    L.marker([item.lat, item.lng], { icon }).addTo(map);
+    L.marker([item.lat, item.lng], { icon, interactive: false, keyboard: false, title: 'Ubicación de la publicación' }).addTo(map);
     leafletMiniMapRef.current = map;
 
     // Recalcula dimensiones para evitar desfasajes en modales

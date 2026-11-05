@@ -40,15 +40,15 @@ export const MapView: React.FC<MapViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('todos');
   const [selectedCategory, setSelectedCategory] = useState<Category | 'Todas'>('Todas');
-  
+
   // Objeto seleccionado al pulsar un pin en el mapa (para mostrar la tarjeta flotante inferior)
   const [selectedMapItem, setSelectedMapItem] = useState<Item | null>(null);
-  
+
   // Posición actual del usuario
   const currentLocation = useMemo(() => isValidCoordinates(userLat, userLng)
     ? { lat: userLat!, lng: userLng! }
     : null, [userLat, userLng]);
-  
+
   // Indicador de carga mientras se consulta el GPS del navegador
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -127,12 +127,12 @@ export const MapView: React.FC<MapViewProps> = ({
     // Filtramos los objetos según los criterios de búsqueda, estado y categoría
     const filteredItems = items.filter(item => {
       if (!isValidCoordinates(item.lat, item.lng)) return false;
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch = searchQuery === '' ||
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.locationName.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesFilter = 
+      const matchesFilter =
         activeFilter === 'todos' ? true :
         activeFilter === 'encontrados' ? item.status === 'encontrado' :
         activeFilter === 'perdidos' ? item.status === 'perdido' :
@@ -151,24 +151,24 @@ export const MapView: React.FC<MapViewProps> = ({
       const isLost = item.status === 'perdido';
       const isRecovered = item.status === 'recuperado';
       // Determinamos el color: Rojo para perdido, verde oscuro para recuperado, verde claro para encontrado
-      const color = isLost ? '#DC2626' : isRecovered ? '#059669' : '#16A34A';
+      const color = isLost ? '#9c3427' : isRecovered ? '#031926' : '#315e65';
 
       // HTML del pin con foto circular y puntero triangular
       const svgHtml = `
         <div style="position: relative; width: 42px; height: 50px; display: flex; align-items: center; justify-content: center;">
           <div style="
-            width: 38px; 
-            height: 38px; 
-            border-radius: 50%; 
-            background: white; 
-            border: 3px solid ${color}; 
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid ${color};
             box-shadow: 0 4px 10px rgba(0,0,0,0.25);
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
           ">
-            <img src="${item.imageUrl.replace(/[&<>"']/g, character => ({
+            <img alt="" src="${item.imageUrl.replace(/[&<>"']/g, character => ({
               '&': '&amp;',
               '<': '&lt;',
               '>': '&gt;',
@@ -179,8 +179,8 @@ export const MapView: React.FC<MapViewProps> = ({
           <div style="
             position: absolute;
             bottom: 2px;
-            width: 0; 
-            height: 0; 
+            width: 0;
+            height: 0;
             border-left: 6px solid transparent;
             border-right: 6px solid transparent;
             border-top: 8px solid ${color};
@@ -200,7 +200,7 @@ export const MapView: React.FC<MapViewProps> = ({
     // Recorremos los objetos filtrados y creamos un marcador para cada uno
     filteredItems.forEach(item => {
       const icon = createCustomIcon(item);
-      const marker = L.marker([item.lat, item.lng], { icon });
+      const marker = L.marker([item.lat, item.lng], { icon, title: `${item.title || 'Objeto sin título'} · ${item.status}`, keyboard: true });
 
       // Evento de clic en el marcador: selecciona el objeto y desplaza suavemente el mapa
       marker.on('click', () => {
@@ -217,12 +217,12 @@ export const MapView: React.FC<MapViewProps> = ({
       const userIcon = L.divIcon({
         html: `
           <div style="
-            width: 20px; 
-            height: 20px; 
-            border-radius: 50%; 
-            background: #2563EB; 
-            border: 3px solid white; 
-            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.3), 0 2px 8px rgba(0,0,0,0.3);
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #468189;
+            border: 3px solid white;
+            box-shadow: 0 0 0 6px rgba(70, 129, 137, 0.3), 0 2px 8px rgba(0,0,0,0.3);
           "></div>
         `,
         className: 'user-map-pin',
@@ -230,7 +230,7 @@ export const MapView: React.FC<MapViewProps> = ({
         iconAnchor: [10, 10]
       });
 
-      const userMarker = L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon });
+      const userMarker = L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon, interactive: false, keyboard: false, title: 'Tu ubicación aproximada' });
       userMarker.bindTooltip('Mi Ubicación', { permanent: false, direction: 'top' });
       markersGroupRef.current?.addLayer(userMarker);
     }

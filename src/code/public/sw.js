@@ -25,7 +25,7 @@ self.addEventListener('notificationclick', event => {
 });
 
 // One public document only; no API, image, HTML shell or private response caching.
-const OFFLINE_CACHE='buscag-offline-v1';
+const OFFLINE_CACHE='buscag-offline-v2';
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(OFFLINE_CACHE).then(cache=>cache.add('/offline.html')));
 });

@@ -1,3 +1,7 @@
+> Extensión escolar opcional: [SCHOOL_FEATURES.md](SCHOOL_FEATURES.md) documenta
+> vigilancia por zona, QR, devolución bilateral y estadísticas. Código preparado;
+> migración y scheduler **no aplicados remotamente** por esta ejecución.
+
 <div align="center">
 <img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
 </div>

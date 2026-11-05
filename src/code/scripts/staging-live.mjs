@@ -1,3 +1,4 @@
+import {runSchoolChecks} from './school-live-checks.mjs';
 // Opt-in REAL staging API checks. Never imports dotenv or production settings.
 import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
@@ -18,12 +19,12 @@ export function liveConfiguration(env, args) {
   const mode = args[0];
   if (
     args.length !== 1 ||
-    !["--probe", "--visitor-preflight", "--email-requests", "--run"].includes(
+    !["--probe", "--visitor-preflight", "--email-requests", "--run", "--school"].includes(
       mode,
     )
   )
     throw new LiveCheckError(
-      "Usar --probe, --visitor-preflight, --email-requests o --run. Destino fijo: BuscAG-Staging.",
+      "Usar --probe, --visitor-preflight, --email-requests, --run o --school. Destino fijo: BuscAG-Staging.",
     );
   if (stagingKeyError(env.BUSCAG_STAGING_PUBLISHABLE_KEY))
     throw new LiveCheckError(
@@ -195,11 +196,16 @@ export async function runLiveChecks(config, report = console.log) {
       new Set(users.map((user) => user.id)).size === config.accounts.length,
       "Las cuentas ficticias deben tener identidades diferentes.",
     );
+    if(config.mode==='--school')check(config.accounts.length===3,'Usar tres cuentas de prueba distintas para el ensayo escolar.');
     const [a, b, c] = clients;
     const [ua, ub] = users;
     report(
       "PASS: login de cuentas confirmadas (no demuestra recepción del correo).",
     );
+    if(config.mode==='--school'){
+      const school=accepted(await a.rpc('school_features'),'Migración escolar no instalada; no se crean publicaciones.');
+      check(school?.version===1,'Contrato escolar no disponible; no se crean publicaciones.');
+    }
     const capabilities = accepted(
       await a.rpc("buscag_capabilities"),
       "RPC de capacidades no disponible.",
@@ -294,6 +300,7 @@ export async function runLiveChecks(config, report = console.log) {
     const item = await publish(a, payload, requestKey);
     const repeated = await publish(a, payload, requestKey);
     check(item.id === repeated.id, "Publicación duplicada por reintento.");
+    if(config.mode==='--school')accepted(await a.rpc('set_item_watch',{p_item:item.id,p_enabled:true,p_lat:payload.lat,p_lng:payload.lng,p_radius:3}),'Vigilancia propia rechazada.');
     const found = await publish(b, { ...payload, status: "encontrado" });
     check(
       accepted(
@@ -489,7 +496,9 @@ export async function runLiveChecks(config, report = console.log) {
       report(
         "PENDIENTE: matching backend deshabilitado; no se activó ni se probó worker.",
       );
-    accepted(
+    if(config.mode==='--school'){
+      await runSchoolChecks({a,b,c,anon:make(),owner:ub.id,partner:ua.id,item:found,check,accepted,report});
+    } else accepted(
       await b
         .from("items")
         .update({ status: "recuperado" })

@@ -1,0 +1,369 @@
+// Disposable DB only. Invoked by the existing date/timestamptz security matrix.
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+export async function schoolChecks(db, users) {
+  const sql = await readFile(
+    new URL(
+      "../supabase/proposals/20261105000000_school_features.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const snapshot = async () =>
+    (
+      await db.query(
+        `select (select count(*) from public.items) items,(select count(*) from public.messages) messages,(select count(*) from public.profiles) profiles,(select count(*) from public.notifications) notifications`,
+      )
+    ).rows;
+  const before = await snapshot();
+  await db.exec(sql);
+  await db.exec(sql);
+  assert.deepEqual(await snapshot(), before);
+  let checks = 1;
+  const test = async (name, fn) => {
+    await fn();
+    checks++;
+    console.log("school: " + name);
+  };
+  const as = async (role, uid, query, args = []) => {
+    await db.exec("begin");
+    try {
+      await db.exec("set local role " + role);
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [
+        uid || "",
+      ]);
+      const r = await db.query(query, args);
+      await db.exec("commit");
+      return r;
+    } catch (e) {
+      await db.exec("rollback");
+      throw e;
+    }
+  };
+  const [a, b, c] = users;
+  const call = (uid, query, args = []) => as("authenticated", uid, query, args);
+  const denied = (fn) => assert.rejects(fn, (e) => e.code === "42501");
+  const payload = {
+    title: "Zafiro mochila violeta",
+    description: "Zafiro mochila violeta cierre plateado",
+    image_url: "https://images.invalid/synthetic.png",
+    category: "Otros",
+    location_name: "Synthetic school",
+    lat: 0,
+    lng: 0,
+    date: "2026-11-05",
+    status: "perdido",
+  };
+  const publish = async (uid, status) =>
+    (
+      await call(
+        uid,
+        "select * from public.publish_item_once(gen_random_uuid(),$1)",
+        [JSON.stringify({ ...payload, status })],
+      )
+    ).rows[0];
+  await db.exec(
+    "update buscag_private.match_control set enabled=true;delete from buscag_private.match_jobs",
+  );
+  const lost = await publish(a, "perdido");
+  const found = await publish(b, "encontrado");
+  const watch = (uid, enabled, lat = 0, radius = 1) =>
+    call(uid, "select public.set_item_watch($1,$2,$3,0,$4)", [
+      lost.id,
+      enabled,
+      lat,
+      radius,
+    ]);
+  const work = () =>
+    as("service_role", null, "select public.process_match_jobs(20)");
+  const count = async () =>
+    (
+      await db.query(
+        "select count(*)::int n from buscag_private.match_notices where lost_id=$1 and found_id=$2",
+        [lost.id, found.id],
+      )
+    ).rows[0].n;
+  await test("private tables and RPCs inaccessible to anonymous/foreign users", async () => {
+    await denied(() =>
+      as("anon", null, "select public.community_statistics()"),
+    );
+    await denied(() => call(c, "select * from buscag_private.item_watches"));
+    await denied(() => watch(c, true));
+    await denied(() => call(c, "select public.get_item_watch($1)", [lost.id]));
+    await denied(() =>
+      call(c, "select public.manage_object_tag($1,true,false)", [lost.id]),
+    );
+  });
+  await test("radius and disabled watch filter existing worker before ledger inserts", async () => {
+    await watch(a, true, 10, 1);
+    await work();
+    assert.equal(await count(), 0);
+    await watch(a, false);
+    await work();
+    assert.equal(await count(), 0);
+    await assert.rejects(watch(a, true, 0, -1), (e) => e.code === "22023");
+    await assert.rejects(watch(a, true, NaN, 1), (e) => e.code === "22023");
+  });
+  await test("backend rejects explicit contradictory colors despite shared generic words", async () => {
+    const r = await db.query(
+      "select buscag_private.match_score(l,jsonb_populate_record(null::public.items,to_jsonb(f)||jsonb_build_object('title','Zafiro mochila roja','description','Zafiro mochila roja cierre plateado'))) score from public.items l,public.items f where l.id=$1 and f.id=$2",
+      [lost.id, found.id],
+    );
+    assert.equal(r.rows[0].score, null);
+  });
+  await test("preferences and pair ledger prevent duplicate notices", async () => {
+    await call(b, "select public.set_match_preference(false)");
+    await watch(a, true);
+    await work();
+    assert.equal(await count(), 1);
+    await watch(a, true);
+    await work();
+    assert.equal(await count(), 1);
+    await call(b, "select public.set_match_preference(true)");
+    await watch(a, true);
+    await work();
+    assert.equal(await count(), 2);
+    await watch(a, true);
+    await work();
+    assert.equal(await count(), 2);
+  });
+  let token;
+  await test("public QR contains no private fields and rotates/revokes", async () => {
+    token = (
+      await call(a, "select public.manage_object_tag($1,true,false) t", [
+        lost.id,
+      ])
+    ).rows[0].t.token;
+    const read = async (t) =>
+      (await as("anon", null, "select public.resolve_object_tag($1) t", [t]))
+        .rows[0].t;
+    assert.deepEqual(Object.keys(await read(token)).sort(), [
+      "category",
+      "item_id",
+      "status",
+    ]);
+    // Legacy free-text classifications must never leak through an anonymous QR.
+    const hasChecks=(await db.query("select count(*)::int n from pg_constraint where conrelid='public.items'::regclass and contype='c' and (pg_get_constraintdef(oid) like '%category%' or pg_get_constraintdef(oid) like '%status%')")).rows[0].n>0;
+    if(!hasChecks){
+    await db.exec('alter table public.items disable trigger user');
+    try{
+      await db.query("update public.items set category='PRIVATE_LEGACY_FIELD',status='PRIVATE_LEGACY_STATE' where id=$1",[lost.id]);
+      const legacy=await read(token);assert.equal(legacy.category,null);assert.equal(legacy.status,null);
+    }finally{
+      await db.query("update public.items set category='Otros',status='perdido' where id=$1",[lost.id]);
+      await db.exec('alter table public.items enable trigger user');
+    }
+    }
+    const rotated = (
+      await call(a, "select public.manage_object_tag($1,true,true) t", [
+        lost.id,
+      ])
+    ).rows[0].t.token;
+    assert.notEqual(rotated, token);
+    assert.equal(await read(token), null);
+    token = rotated;
+    await call(a, "select public.manage_object_tag($1,false,false)", [lost.id]);
+    assert.equal(await read(token), null);
+    await call(a, "select public.manage_object_tag($1,true,false)", [lost.id]);
+  });
+  let request;
+  await test("recovery requires an existing conversation; third parties cannot decide", async () => {
+    await denied(() =>
+      call(a, "select public.request_item_recovery($1,$2)", [lost.id, c]),
+    );
+    await call(
+      b,
+      "select * from public.send_message_once(gen_random_uuid(),$1,$2,$3)",
+      [lost.id, a, "Synthetic return conversation"],
+    );
+    request = (
+      await call(a, "select public.request_item_recovery($1,$2) id", [
+        lost.id,
+        b,
+      ])
+    ).rows[0].id;
+    assert.equal(
+      (
+        await call(a, "select public.request_item_recovery($1,$2) id", [
+          lost.id,
+          b,
+        ])
+      ).rows[0].id,
+      request,
+    );
+    await denied(() =>
+      call(a, "select public.resolve_item_recovery($1,true)", [request]),
+    );
+    await denied(() =>
+      call(c, "select public.resolve_item_recovery($1,true)", [request]),
+    );
+    assert.deepEqual(
+      (
+        await call(c, "select public.list_recovery_confirmations($1) r", [
+          lost.id,
+        ])
+      ).rows[0].r,
+      [],
+    );
+  });
+  await test("second participant confirms once; messages/history survive; deletion is blocked", async () => {
+    assert.equal(
+      (
+        await call(b, "select public.resolve_item_recovery($1,true) s", [
+          request,
+        ])
+      ).rows[0].s,
+      "confirmed",
+    );
+    assert.equal(
+      (
+        await call(b, "select public.resolve_item_recovery($1,true) s", [
+          request,
+        ])
+      ).rows[0].s,
+      "confirmed",
+    );
+    assert.equal(
+      (await db.query("select status from public.items where id=$1", [lost.id]))
+        .rows[0].status,
+      "recuperado",
+    );
+    await denied(() =>
+      call(a, "update public.items set status='encontrado' where id=$1", [
+        lost.id,
+      ]),
+    );
+    assert.equal(
+      (
+        await call(a, "select * from public.messages where item_id=$1", [
+          lost.id,
+        ])
+      ).rows.length,
+      1,
+    );
+    await assert.rejects(
+      call(a, "delete from public.items where id=$1", [lost.id]),
+      (e) => ["23503", "23001"].includes(e.code),
+    );
+  });
+  await test("statistics use real rows and respect caller RLS", async () => {
+    const stats = (await call(a, "select public.community_statistics() s"))
+      .rows[0].s;
+    assert.equal(
+      Number(stats.publications),
+      (await call(a, "select count(*)::int n from public.items")).rows[0].n,
+    );
+    assert.equal(stats.scope, "visible_by_rls");
+    assert.ok(Number(stats.recovered) >= 1);
+    // Prove invoker semantics with an additional restrictive policy, rolled back.
+    await db.exec("begin");
+    try {
+      await db.exec(
+        "create policy school_test_scope on public.items as restrictive for select to authenticated using(owner_id=auth.uid())",
+      );
+      await db.exec("set local role authenticated");
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)", [a]);
+      const filtered = (
+        await db.query("select public.community_statistics() s")
+      ).rows[0].s;
+      assert.equal(filtered.publications, filtered.mine);
+      assert.ok(Number(filtered.publications) < Number(stats.publications));
+    } finally {
+      await db.exec("rollback");
+    }
+  });
+  await test("cancellation is participant-only and new requests are rate bounded", async () => {
+    const extra = await publish(a, "perdido");
+    await call(
+      b,
+      "select * from public.send_message_once(gen_random_uuid(),$1,$2,$3)",
+      [extra.id, a, "Synthetic cancellation conversation"],
+    );
+    for (let n = 0; n < 5; n++) {
+      const id = (
+        await call(a, "select public.request_item_recovery($1,$2) id", [
+          extra.id,
+          b,
+        ])
+      ).rows[0].id;
+      await denied(() =>
+        call(c, "select public.resolve_item_recovery($1,false)", [id]),
+      );
+      assert.equal(
+        (await call(a, "select public.resolve_item_recovery($1,false) s", [id]))
+          .rows[0].s,
+        "cancelled",
+      );
+      assert.equal(
+        (await call(a, "select public.resolve_item_recovery($1,false) s", [id]))
+          .rows[0].s,
+        "cancelled",
+      );
+    }
+    await assert.rejects(
+      call(a, "select public.request_item_recovery($1,$2)", [extra.id, b]),
+      (e) => e.code === "P0001",
+    );
+    assert.equal(
+      (
+        await db.query("select status from public.items where id=$1", [
+          extra.id,
+        ])
+      ).rows[0].status,
+      "perdido",
+    );
+  });
+  await test("read-only readiness verifies RPC ACLs and scheduler fails closed without pg_cron", async () => {
+    const audit = await readFile(
+      new URL("../supabase/audit/school_readiness.sql", import.meta.url),
+      "utf8",
+    );
+    const original = await snapshot();
+    await db.exec(audit);
+    assert.deepEqual(await snapshot(), original);
+    const acl = (
+      await db.query(
+        "select has_function_privilege('anon','public.resolve_object_tag(uuid)','EXECUTE') qr,has_function_privilege('anon','public.request_item_recovery(uuid,uuid)','EXECUTE') recovery,has_function_privilege('authenticated','public.process_match_jobs(integer)','EXECUTE') worker",
+      )
+    ).rows[0];
+    assert.deepEqual(acl, { qr: true, recovery: false, worker: false });
+    const cron = await readFile(
+      new URL(
+        "../supabase/activation/schedule_school_matching_STAGING_ONLY.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    await assert.rejects(db.exec(cron), (e) => e.message.includes("pg_cron"));
+    await db.exec("rollback");
+    assert.deepEqual(await snapshot(), original);
+  });
+  await test("reapplying preserves watches, tags and confirmed histories", async () => {
+    const original = await snapshot();
+    await db.exec(sql);
+    assert.deepEqual(await snapshot(), original);
+    assert.equal(
+      (await call(a, "select public.get_item_watch($1) w", [lost.id])).rows[0].w
+        .enabled,
+      true,
+    );
+    assert.equal(
+      (
+        await call(b, "select public.list_recovery_confirmations($1) r", [
+          lost.id,
+        ])
+      ).rows[0].r[0].state,
+      "confirmed",
+    );
+    assert.ok(
+      (
+        await as("anon", null, "select public.resolve_object_tag($1) t", [
+          token,
+        ])
+      ).rows[0].t,
+    );
+  });
+  console.log(
+    `PASS: ${checks} school feature integration/security groups; repeatable SQL, isolated database only`,
+  );
+}

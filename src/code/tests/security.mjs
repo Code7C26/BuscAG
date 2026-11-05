@@ -655,6 +655,7 @@ try {
       await db.query(`insert into public.notifications(user_id,title,message,type) values('${ids.a}','Synthetic','Synthetic','match')`);
     }finally {await db.exec('rollback');}
   })();
+  await (await import('./schoolChecks.mjs')).schoolChecks(db,[ids.a,ids.b,ids.c]);
   console.log(`PASS: ${passed} offline PostgreSQL security checks (${itemDateType}, ${observedShape?"observed":"repository"})`);
 } catch (error) {
   console.error('FAIL', error.code || error.name, error.message);

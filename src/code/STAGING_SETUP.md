@@ -1,5 +1,16 @@
 # BuscAG-Staging: instalación automática desde la computadora del operador
 
+## Actualización de una instalación existente
+
+**Para BuscAG Prueba `yiarlhpbgkofhhipkfha`, que ya tiene las funciones escolares,
+usar [STAGING_UPGRADE.md](STAGING_UPGRADE.md).** Los modos nuevos `--upgrade-plan` y
+`--upgrade-verify` son de sólo lectura remota y no necesitan historial de migraciones.
+No ejecutar el `--apply` del baseline para actualizar esa instalación. El instalador
+lo rechaza si encuentra `recovery_confirmations`, incluso sin su registro propio.
+
+El procedimiento histórico que sigue sirve para un baseline verificado sin las
+funciones escolares. No es la secuencia de actualización de Prueba.
+
 **Frontend tras instalar:** ver [STAGING_FRONTEND_TESTS.md](STAGING_FRONTEND_TESTS.md). El operador confirmó las nueve migraciones, verify y smoke correctos; no repetir instalación para empezar esas pruebas.
 
 No se conectó a staging en esta ejecución: el entorno sólo identifica variables del

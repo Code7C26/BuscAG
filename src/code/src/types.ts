@@ -22,7 +22,7 @@ export type Category =
 export type FilterType = 'todos' | 'encontrados' | 'perdidos' | 'cerca';
 
 // Pestañas de navegación de la aplicación
-export type TabType = 'home' | 'map' | 'matches' | 'notifications' | 'profile' | 'publish';
+export type TabType = 'home' | 'map' | 'matches' | 'notifications' | 'profile' | 'messages' | 'publish';
 /**
  * Representa al usuario de la plataforma (quien publica o busca)
  */
@@ -32,6 +32,7 @@ export interface User {
   avatar: string;          // URL de la imagen de perfil
   email: string;           // Correo electrónico de contacto
   phone: string;           // Teléfono directo para llamadas o WhatsApp
+  ratingCount?: number;
   rating: number;          // Puntuación de confianza comunitaria (ej. 4.9)
   location: string;        // Barrio o zona habitual del usuario
   totalPublished: number;  // Cantidad de publicaciones realizadas

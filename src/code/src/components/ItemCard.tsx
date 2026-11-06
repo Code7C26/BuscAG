@@ -133,7 +133,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore, currentUse
                 )}
               </span>
               <span className="text-[10px] text-slate-500 block leading-tight">
-                ⭐ {item.user.rating}
+                {item.user.ratingCount ? `⭐ ${item.user.rating}/5` : 'Sin valoraciones'}
               </span>
             </div>
           </div>

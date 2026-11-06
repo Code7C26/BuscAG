@@ -1,3 +1,4 @@
+import {SafetyActions} from './SafetyActions';
 import React, { useRef } from "react";
 import { X, Users, Package, ArrowLeft, LockKeyhole } from "lucide-react";
 import type { User, Item } from "../types";
@@ -7,11 +8,13 @@ import { useDialogFocus } from "../utils/useDialogFocus";
 /** Deliberately read-only public projection: no email, phone, locality or account controls. */
 export function PublicProfileModal({
   user,
+  currentUserId,
   items,
   onClose,
   onViewItem,
 }: {
   user: User | null;
+  currentUserId?: string;
   items: Item[];
   onClose: () => void;
   onViewItem: (item: Item) => void;
@@ -84,6 +87,7 @@ export function PublicProfileModal({
               <p>No hay publicaciones visibles en este momento.</p>
             </div>
           )}
+        {currentUserId&&<SafetyActions key={user.id+currentUserId} userId={currentUserId} targetUserId={user.id}/>}
         </section>
       </div>
     </div>

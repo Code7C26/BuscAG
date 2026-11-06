@@ -1,4 +1,12 @@
 @import "tailwindcss";
+
+.community-tools { border: 1px solid #d5e4e4; border-radius: 1rem; padding: 1rem; background: #fff; font-size: .875rem; }
+.community-tools h3 { font-weight: 750; color: #163c48; }
+.community-tools input:not([type=checkbox]), .community-tools textarea, .community-tools select { display: block; width: 100%; max-width: 100%; border: 1px solid #a9c3c7; border-radius: .6rem; padding: .55rem; margin-top: .3rem; background: #fff; color: #163c48; }
+.community-tools button, .chat-context-tools summary { padding: .5rem .75rem; border: 1px solid #467e86; border-radius: .65rem; color: #245b63; background: #f0f8f7; font-weight: 650; cursor: pointer; }
+.community-tools button:disabled { opacity: .55; cursor: default; }
+.community-tools summary { font-weight: 650; cursor: pointer; padding: .4rem 0; }
+.community-tools button:focus-visible, .community-tools summary:focus-visible { outline: 3px solid #316b78; outline-offset: 3px; }
 @theme {
   --color-slate-50: #faf7ef;
   --color-slate-100: #f1f5f1;

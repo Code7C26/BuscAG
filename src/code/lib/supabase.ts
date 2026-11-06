@@ -20,6 +20,8 @@ export interface Database {
           full_name: string
           avatar_url: string
           phone: string
+          phone_shared?: boolean
+          rating_count?: number
           location: string
           rating: number
           created_at: string
@@ -148,6 +150,19 @@ export interface Database {
       }
     }
     Functions: {
+      my_community_settings:{Args:Record<string,never>;Returns:any}
+      save_my_profile:{Args:{p_name:string;p_avatar:string;p_phone:string;p_share:boolean;p_location:string};Returns:any}
+      set_user_block:{Args:{p_target:string;p_block:boolean};Returns:boolean}
+      list_my_blocks:{Args:Record<string,never>;Returns:any[]}
+      can_share_contact:{Args:{p_target:string};Returns:boolean}
+      submit_report:{Args:{p_kind:string;p_target:string;p_reason:string;p_description:string};Returns:string}
+      list_reports:{Args:Record<string,never>;Returns:any[]}
+      moderate_report:{Args:{p_report:string;p_state:string;p_note:string};Returns:string}
+      report_audit:{Args:{p_report:string};Returns:any[]}
+      set_item_follow:{Args:{p_item:string;p_follow:boolean;p_notify:boolean};Returns:boolean}
+      my_item_follow:{Args:{p_item:string};Returns:{following:boolean;notify:boolean}}
+      rate_recovery:{Args:{p_request:string;p_stars:number};Returns:string}
+      received_ratings:{Args:Record<string,never>;Returns:any[]}
       school_features:{Args:Record<string,never>;Returns:{version:number;matching_enabled:boolean}}
       get_item_watch:{Args:{p_item:string};Returns:import('./schoolFeatures').Watch|null}
       set_item_watch:{Args:{p_item:string;p_enabled:boolean;p_lat:number;p_lng:number;p_radius:number};Returns:import('./schoolFeatures').Watch}

@@ -1,3 +1,4 @@
+import {SafetyActions} from './SafetyActions';
 import { RecoveryPanel } from './RecoveryPanel';
 import {ItemSchoolTools} from './ItemSchoolTools';
 import {Avatar} from './Avatar';
@@ -313,6 +314,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           )}
 
           {/* Tarjeta del usuario que publicó el objeto */}
+          <SafetyActions key={`safety-${item.id}-${currentUser.id}`} userId={currentUser.id} targetUserId={item.user.id} itemId={item.id}/>
           <RecoveryPanel key={`recovery-${item.id}-${currentUser.id}`} item={item} userId={currentUser.id} onChanged={onRecoveryChanged}/>
           <ItemSchoolTools key={item.id+currentUser.id} item={item} userId={currentUser.id}/>
           <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
@@ -326,7 +328,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                  <span>⭐ {item.user.rating} calificación</span>
+                  <span>{item.user.ratingCount ? `⭐ ${item.user.rating}/5 (${item.user.ratingCount})` : 'Sin valoraciones'}</span>
                   <span>•</span>
                   <span>{item.user.location}</span>
                 </div>
@@ -356,7 +358,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0">Editar</button>}
               {!isRecovered && (
                 <button
-                  onClick={() => dialogRef.current?.querySelector('#item-recovery')?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => dialogRef.current?.querySelector('[aria-label="Recuperación segura"]')?.scrollIntoView({ behavior: 'smooth' })}
                   className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import type { Recovery } from "../../lib/schoolFeatures";
 import type { Item } from "../types";
+import {communityCall} from '../../lib/community';
 
 type Context = {
   version: number;
@@ -24,6 +25,7 @@ export function RecoveryPanel({
   const [partner, setPartner] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [stars,setStars] = useState('');
   const epoch = useRef(0),
     sequence = useRef(0),
     pending = useRef(false);
@@ -93,13 +95,12 @@ export function RecoveryPanel({
   const waiting = context?.requests.some((r) => r.state === "pending");
   return (
     <section
-      id="item-recovery"
       aria-label="Recuperación segura"
       className="rounded-2xl border p-4 space-y-3"
     >
       <h3 className="font-bold">Recuperación segura</h3>
       <p className="text-sm" role="status">
-        {context?.status === "recuperado"
+        {context?.requests.some(r=>r.disputed) ? 'Devolución disputada' : context?.status === "recuperado"
           ? "Recuperado"
           : waiting
             ? "Pendiente de confirmación"
@@ -112,6 +113,8 @@ export function RecoveryPanel({
           {notice}
         </p>
       )}
+      {request&&<p className="text-xs">{request.owner_name||'El propietario'} solicita la confirmación a {request.partner_name||'la contraparte vinculada'}.</p>}
+      {context?.requests.some(r=>r.disputed)&&<p className="text-xs">Hay un problema informado para revisión. Se conserva el historial y el estado previamente confirmado.</p>}
       {owner && active && !waiting && context && (
         <>
           {context.partners.length > 0 ? (
@@ -239,6 +242,14 @@ export function RecoveryPanel({
             </button>
           </div>
         ))}
+      {request && <details><summary>Historial, valoración y problemas</summary>
+        {context?.requests.map(r=><article key={r.id} className="border rounded p-2 my-2 text-sm">
+          <p>{r.owner_name||'Propietario'} → {r.partner_name||(r.mode==='individual'?'Recuperación individual':'Contraparte')} · {r.state==='confirmed'?'Confirmada':r.state==='cancelled'?'Rechazada o cancelada':'Pendiente'}</p>
+          <p>Solicitud: {r.created_at ? new Date(r.created_at).toLocaleString() : 'Fecha no disponible'}{r.resolved_at&&` · Resolución: ${new Date(r.resolved_at).toLocaleString()}`}</p>
+          {r.state==='confirmed'&&r.mode==='bilateral'&&(r.my_rating ? <p>Tu valoración: {r.my_rating}/5</p> : <><label>Calificación<select aria-label="Calificación de la devolución" value={stars} onChange={e=>setStars(e.target.value)}><option value="">Elegí de 1 a 5 estrellas</option>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} estrellas</option>)}</select></label><button disabled={busy||!stars} onClick={()=>void run(async()=>{await communityCall('rate_recovery',{p_request:r.id,p_stars:Number(stars)});})}>Valorar devolución</button></>)}
+          {r.mode==='bilateral'&&<button disabled={busy||r.disputed} onClick={()=>{const description=window.prompt('Describí el problema de la devolución (hasta 2000 caracteres).');if(!description?.trim())return;void run(async()=>{await communityCall('submit_report',{p_kind:'recovery',p_target:r.id,p_reason:'otro',p_description:description.slice(0,2000)});});}}>Informar un problema</button>}
+        </article>)}
+      </details>}
       <button
         disabled={busy}
         className="underline text-sm"

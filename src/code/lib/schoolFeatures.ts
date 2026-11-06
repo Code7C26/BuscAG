@@ -11,6 +11,10 @@ export interface Recovery {
   owner_id: string | null;
   partner_id: string | null;
   mode?: "bilateral" | "individual";
+  owner_name?: string;
+  partner_name?: string;
+  disputed?: boolean;
+  my_rating?: number | null;
   state: "pending" | "confirmed" | "cancelled";
   created_at: string;
   resolved_at: string | null;

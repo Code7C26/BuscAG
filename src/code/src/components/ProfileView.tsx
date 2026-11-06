@@ -1,3 +1,4 @@
+import {ProfileSettings} from './ProfileSettings';
 import React, { useId, useRef, useState, useEffect } from "react";
 import { Avatar } from "./Avatar";
 import { ItemCard } from "./ItemCard";
@@ -19,6 +20,7 @@ import {
   Settings2,
 } from "lucide-react";
 interface ProfileViewProps {
+  onProfileSaved?: () => void;
   currentUser: User;
   userItems: Item[];
   onSignOut: () => void;
@@ -37,6 +39,7 @@ interface ProfileViewProps {
 type ProfileTab = "published" | "recovered" | "settings";
 export const ProfileView: React.FC<ProfileViewProps> = ({
   currentUser,
+  onProfileSaved,
   userItems,
   onSignOut,
   isSigningOut = false,
@@ -165,7 +168,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             </div>
             <div>
               <dt>Calificación</dt>
-              <dd>{currentUser.rating}</dd>
+              <dd>{currentUser.ratingCount ? `${currentUser.rating}/5 (${currentUser.ratingCount})` : 'Sin valoraciones'}</dd>
             </div>
           </dl>
           <section className="account-privacy-note">
@@ -219,6 +222,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   </div>
                   <Settings2 size={24} />
                 </div>
+                <ProfileSettings key={currentUser.id} userId={currentUser.id} onSaved={onProfileSaved}/>
                 <section
                   className="settings-group"
                   aria-labelledby={`${tabId}-notices`}

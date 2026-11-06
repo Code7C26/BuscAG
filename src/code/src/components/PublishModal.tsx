@@ -14,6 +14,7 @@ import { useDialogFocus } from '../utils/useDialogFocus';
 import React, { useState, useRef, useEffect, useId } from 'react';
 import { X, Camera, Upload, MapPin, Tag, Calendar, AlertCircle, CheckCircle2, Sparkles, Navigation } from 'lucide-react';
 import L from 'leaflet';
+import locationPinUrl from '../assets/location-pin.svg';
 import { Category, ItemStatus, Item, User } from '../types';
 import { DEFAULT_CENTER, isValidCoordinates } from '../utils/geo';
 
@@ -118,7 +119,17 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
 
     // Crea un marcador arrastrable (draggable: true)
-    const marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    // Vite resuelve el SVG local también en el build; no dependemos de la
+    // autodetección de rutas de Icon.Default ni de imágenes externas.
+    const icon = L.icon({
+      iconUrl: locationPinUrl,
+      iconSize: [32, 44],
+      iconAnchor: [16, 44],
+      popupAnchor: [0, -44]
+    });
+    const marker = L.marker([lat, lng], {
+      icon, draggable: true, title: 'Ubicación seleccionada', alt: 'Ubicación seleccionada'
+    }).addTo(map);
     pickerMarkerRef.current = marker;
 
     // Evento al terminar de arrastrar el pin: actualiza coordenadas

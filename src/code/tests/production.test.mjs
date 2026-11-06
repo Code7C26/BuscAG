@@ -31,6 +31,7 @@ const sources = {
 async function bundle(entry, app = false) {
   const outfile = path.join(dir, path.basename(entry) + '.mjs');
   await build({ entryPoints: [entry], outfile, bundle: true, platform: 'node', format: 'esm',
+    loader: { '.svg': 'dataurl' },
     external: ['react', 'react-dom', 'react-dom/*', 'lucide-react', 'qrcode'], plugins: [{ name: 'offline', setup(p) {
       p.onResolve({ filter: /(^|\/)supabase(\.ts)?$/ }, () => ({ path: 'auth', namespace: 'mock' }));
       p.onResolve({ filter: /^leaflet$/ }, () => ({ path: 'leaflet', namespace: 'mock' }));
@@ -68,7 +69,7 @@ const leaflet = {
       setLatLng(){ return this; },getLatLng(){return {lat:0,lng:0};},bindTooltip(){return this;}};
     markers.push(marker); return marker;
   },
-  tileLayer() { return { addTo() {} }; }, divIcon() { return {}; },
+  tileLayer() { return { addTo() {} }; }, divIcon() { return {}; }, icon(options) { return { options }; },
   layerGroup() { return { addTo(){ return this; }, clearLayers(){}, addLayer(){} }; },
   control:{ zoom(){ return { addTo(){} }; } }
 };

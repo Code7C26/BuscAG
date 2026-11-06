@@ -1,0 +1,251 @@
+import React, { useEffect, useRef, useState } from "react";
+import { supabase } from "../../lib/supabase";
+import type { Recovery } from "../../lib/schoolFeatures";
+import type { Item } from "../types";
+
+type Context = {
+  version: number;
+  status: string;
+  partners: { id: string; name: string }[];
+  requests: Recovery[];
+};
+
+// The existing recovery RPCs/table are shared by individual and bilateral flows.
+export function RecoveryPanel({
+  item,
+  userId,
+  onChanged,
+}: {
+  item: Item;
+  userId: string;
+  onChanged: () => void;
+}) {
+  const [context, setContext] = useState<Context | null>(null);
+  const [partner, setPartner] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+  const epoch = useRef(0),
+    sequence = useRef(0),
+    pending = useRef(false);
+  const latest = useRef({ item, onChanged });
+  latest.current = { item, onChanged };
+  const owner = item.user.id === userId;
+
+  async function refresh(lifecycle = epoch.current) {
+    const request = ++sequence.current;
+    const result = await supabase!.rpc("recovery_context", { p_item: item.id });
+    if (lifecycle !== epoch.current || request !== sequence.current) return;
+    if (result.error || result.data?.version !== 2) throw Error("unavailable");
+    setContext(result.data);
+    setNotice("");
+    if (result.data.status !== latest.current.item.status)
+      latest.current.onChanged();
+  }
+  useEffect(() => {
+    const lifecycle = ++epoch.current;
+    const update = () => {
+      if (!supabase || pending.current) return;
+      void refresh(lifecycle).catch(() => {
+        if (lifecycle === epoch.current) {
+          setContext(null);
+          setNotice(
+            "Recuperación segura no disponible. Verificá la conexión y la instalación del backend de recuperación. No se cambió el estado.",
+          );
+        }
+      });
+    };
+    update();
+    const timer = window.setInterval(update, 5000);
+    window.addEventListener("focus", update);
+    return () => {
+      ++epoch.current;
+      ++sequence.current;
+      clearInterval(timer);
+      window.removeEventListener("focus", update);
+    };
+  }, [item.id, userId]);
+
+  async function run(action: () => Promise<unknown>) {
+    if (!supabase || pending.current) return;
+    const lifecycle = epoch.current;
+    pending.current = true;
+    ++sequence.current;
+    setBusy(true);
+    setNotice("");
+    try {
+      await action();
+      if (lifecycle !== epoch.current) return;
+      await refresh(lifecycle);
+      latest.current.onChanged();
+    } catch {
+      if (lifecycle === epoch.current)
+        setNotice(
+          "No se pudo confirmar el resultado. Actualizá para consultar el estado; reintentar no duplica una confirmación completada.",
+        );
+    } finally {
+      pending.current = false;
+      if (lifecycle === epoch.current) setBusy(false);
+    }
+  }
+  const request = context?.requests[0];
+  const active =
+    context?.status === "perdido" || context?.status === "encontrado";
+  const waiting = context?.requests.some((r) => r.state === "pending");
+  return (
+    <section
+      id="item-recovery"
+      aria-label="Recuperación segura"
+      className="rounded-2xl border p-4 space-y-3"
+    >
+      <h3 className="font-bold">Recuperación segura</h3>
+      <p className="text-sm" role="status">
+        {context?.status === "recuperado"
+          ? "Recuperado"
+          : waiting
+            ? "Pendiente de confirmación"
+            : request?.state === "cancelled"
+              ? "Confirmación rechazada"
+              : "La publicación sigue activa hasta confirmar la recuperación."}
+      </p>
+      {notice && (
+        <p role="alert" className="text-sm">
+          {notice}
+        </p>
+      )}
+      {owner && active && !waiting && context && (
+        <>
+          {context.partners.length > 0 ? (
+            <>
+              <label className="block text-sm">
+                Contraparte vinculada
+                <select
+                  className="block border rounded p-2"
+                  value={partner}
+                  disabled={busy}
+                  onChange={(e) => setPartner(e.target.value)}
+                >
+                  <option value="">Elegí una persona</option>
+                  {context.partners.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="text-xs">
+                Tu solicitud confirma tu parte. La otra persona debe aceptar
+                después de la entrega. Esto afecta sólo a esta publicación.
+              </p>
+              <button
+                disabled={busy || !partner}
+                className="underline"
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "¿Confirmás que la devolución ocurrió y querés solicitar la confirmación de esta persona?",
+                    )
+                  )
+                    return;
+                  void run(async () => {
+                    const r = await supabase!.rpc("request_item_recovery", {
+                      p_item: item.id,
+                      p_partner: partner,
+                    });
+                    if (r.error) throw r.error;
+                  });
+                }}
+              >
+                Solicitar confirmación de devolución
+              </button>
+            </>
+          ) : context.requests.some(r => r.mode !== 'individual') ? (
+            <p className="text-sm">Hay historial bilateral sin contraparte disponible. No se puede cerrar como recuperación individual.</p>
+          ) : (
+            <>
+              <p className="text-xs">
+                Sin contraparte vinculada. La recuperación será declarada por
+                vos, sin confirmación bilateral.
+              </p>
+              <button
+                disabled={busy}
+                className="underline"
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "¿Confirmás explícitamente que recuperaste el objeto sin contraparte? Esta declaración no es una confirmación bilateral.",
+                    )
+                  )
+                    return;
+                  void run(async () => {
+                    const r = await supabase!.rpc("request_item_recovery", {
+                      p_item: item.id,
+                      p_partner: null,
+                    });
+                    if (r.error) throw r.error;
+                  });
+                }}
+              >
+                Confirmar recuperación sin contraparte
+              </button>
+            </>
+          )}
+        </>
+      )}
+      {context?.requests
+        .filter((r) => r.state === "pending")
+        .map((r) => (
+          <div key={r.id} className="flex flex-wrap gap-3">
+            {r.partner_id === userId && (
+              <button
+                disabled={busy}
+                className="underline"
+                onClick={() => {
+                  if (!window.confirm("¿Confirmás que la entrega ya ocurrió?"))
+                    return;
+                  void run(async () => {
+                    const result = await supabase!.rpc(
+                      "resolve_item_recovery",
+                      { p_request: r.id, p_accept: true },
+                    );
+                    if (result.error) throw result.error;
+                  });
+                }}
+              >
+                Confirmar entrega realizada
+              </button>
+            )}
+            <button
+              disabled={busy}
+              className="underline"
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    "¿Rechazar o cancelar esta solicitud? La publicación seguirá activa.",
+                  )
+                )
+                  return;
+                void run(async () => {
+                  const result = await supabase!.rpc("resolve_item_recovery", {
+                    p_request: r.id,
+                    p_accept: false,
+                  });
+                  if (result.error) throw result.error;
+                });
+              }}
+            >
+              {r.partner_id === userId
+                ? "Rechazar confirmación"
+                : "Cancelar solicitud"}
+            </button>
+          </div>
+        ))}
+      <button
+        disabled={busy}
+        className="underline text-sm"
+        onClick={() => void run(() => refresh())}
+      >
+        Actualizar confirmaciones
+      </button>
+    </section>
+  );
+}

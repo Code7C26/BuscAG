@@ -1,3 +1,4 @@
+import { RecoveryPanel } from './RecoveryPanel';
 import {ItemSchoolTools} from './ItemSchoolTools';
 import {Avatar} from './Avatar';
 import { formatItemDate } from '../utils/itemDate';
@@ -9,11 +10,11 @@ import { useDialogFocus } from '../utils/useDialogFocus';
  * - Título, descripción detallada, categoría y recompensa si aplica
  * - Mini-mapa interactivo Leaflet con la ubicación exacta donde ocurrió el hallazgo o pérdida
  * - Perfil del usuario publicador con insignia de verificación y calificación
- * - Acciones contextuales: Si es el dueño, permite marcarlo como "Recuperado" o eliminarlo.
+ * - Acciones contextuales: Si es el dueño, permite gestionar la recuperación o eliminarlo.
  *   Si es otro usuario, permite abrir el flujo de contacto directo.
  */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { X, MapPin, Clock, Tag, ShieldCheck, MessageCircle, Phone, Share2, CheckCircle2, AlertCircle, Trash2, PartyPopper, Sparkles, ChevronRight } from 'lucide-react';
+import { X, MapPin, Clock, Tag, ShieldCheck, MessageCircle, Phone, Share2, CheckCircle2, AlertCircle, Trash2, Sparkles, ChevronRight } from 'lucide-react';
 import L from 'leaflet';
 import { Item, User, MatchResult, Message } from '../types';
 import { formatTimeAgo, isValidCoordinates } from '../utils/geo';
@@ -27,7 +28,6 @@ interface ItemDetailModalProps {
   onEditItem?: (item: Item) => void;
   onViewProfile?: (user:User)=>void;
   currentUser: User;                             // Usuario que está utilizando la app actualmente
-  onMarkAsRecovered?: (itemId: string) => Promise<boolean>;  // Cambia el estado a 'recuperado'
   onDeleteItem?: (itemId: string) => Promise<boolean>;       // Elimina la publicación de la lista
   messages?: Message[];
   onRecoveryChanged?:()=>void;
@@ -42,7 +42,6 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   currentUser,
   onEditItem,
   onViewProfile,
-  onMarkAsRecovered,
   onDeleteItem,
   messages = [],
   onRecoveryChanged = ()=>{},
@@ -56,19 +55,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   const miniMapRef = useRef<HTMLDivElement>(null);
   const leafletMiniMapRef = useRef<L.Map | null>(null);
 
-  // Estado para mostrar un banner de celebración festiva al recuperar el objeto
+  // Conserva un fallback si la foto de la publicación no se puede cargar.
   const [failedImage,setFailedImage]=useState<string|null>(null);
-  const [showRecoveredConfetti, setShowRecoveredConfetti] = useState(false);
-  const recovering = useRef(false);
-  const recoveryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const latestItem = useRef(item?.id);
-  latestItem.current = item?.id;
-  useEffect(() => {
-    recovering.current = false;
-    latestItem.current = item?.id;
-    setShowRecoveredConfetti(false);
-    return () => { latestItem.current = undefined; if (recoveryTimer.current) clearTimeout(recoveryTimer.current); };
-  }, [item?.id]);
 
   // Verificaciones de permisos y estado del objeto
   const isOwner = Boolean(item && currentUser.id === item.user.id);
@@ -141,32 +129,11 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   // Si no hay ningún objeto seleccionado, no renderizamos el modal
   if (!item) return null;
 
-  /**
-   * Manejador para marcar el objeto como recuperado con animación de celebración
-   */
-  const handleMarkRecovered = async () => {
-    if (!onMarkAsRecovered || recovering.current) return;
-    recovering.current = true; const id = item.id;
-    try {
-      const saved = await onMarkAsRecovered(id);
-      if (saved && latestItem.current === id) {
-        setShowRecoveredConfetti(true);
-        recoveryTimer.current = setTimeout(() => setShowRecoveredConfetti(false),3000);
-      }
-    } finally { if (latestItem.current === id) recovering.current = false; }
-  };
 
   return (
     <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Detalle de publicación" tabIndex={-1} className="modal-dialog w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
         
-        {/* Banner animado de felicitaciones al recuperar el objeto */}
-        {showRecoveredConfetti && (
-          <div className="absolute top-0 inset-x-0 bg-emerald-600 text-white p-3 text-center z-30 font-extrabold text-sm flex items-center justify-center gap-2 animate-bounce shadow-lg">
-            <PartyPopper className="w-5 h-5" />
-            ¡Felicidades! Objeto marcado como RECUPERADO 🎉
-          </div>
-        )}
 
         {/* Imagen principal superior con botón de cierre e insignias de estado */}
         <div className="relative aspect-16/10 max-h-[30vh] shrink-0 w-full bg-slate-900 overflow-hidden">
@@ -346,13 +313,14 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           )}
 
           {/* Tarjeta del usuario que publicó el objeto */}
-          <ItemSchoolTools key={item.id+currentUser.id} item={item} userId={currentUser.id} messages={messages} onRecovered={onRecoveryChanged}/>
+          <RecoveryPanel key={`recovery-${item.id}-${currentUser.id}`} item={item} userId={currentUser.id} onChanged={onRecoveryChanged}/>
+          <ItemSchoolTools key={item.id+currentUser.id} item={item} userId={currentUser.id}/>
           <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Avatar src={item.user.avatar} name={item.user.name} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs"/>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-900 text-sm">{item.user.name}</span>
+                  <span className="font-bold text-slate-900 text-sm">{item.user.name} · {isOwner ? 'Tu publicación' : 'Publicación de otra persona'}</span>
                   {item.user.verified && (
                     <ShieldCheck className="w-4 h-4 text-blue-600" aria-label="Usuario verificado" />
                   )}
@@ -388,11 +356,11 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                 className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0">Editar</button>}
               {!isRecovered && (
                 <button
-                  onClick={handleMarkRecovered}
+                  onClick={() => dialogRef.current?.querySelector('#item-recovery')?.scrollIntoView({ behavior: 'smooth' })}
                   className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <CheckCircle2 className="w-4 h-4" />
-                  Marcar como Recuperado
+                  Gestionar recuperación
                 </button>
               )}
 

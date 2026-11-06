@@ -135,7 +135,6 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   const pushRevision = useRef(0);
   const messageIntents = useRef(createMessageIntents());
   const publications = useRef(createPublicationPublisher<Database['public']['Tables']['items']['Row']>());
-  const recoveryRequests = useRef(new Map<string,Promise<boolean>>());
   const messageRequests = useRef(new Map<string, Promise<void>>());
   const captureOperation = useCallback(() => {
     const sessionCurrent = sessionGuard.capture();
@@ -524,36 +523,6 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
     setSelectedDetailItem(null); setIsPublishOpen(false); setEditingItem(item);
   };
 
-  /**
-   * Cambia el estado de un objeto a 'recuperado' y genera una notificación
-   */
-  const handleMarkAsRecovered = (itemId: string): Promise<boolean> => {
-    const pending = recoveryRequests.current.get(itemId);
-    if (pending) return pending;
-    const target = items.find(item=>item.id===itemId && item.user.id===currentUser?.id);
-    if (!currentUser || !supabase || !target) return Promise.resolve(false);
-    if (target.status==='recuperado') return Promise.resolve(true);
-    const current = captureOperation();
-    if (!current() || !window.confirm('¿Confirmas que este objeto fue recuperado?')) return Promise.resolve(false);
-    const request = Promise.resolve().then(async()=>{
-      try {
-        if (!current()) return false;
-        const {data,error} = await supabase.from('items').update({status:'recuperado'})
-          .eq('id',itemId).eq('owner_id',currentUser.id).select('*').maybeSingle();
-        if (!current()) return false;
-        if (error) throw error;
-        if (!data) throw new Error('No tienes permiso para cambiar esta publicación.');
-        setItems(prev=>prev.map(item=>item.id===itemId?{...item,status:'recuperado'}:item));
-        triggerToast('🎉 ¡Excelente! Objeto marcado como RECUPERADO.');
-        return true;
-      } catch {
-        if (current()) triggerToast('No se pudo actualizar la publicación.');
-        return false;
-      } finally { recoveryRequests.current.delete(itemId); }
-    });
-    recoveryRequests.current.set(itemId,request);
-    return request;
-  };
 
   /**
    * Elimina una publicación de la lista por su ID
@@ -998,6 +967,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
                   {filteredItems.length} objetos
                 </span>
               </div>
+              <p className="text-xs text-slate-600 mb-3">Listado general de la comunidad: incluye tus publicaciones y las de otras personas.</p>
 
               {/* Mensaje de estado vacío si ningún ítem coincide */}
               {filteredItems.length === 0 ? (
@@ -1022,6 +992,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
                     <ItemCard
                       key={item.id}
                       item={item}
+                      currentUserId={currentUser.id}
                       onViewMore={(selected) => setSelectedDetailItem(selected)}
                     />
                   ))}
@@ -1092,7 +1063,6 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
             signOutError={signOutError}
             onViewItem={(selected) => setSelectedDetailItem(selected)}
             onOpenPublish={() => setIsPublishOpen(true)}
-            onMarkAsRecovered={handleMarkAsRecovered}
             onDeleteItem={handleDeleteItem}
             onGoToMatches={() => setActiveTab('matches')}
             userMatchesCount={userMatchesCount}
@@ -1141,7 +1111,6 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
         currentUser={currentUser}
         onEditItem={openEdit}
         onViewProfile={user=>{if(user.id===currentUser.id){setSelectedDetailItem(null);setActiveTab('profile');}else setViewingPublicUser(user);}}
-        onMarkAsRecovered={handleMarkAsRecovered}
         onDeleteItem={handleDeleteItem}
         messages={messages}
         onRecoveryChanged={()=>{const current=captureOperation();if(supabase)loadItems(current).then(rows=>{if(current())setItems(rows);}).catch(()=>{if(current())triggerToast('No se pudo actualizar el listado. Volvé a cargar.');});}}

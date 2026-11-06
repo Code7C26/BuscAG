@@ -135,8 +135,15 @@ async function loadPublicProfiles(ownerIds: string[], isCurrent: () => boolean):
 }
 
 export async function loadItems(isCurrent: () => boolean = () => true): Promise<Item[]> {
-  const rows = await readAll<ItemRow>((from, to) => client().from('items')
+  const loadedRows = await readAll<ItemRow>((from, to) => client().from('items')
     .select('*', from === 0 ? { count: 'exact' } : {}).order('created_at', { ascending: false }).order('id').range(from, to), isCurrent);
+  // Offset pages can overlap if a publication arrives while reading the feed.
+  // Keep each database ID once, without merging distinct owners/publications.
+  const seen = new Set<string>();
+  const rows = loadedRows.filter(row => {
+    if (seen.has(row.id)) return false;
+    seen.add(row.id); return true;
+  });
 
   if (!rows.length) return [];
 

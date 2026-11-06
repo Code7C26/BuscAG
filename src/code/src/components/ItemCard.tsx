@@ -18,11 +18,12 @@ import { formatTimeAgo } from '../utils/geo';
 
 // Propiedades que recibe el componente ItemCard
 interface ItemCardProps {
+  currentUserId?: string;
   item: Item;                        // Objeto con toda la información a mostrar
   onViewMore: (item: Item) => void;  // Callback para abrir el modal de detalle al tocar la tarjeta
 }
 
-export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
+export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore, currentUserId }) => {
   // Banderas para simplificar la lógica condicional de colores y estados
   const [failedImage,setFailedImage]=useState<string|null>(null);
   const isLost = item.status === 'perdido';
@@ -87,6 +88,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore }) => {
       {/* Cuerpo de la tarjeta con título, descripción y metadatos */}
       <div className="item-card__content flex-1 flex flex-col justify-between gap-3">
         <div>
+          {currentUserId && <p className="text-xs font-semibold">{item.user.id === currentUserId ? 'Tu publicación' : 'Publicación de otra persona'}</p>}
           {/* Nombre / Título del objeto */}
           <h3 className="item-card__title text-base leading-snug line-clamp-1 group-hover:text-blue-700 transition-colors">
             {item.title||'Publicación sin título'}

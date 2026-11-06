@@ -28,7 +28,6 @@ interface ProfileViewProps {
   onChangePassword?: () => void;
   onViewItem: (item: Item) => void;
   onOpenPublish: () => void;
-  onMarkAsRecovered: (id: string) => void;
   onDeleteItem: (id: string) => void;
   onGoToMatches?: () => void;
   userMatchesCount?: number;
@@ -46,7 +45,6 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onChangePassword,
   onViewItem,
   onOpenPublish,
-  onMarkAsRecovered,
   onDeleteItem,
   onGoToMatches,
   userMatchesCount = 0,
@@ -317,7 +315,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                   <div>
                     <span className="eyebrow">
                       {activeSubTab === "published"
-                        ? "EN TU COMUNIDAD"
+                        ? "MIS PUBLICACIONES"
                         : "HISTORIAS QUE VUELVEN"}
                     </span>
                     <h2>
@@ -327,7 +325,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     </h2>
                     <p>
                       {activeSubTab === "published"
-                        ? "Editá la información o marcá un objeto como recuperado."
+                        ? "Editá la información o gestioná la confirmación de recuperación."
                         : "Cada encuentro cuenta. Tus conversaciones se conservan."}
                     </p>
                   </div>
@@ -348,7 +346,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <p>
                       {activeSubTab === "published"
                         ? "Publicá lo que encontraste o lo que estás buscando. La comunidad puede ayudarte."
-                        : "Cuando marques un objeto como recuperado, aparecerá en este espacio."}
+                        : "Cuando se confirme la recuperación de uno de tus objetos, aparecerá en este espacio."}
                     </p>
                     {activeSubTab === "published" && (
                       <button
@@ -365,7 +363,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     {(activeSubTab === "published" ? published : recovered).map(
                       (item) => (
                         <div key={item.id} className="account-item">
-                          <ItemCard item={item} onViewMore={onViewItem} />
+                          <ItemCard currentUserId={currentUser.id} item={item} onViewMore={onViewItem} />
                           {activeSubTab === "published" && (
                             <div className="account-item-actions">
                               {onEditItem && (
@@ -375,10 +373,10 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                               )}
                               <button
                                 className="recover-action"
-                                onClick={() => onMarkAsRecovered(item.id)}
+                                onClick={() => onViewItem(item)}
                               >
                                 <CheckCircle2 size={16} />
-                                Marcar recuperado
+                                Gestionar recuperación
                               </button>
                               <button
                                 className="delete-action"

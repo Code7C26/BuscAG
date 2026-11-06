@@ -187,7 +187,7 @@ test("publish uploads a fixture through Storage and calls publication RPC once",
   await page.getByText("Objeto ficticio editado", { exact: true }).click();
   page.once("dialog", (dialog) => dialog.accept());
   await page
-    .getByRole("button", { name: "Marcar como Recuperado", exact: true })
+    .getByRole("button", { name: "Confirmar recuperación sin contraparte", exact: true })
     .click();
   await expect
     .poll(

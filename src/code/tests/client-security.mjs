@@ -24,6 +24,7 @@ async function loadModule(file, responses) {
         eq(column, value) { call.filter = [column, value]; return query; },
         maybeSingle() { return query; },
         then(resolve, reject) {
+          if (typeof response === 'function') return Promise.resolve(response(call.range)).then(resolve,reject);
           const output = call.range && Array.isArray(response.data)
             ? { ...response, data: response.data.slice(call.range[0], call.range[1] + 1), count: response.data.length } : response;
           return Promise.resolve(output).then(resolve, reject);
@@ -50,6 +51,17 @@ async function loadModule(file, responses) {
 }
 async function check(name, run) { await run(); passed++; console.log(`ok ${passed} - ${name}`); }
 try {
+  await check('overlapping feed pages render each ID once and retain the actual owner even without a directory profile', async () => {
+    const first = Array.from({length:100},(_,index)=>({...item,id:`item-${index}`}));
+    const foreign = {...item,id:'foreign-item',owner_id:'another-account'};
+    const {module} = await loadModule('lib/database.ts', {
+      items: range => ({data:range[0]===0?first:[first[99],foreign],count:102,error:null}),
+      public_profiles:{data:[profile],error:null}
+    });
+    const rows = await module.loadItems();
+    assert.equal(rows.length,101);assert.equal(new Set(rows.map(row=>row.id)).size,101);
+    assert.equal(rows.find(row=>row.id==='foreign-item').user.id,'another-account');
+  });
   await check('item authors are loaded through the controlled directory', async () => {
     const { module, calls } = await loadModule('lib/database.ts', {
       items: { data: [item], error: null }, public_profiles: { data: [profile], error: null }

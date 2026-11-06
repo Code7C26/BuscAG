@@ -16,6 +16,7 @@ export function createStore() {
     items: [] as any[],
     messages: [] as any[],
     notifications: [] as any[],
+    recoveries: [] as any[],
     receipts: new Map<string, any>(),
   };
 }
@@ -146,6 +147,16 @@ export async function mockBackend(
                 : [];
       if (path.endsWith("/rpc/buscag_capabilities"))
         data = { queued_match_notifications: false };
+      else if (path.endsWith('/rpc/recovery_context')) {
+        const item=items.find(i=>i.id===body.p_item);
+        data={version:2,status:item?.status,partners:[],requests:store.recoveries.filter(r=>r.item_id===body.p_item)};
+      } else if (path.endsWith('/rpc/request_item_recovery')) {
+        const item=items.find(i=>i.id===body.p_item&&i.owner_id===actor.id);
+        if(!item||body.p_partner!==null) throw Error('This fixture supports owned individual recovery only');
+        let recovery=store.recoveries.find(r=>r.item_id===item.id);
+        if(!recovery){recovery={id:crypto.randomUUID(),item_id:item.id,owner_id:actor.id,partner_id:null,mode:'individual',state:'confirmed'};store.recoveries.push(recovery);}
+        item.status='recuperado';data=recovery.id;
+      }
       else if (path.endsWith("/rpc/publish_item_once")) {
         if (!receipts.has(body.p_request_key)) {
           const row = {

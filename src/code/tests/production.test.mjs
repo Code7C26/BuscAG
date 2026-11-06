@@ -344,10 +344,12 @@ test('incoming unread messages are marked while a chat is already open without c
   await render({...props,messages:[{...message,isRead:true}]});assert.equal(marked,1);
 });
 
-test('recovery celebration waits for server success',async()=>{
-  let success=false;const props={item:item(),currentUser:user('a'),onClose:()=>{},onContact:()=>{},onMarkAsRecovered:async()=>success};
-  const {host}=await mount(ItemDetailModal,props);const button=()=>[...host.querySelectorAll('button')].find(b=>b.textContent.includes('Marcar como Recuperado'));
-  await click(button());assert.ok(!host.textContent.includes('¡Felicidades!'));success=true;await click(button());assert.ok(host.textContent.includes('¡Felicidades!'));
+test('recovery opens a dedicated flow and never announces success before server evidence',async()=>{
+  const props={item:item(),currentUser:user('a'),onClose:()=>{},onContact:()=>{}};
+  const {host}=await mount(ItemDetailModal,props);
+  assert.ok(host.textContent.includes('Recuperación segura'));
+  assert.ok(!host.textContent.includes('¡Felicidades!'));
+  assert.ok(!host.textContent.includes('Marcar como Recuperado'));
 });
 
 test('editing changes content only, preserves ID/ownership/count and does not reupload an unchanged image',async()=>{
@@ -457,19 +459,15 @@ test('reconnect and resume reconcile missed messages and notices; old channels c
   await act(async()=>second.status('SUBSCRIBED'));assert.ok(loads>afterSwitch);
 });
 
-test('recovery requires ownership and confirmation and concurrent clicks share one server mutation',async()=>{
+test('opening an owned publication from profile never mutates status directly',async()=>{
   await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
-  const recover=mock.views.ProfileView.onMarkAsRecovered;
-  assert.equal(await recover('not-owned'),false);
-  assert.equal(await recover('item-a'),false);assert.equal(mock.queries.length,0);
-  window.confirm=()=>true;const pending=defer();mock.result=()=>pending.promise;
-  let first,second;
-  await act(async()=>{first=recover('item-a');second=recover('item-a');});
-  assert.equal(first,second);assert.equal(mock.queries.length,1);
-  await act(async()=>pending.resolve({data:{id:'item-a'},error:null}));assert.equal(await first,true);
-  assert.ok(mock.queries[0].filters.some(([column,value])=>column==='owner_id'&&value==='a'));
+  assert.equal(mock.views.ProfileView.userItems.length,1);
+  assert.ok(mock.views.ProfileView.userItems.every(row=>row.user.id==='a'));
+  await act(async()=>mock.views.ProfileView.onViewItem(item()));
+  assert.equal(mock.queries.length,0);
+  assert.equal(mock.views.ItemDetailModal.item.id,'item-a');
+  assert.equal(mock.views.ItemDetailModal.onMarkAsRecovered,undefined);
 });
-
 
 test('read confirmation cannot mark a notification arriving during the pending request',async()=>{
   const notice=id=>({id,title:'Synthetic',message:'Synthetic',date:new Date().toISOString(),type:'match',read:false});

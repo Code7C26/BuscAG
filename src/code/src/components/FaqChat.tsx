@@ -39,7 +39,7 @@ const faqEntries = [
   },
   {
     keywords: ['ya recupere', 'recupere mi objeto', 'devolvi', 'marcar resuelto', 'eliminar publicacion', 'borrar publicacion'],
-    answer: 'Abre tu perfil y busca la publicación. Podés marcarla como recuperada sin perder la conversación. Si elegís eliminarla, confirmá con cuidado: las conversaciones asociadas también se eliminan.'
+    answer: 'Abre tu perfil y busca la publicación. Abrí Gestionar recuperación. Si hay una contraparte vinculada, debe confirmar la entrega; sin contraparte, confirmás explícitamente tu declaración. Se conserva la conversación. Si elegís eliminarla, confirmá con cuidado: las conversaciones asociadas también se eliminan.'
   },
   {
     keywords: ['sin cuenta', 'necesito cuenta', 'cuenta para usar', 'crear cuenta', 'registrarme', 'iniciar sesion', 'navegar sin registrarme'],

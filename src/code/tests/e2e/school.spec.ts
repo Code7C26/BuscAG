@@ -37,6 +37,7 @@ async function setup(page: Page, owner = userId) {
       "manage_object_tag",
       "resolve_object_tag",
       "list_recovery_confirmations",
+      "recovery_context",
       "request_item_recovery",
       "resolve_item_recovery",
       "community_statistics",
@@ -76,6 +77,10 @@ async function setup(page: Page, owner = userId) {
           status: "perdido",
         };
         break;
+      case "recovery_context":
+        data = { version:2, status:store.items[0].status,
+          partners: [{id:partnerId,name:'Mateo de prueba'}], requests };
+        break;
       case "list_recovery_confirmations":
         data = requests;
         break;
@@ -96,6 +101,7 @@ async function setup(page: Page, owner = userId) {
           ...r,
           state: body.p_accept ? "confirmed" : "cancelled",
         }));
+        if(body.p_accept) store.items[0].status="recuperado";
         data = body.p_accept ? "confirmed" : "cancelled";
         break;
       case "community_statistics":
@@ -124,7 +130,7 @@ async function openTools(page: Page) {
     .click();
   const dialog = page.getByRole("dialog", { name: "Detalle de publicación" });
   await dialog
-    .getByRole("button", { name: "Alertas, QR y devolución segura" })
+    .getByRole("button", { name: "Alertas y QR" })
     .click();
   return dialog;
 }
@@ -238,7 +244,7 @@ test("foreign item exposes no watch or QR management and unavailable backend has
   await login(page);
   const dialog = await openTools(page);
   await expect(
-    dialog.getByText("Devolución entre dos personas", { exact: true }),
+    dialog.getByRole("heading", { name: "Recuperación segura", exact: true }),
   ).toBeVisible();
   await expect(
     dialog.getByRole("button", { name: "Generar QR", exact: true }),
@@ -258,7 +264,7 @@ test("foreign item exposes no watch or QR management and unavailable backend has
     }),
   );
   const retry = await openTools(page);
-  await expect(retry.getByRole("status")).toContainText("No se pudo completar");
+  await expect(retry.getByRole("status").filter({hasText:"No se pudo completar"})).toContainText("No se pudo completar");
   await expect(
     retry.getByRole("button", { name: "Generar QR", exact: true }),
   ).toHaveCount(0);
@@ -287,8 +293,9 @@ test("two browser account sessions request and confirm a real UI recovery flow u
   await login(page);
   let dialog = await openTools(page);
   await dialog
-    .getByLabel("Persona con quien conversaste")
+    .getByLabel("Contraparte vinculada")
     .selectOption(partnerId);
+  page.once("dialog", (prompt) => prompt.accept());
   await dialog
     .getByRole("button", {
       name: "Solicitar confirmación de devolución",
@@ -296,7 +303,7 @@ test("two browser account sessions request and confirm a real UI recovery flow u
     })
     .click();
   await expect(
-    dialog.getByText("Confirmación pendiente", { exact: true }),
+    dialog.getByText("Pendiente de confirmación", { exact: true }),
   ).toBeVisible();
   await expect(
     dialog.getByRole("button", { name: "Confirmar entrega realizada" }),
@@ -322,7 +329,7 @@ test("two browser account sessions request and confirm a real UI recovery flow u
     .getByRole("button", { name: "Confirmar entrega realizada" })
     .click();
   await expect(
-    dialog.getByText("Devolución confirmada", { exact: true }),
+    dialog.getByText("Recuperado", { exact: true }),
   ).toBeVisible();
   expect(
     calls.filter(

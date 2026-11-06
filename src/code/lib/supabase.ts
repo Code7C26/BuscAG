@@ -156,7 +156,8 @@ export interface Database {
       manage_object_tag:{Args:{p_item:string;p_enabled:boolean;p_rotate:boolean};Returns:{token:string;enabled:boolean}}
       resolve_object_tag:{Args:{p_token:string};Returns:import('./schoolFeatures').PublicTag|null}
       list_recovery_confirmations:{Args:{p_item:string};Returns:import('./schoolFeatures').Recovery[]}
-      request_item_recovery:{Args:{p_item:string;p_partner:string};Returns:string}
+      recovery_context:{Args:{p_item:string};Returns:{version:number;status:string;partners:{id:string;name:string}[];requests:import('./schoolFeatures').Recovery[]}}
+      request_item_recovery:{Args:{p_item:string;p_partner:string|null};Returns:string}
       resolve_item_recovery:{Args:{p_request:string;p_accept:boolean};Returns:string}
       community_statistics:{Args:Record<string,never>;Returns:import('./schoolFeatures').CommunityStats}
 

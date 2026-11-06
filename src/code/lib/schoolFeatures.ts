@@ -8,8 +8,9 @@ export interface Watch {
 export interface Recovery {
   id: string;
   item_id: string;
-  owner_id: string;
-  partner_id: string;
+  owner_id: string | null;
+  partner_id: string | null;
+  mode?: "bilateral" | "individual";
   state: "pending" | "confirmed" | "cancelled";
   created_at: string;
   resolved_at: string | null;

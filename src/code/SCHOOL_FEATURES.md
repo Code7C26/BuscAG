@@ -169,7 +169,8 @@ entorno; no se reutilizó la clave del proyecto original para intentar conectars
 ## Resultados locales de esta entrega
 
 - `qa:local`: TypeScript y build aprobados; 121 casos de lógica/DOM y 50 E2E
-  escritorio/móvil aprobados. Los E2E interceptan HTTP/Realtime; incluyen cambio
+  escritorio/móvil aprobados sobre el cliente compilado de staging. Los E2E
+  interceptan HTTP/Realtime; incluyen cambio
   de cuenta, devolución bilateral, controles ajenos, radio, preferencia y QR.
 - Runner de staging: ocho pruebas de protección aprobadas; una usa el SDK real
   con HTTP interceptado para demostrar que matching deshabilitado detiene School

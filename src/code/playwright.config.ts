@@ -10,7 +10,8 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: "http://127.0.0.1:3001",
-    trace: "off",
+    trace: "retain-on-failure",
+    serviceWorkers: "block", // Mocked APIs; dedicated PWA tests exercise the worker.
     video: "off",
     screenshot: "only-on-failure",
     launchOptions: {
@@ -33,7 +34,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "node node_modules/vite/bin/vite.js --mode staging",
+    command: "node scripts/serve-e2e.mjs",
     url: "http://127.0.0.1:3001",
     reuseExistingServer: false,
     env: { ...stagingEnvironment("sb_publishable_e2e_fixture") },

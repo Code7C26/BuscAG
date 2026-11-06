@@ -78,3 +78,32 @@ amplios. No se modificaron bases remotas, main, German ni Firebase.
 - Los fallos antes de las correcciones se reprodujeron deliberadamente; no se
   confunden con el resultado de estas baterías finales. Servicios Supabase reales
   y aplicación de migraciones continúan pendientes de autorización.
+
+## Segundo resultado remoto y ajuste del entorno E2E
+
+La ejecución 42136336615 de fad0057 no aprobó: 49/50. El inicio pasó y el fallo
+se desplazó a esperar el diálogo de publicación tras el clic. Su captura/contexto
+vuelven a mostrar el inicio, sin diálogo ni fallback de formulario pendiente. La
+primera corrección era necesaria, pero no bastó para cerrar el incidente. No se
+presenta ese resultado como un CI exitoso.
+
+Los E2E utilizaban el servidor de desarrollo con compilación y optimización tardía
+más HMR. Su primera carga puede introducir esperas/recargas que no existen en
+Firebase estático. Sin traza no se afirma retrospectivamente cuál evento exacto
+perdió la acción. La aceptación ahora utiliza el cliente realmente compilado en
+modo staging, servido por preview en 127.0.0.1, sin HMR. Las aserciones originales
+siguen intactas y se añade el requisito de que abrir el formulario no recargue el
+documento. Leaflet y qrcode se preoptimizan también para el ensayo de desarrollo.
+
+La prueba de módulo retenido cubre tanto la URL fuente como el chunk compilado;
+no se desactivó. El backend continúa interceptado. Service workers se bloquean
+únicamente en esos E2E para permitir intercepción fiable: las pruebas separadas
+PWA/presentación siguen ejecutándose. Se retienen trazas sólo al fallar para que
+un nuevo incidente tenga evidencia de navegación/red, con las cuentas ficticias
+de este entorno. No se incluyen servicios ni credenciales reales.
+
+La batería local completa volvió a aprobar con el servidor compilado: 50 E2E,
+121 lógica/DOM, TypeScript/build, controles de seguridad y pruebas PWA separadas.
+También aprobaron veinte repeticiones dirigidas con la nueva comprobación de
+una sola navegación de documento al abrir el formulario. El resultado del CI
+remoto se comprobará para el SHA final, sin reutilizar éxitos de otros commits.

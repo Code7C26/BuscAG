@@ -30,6 +30,9 @@ export default defineConfig(({ command, mode }) => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    // Discover heavy lazy dependencies at startup, avoiding first-use reoptimization.
+    optimizeDeps: {include:['leaflet','qrcode']},
+    preview: staging?{host:'127.0.0.1',port:3001,strictPort:true,headers:{'Content-Security-Policy':STAGING_CSP,'Cache-Control':'no-store'}}:undefined,
     server: {
       ...(staging?{host:'127.0.0.1',port:3001,strictPort:true,headers:{'Content-Security-Policy':STAGING_CSP,'Cache-Control':'no-store'}}:{}),
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

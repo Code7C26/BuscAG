@@ -17,3 +17,5 @@ dist-pwa-test/
 dist-presentation/
 dist-presentation-test/
 presentation-test-results/
+
+dist-e2e/

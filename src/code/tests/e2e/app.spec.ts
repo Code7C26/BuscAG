@@ -58,6 +58,8 @@ test("registration and recovery send explicit redirects without claiming email d
 test("real browser login, feed, filters, publish dialog and keyboard navigation fit the viewport", async ({
   page,
 }, info) => {
+  let documentNavigations=0;
+  page.on('framenavigated',frame=>{if(frame===page.mainFrame())documentNavigations++;});
   await mockBackend(page);
   await page.goto("/");
   await login(page);
@@ -82,6 +84,7 @@ test("real browser login, feed, filters, publish dialog and keyboard navigation 
     .getByRole("button", { name: "Publicar objeto", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
+  expect(documentNavigations,'Opening the form must not reload the SPA and discard its state').toBe(1);
   await page.screenshot({
     path: `test-results/publish-${info.project.name}.png`,
     fullPage: true,
@@ -324,7 +327,7 @@ test("compact 320px layout keeps forms, profile and navigation inside the viewpo
 test('a delayed closed detail module never blocks login, home or the publication form',async({page})=>{
  await mockBackend(page);
  let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});let requested=false;
- await page.route('**/src/components/ItemDetailModal.tsx*',async route=>{requested=true;await held;await route.continue().catch(()=>{});});
+ await page.route(/\/(?:src\/components\/ItemDetailModal\.tsx|assets\/ItemDetailModal-[^/]+\.js)(?:\?.*)?$/,async route=>{requested=true;await held;await route.continue().catch(()=>{});});
  try{
   await page.goto('/');await login(page);
   await expect(page.getByRole('heading',{name:/Lo importante/})).toBeVisible();

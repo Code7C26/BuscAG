@@ -205,6 +205,7 @@ export async function runLiveChecks(config, report = console.log) {
     if(config.mode==='--school'){
       const school=accepted(await a.rpc('school_features'),'Migración escolar no instalada; no se crean publicaciones.');
       check(school?.version===1,'Contrato escolar no disponible; no se crean publicaciones.');
+      check(school.matching_enabled===true,'Matching escolar deshabilitado: verificar y activar el worker antes del ensayo completo. No se crean publicaciones.');
     }
     const capabilities = accepted(
       await a.rpc("buscag_capabilities"),

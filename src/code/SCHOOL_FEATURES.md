@@ -105,6 +105,9 @@ No sustituir esta distinción por resultados del navegador con APIs simuladas.
    ```powershell
    powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Run-StagingQA.ps1 -Mode School
    ```
+   El modo School exige matching habilitado antes de crear publicaciones; si está
+   pausado se detiene, en lugar de aprobar un ensayo incompleto. `-Mode Run` conserva
+   su comportamiento anterior de informar matching pendiente.
    Extiende el ensayo existente de Storage/chat/Realtime con vigilancia, QR público
    y revocación, devolución bilateral, rechazo de tercero y estadísticas. No elimina
    sus nuevos datos QA ni toca la mochila previa. No certifica ON/OFF/radio remoto
@@ -160,6 +163,9 @@ entorno; no se reutilizó la clave del proyecto original para intentar conectars
 - `qa:local`: TypeScript y build aprobados; 121 casos de lógica/DOM y 48 E2E
   escritorio/móvil aprobados. Los E2E interceptan HTTP/Realtime; incluyen cambio
   de cuenta, devolución bilateral, controles ajenos, radio, preferencia y QR.
+- Runner de staging: ocho pruebas de protección aprobadas; una usa el SDK real
+  con HTTP interceptado para demostrar que matching deshabilitado detiene School
+  antes de subir imágenes o crear publicaciones. No es una prueba de servicios reales.
 - El PNG QR generado por el frontend se decodificó en el navegador y coincidió con
   su URL esperada. Falta escaneo físico con la URL pública de staging.
 - SQL aislado: 12 grupos nuevos en cada una de tres variantes, tanto en PGlite como

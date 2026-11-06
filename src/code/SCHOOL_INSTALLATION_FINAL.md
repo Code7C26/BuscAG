@@ -1,41 +1,42 @@
-# Candidato escolar revisado: instalación bloqueada hasta comparar Staging
+# Propuesta escolar revisada: funciones compatibles, procedimiento definitivo
 
-Rama: Alexis. Base revisada: 848577ac80ee65db7bd289c68b3916010708ad34.
+Rama: Alexis. SQL revisado: 123669fa91de73e6ee0c01024549b512fbd984e7.
+El SQL conserva la corrección de retención aprobada en las pruebas aisladas.
 Este cambio no ejecuta SQL remoto, no despliega y no altera main/German.
 
-## Diagnóstico y huellas
+## Diagnóstico y funciones: revisión cerrada
+
+Estado: LISTO PARA INSTALAR la propuesta revisada en Staging, sujeto al respaldo,
+verificación del destino y autorización de escritura de los pasos siguientes.
+La instalación no fue ejecutada. La activación y certificación funcional remotas
+son etapas posteriores; este estado no certifica SMTP, push ni pg_cron.
 
 El operador informa 26/26 preflight verdaderos, match_words(text) presente y las
-cuatro tablas escolares ausentes. No se recibió el JSON completo ni las definiciones
-reales de las funciones. Informa 12/13 MD5 diferentes, sin identificar la coincidencia.
-Por tanto, las 13 comparaciones individuales están pendientes de evidencia: no es
-posible etiquetar ninguna diferencia como solo formato, funcional o de seguridad.
-MD5 se utiliza como huella textual, no como prueba criptográfica de seguridad.
+cuatro tablas escolares ausentes. Se recibieron las 13 definiciones reales en
+buscag_13_funciones_staging_revisadas.json y el informe comparativo adjunto.
+La revisión independiente contra Alexis 123669f está en
+SCHOOL_FUNCTION_REVIEW.md: 13/13 cuerpos coinciden conservando literales.
+Las 12 diferencias de MD5 literal se explican por formato fuera de literales.
+El informe adjunto atribuye una diferencia a las comillas de notify_item_recovered;
+no se reproduce: ambos archivos contienen comillas dobles sin barras invertidas.
+No reemplazar esa función ni reaplicar una migración antigua para alinear huellas.
 
-La consulta anterior calculó MD5 sobre prosrc literal (UTF-8), incluidos espacios,
-saltos de línea y comentarios. SQL Editor, CRLF/LF o formato podrían explicar una
-diferencia, pero 12 diferencias no prueban que esa sea su causa. No normalizar
-expresiones, literales o identificadores ni quitar comentarios con regex para
-aprobar equivalencia: puede ocultar cambios semánticos.
+Firmas, resultados, lenguajes, volatilidad, contexto DEFINER/INVOKER y configuración
+son compatibles. Todas las funciones exportadas tienen propietario postgres y
+search_path vacío; match_score y publish_item_once mantienen TimeZone UTC.
+match_words(text) conserva text[], normalización NFD, límite de entrada 10.000,
+stopwords y eliminación de duplicados. La extensión lo reutiliza sin reemplazarlo.
 
-Solicitar las definiciones reales y metadatos desde el SQL Editor de Staging,
-revisarlos privadamente antes de compartir (los cuerpos podrían contener secretos).
-Comparar cada firma/cuerpo/atributo/propietario/ACL contra los nueve archivos del
-instalador documentado en STAGING_SETUP.md. No reemplazar funciones para hacer
-coincidir huellas. Una diferencia en notify_item_recovered puede ser lógica
-personalizada legítima y debe preservarse/revisarse.
+match_score y process_match_jobs se reemplazan intencionalmente por la propuesta:
+se añaden colores, vigilancia/radio y preferencias; se conservan firmas, umbral,
+UTC/DATE, cola, ledger, reintentos, heartbeat, exclusión del worker y ACL restringida.
+No se identificó lógica remota adicional que se pierda. El bloqueo de revisión de
+funciones queda cerrado con la evidencia adjunta, no por coincidencia de MD5.
 
-Funciones: notify_item_recovered, can_send_item_message,
-canonicalize_message_display, send_message_once, match_backend_enabled,
-buscag_private.match_words, buscag_private.match_score,
-buscag_private.enqueue_match, process_match_jobs, buscag_capabilities,
-publish_item_once, validate_item_content_write, ensure_recovered_notice_text.
-
-Especialmente: match_words(text) debe devolver text[], conservar su normalización,
-límite de entrada y stopwords; estar en esquema privado sin acceso cliente y con
-search_path vacío. La propuesta reemplaza match_score y process_match_jobs: revisar
-primero cualquier lógica remota adicional que pudiera perderse. Las funciones que
-no reemplaza también deben ser compatibles. No ejecutar RPC para comparar cuerpos.
+El JSON no exporta GRANT/RLS/triggers ni el catálogo completo. Su revisión no
+revalida esos elementos: se usa como contexto el preflight informado por el
+operador y se exige una comprobación vigente del destino/baseline antes de escribir.
+No hay una inspección remota nueva implícita en esta conclusión.
 
 ## Retención y seguridad revisadas
 
@@ -59,12 +60,21 @@ no reemplaza también deben ser compatibles. No ejecutar RPC para comparar cuerp
 - Reaplicar conserva datos. Una tabla previa con RESTRICT/incompatibilidad detiene
   la instalación; no intenta convertir ni borrar un historial ya instalado.
 
+## Archivo definitivo
+
+`supabase/proposals/20261105000000_school_features.sql`
+
+SHA-256 de los bytes del archivo revisado: `49b72f1354327c841fb1947728c2e1fd7e4d4f0d214d2b8da6fa783a499c158f`.
+Este cierre de revisión cambia documentación, no modifica nuevamente el SQL.
+
 ## Pasos exactos de instalación futura (no ejecutados)
 
-1. Cerrar la revisión de las 13 funciones y del JSON completo de catálogo de Staging.
-   Exigir dependencias/RLS/ACL/propietarios/tipos/triggers compatibles; el historial
-   de migraciones ausente no obliga a repetir las nueve. Confirmar las cuatro tablas
-   escolares ausentes. Si hay diferencias funcionales, reconciliar antes de instalar.
+1. La revisión de las 13 funciones está cerrada según SCHOOL_FUNCTION_REVIEW.md.
+   Confirmar que Staging no cambió desde los diagnósticos: dependencias/RLS/ACL,
+   propietarios, tipos y triggers compatibles; las cuatro tablas escolares ausentes.
+   Si cambió, repetir las consultas de catálogo de solo lectura antes de instalar.
+   Conservar la evidencia de las 26 comprobaciones verdaderas y sus secciones de
+   políticas/permisos. La ausencia de historial no exige repetir las nueve migraciones.
 2. En Dashboard seleccionar BuscAG-Staging, referencia yiarlhpbgkofhhipkfha. Verificar
    visualmente proyecto y rol postgres/propietario. Respaldar base e imágenes de
    Staging por separado y verificar recuperación según RECOVERY_REHEARSAL.md.
@@ -116,5 +126,5 @@ la transacción abortada debe reintentarse completa tras revisar el resultado; n
 omitir FK/triggers para forzar una baja. Las pruebas existentes de concurrencia
 cubren worker/vigilancia; no certifican todos los interleavings de baja/resolución.
 No se ejecutaron ensayos remotos ni se certificaron SMTP, push o pg_cron.
-Ninguna prueba local demuestra equivalencia con los cuerpos reales de Staging
-no recibidos.
+La comparación estática independiente de los cuerpos adjuntos cierra su revisión;
+las pruebas locales no sustituyen los ensayos funcionales posteriores en Staging.

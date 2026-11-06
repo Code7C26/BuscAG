@@ -207,6 +207,7 @@ prueba concurrente. No se ampliaron timeouts ni se deshabilitaron pruebas.
 Ver `SCHOOL_INSTALLATION_FINAL.md` para la revisión actual. Las cifras anteriores
 son evidencia histórica del commit previo; no sustituyen los resultados nuevos.
 Las 26 comprobaciones preflight verdaderas son un resultado comunicado por el
-operador. No se recibieron los cuerpos reales de las 13 funciones; 12 huellas
-distintas no permiten concluir si cambiaron formato, comportamiento o seguridad.
-No ejecutar la propuesta hasta cerrar esa comparación.
+operador. La revisión posterior de las 13 definiciones adjuntas está cerrada:
+13/13 cuerpos compatibles, conservando literales y sin lógica remota adicional.
+Ver SCHOOL_FUNCTION_REVIEW.md; no se requiere corregir notify_item_recovered.
+Seguir el procedimiento definitivo, con respaldo y autorización antes de escribir.

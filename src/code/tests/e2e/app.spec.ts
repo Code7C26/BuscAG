@@ -320,3 +320,18 @@ test("compact 320px layout keeps forms, profile and navigation inside the viewpo
     page.getByRole("heading", { name: /Lo importante/ }),
   ).toBeVisible();
 });
+
+test('a delayed closed detail module never blocks login, home or the publication form',async({page})=>{
+ await mockBackend(page);
+ let release!:()=>void;const held=new Promise<void>(resolve=>{release=resolve;});let requested=false;
+ await page.route('**/src/components/ItemDetailModal.tsx*',async route=>{requested=true;await held;await route.continue().catch(()=>{});});
+ try{
+  await page.goto('/');await login(page);
+  await expect(page.getByRole('heading',{name:/Lo importante/})).toBeVisible();
+  await expect.poll(()=>requested).toBe(true);
+  await page.getByRole('button',{name:'Publicar objeto',exact:true}).click();
+  const draft=page.getByPlaceholder('Ej: Mochila negra Jansport, iPhone 13, Llaves...');await draft.fill('Borrador conservado entre aperturas');
+  await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button',{name:'Publicar objeto',exact:true}).click();await expect(draft).toHaveValue('Borrador conservado entre aperturas');
+ }finally{release();}
+});

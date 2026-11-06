@@ -15,11 +15,19 @@ export async function schoolChecks(db, users) {
         `select (select count(*) from public.items) items,(select count(*) from public.messages) messages,(select count(*) from public.profiles) profiles,(select count(*) from public.notifications) notifications`,
       )
     ).rows;
+  // Run before feature tables exist: drift must fail before any extension is installed.
+  await db.exec('alter table public.items disable row level security');
+  await assert.rejects(db.exec(sql),e=>e.message.includes('RLS/ACL drift'));await db.exec('rollback');
+  assert.equal((await db.query("select to_regclass('buscag_private.object_tags') t")).rows[0].t,null);
+  await db.exec('alter table public.items enable row level security');
+  await db.exec('grant insert on public.items to authenticated');
+  await assert.rejects(db.exec(sql),e=>e.message.includes('RPC-only writes'));await db.exec('rollback');
+  await db.exec('revoke insert on public.items from authenticated');
   const before = await snapshot();
   await db.exec(sql);
   await db.exec(sql);
   assert.deepEqual(await snapshot(), before);
-  let checks = 1;
+  let checks = 2; // preflight rejection plus repeatable installation
   const test = async (name, fn) => {
     await fn();
     checks++;
@@ -312,6 +320,23 @@ export async function schoolChecks(db, users) {
       ).rows[0].status,
       "perdido",
     );
+  });
+  if(db.fork)await test('native watch transaction does not block match notification foreign keys',async()=>{
+    await db.exec('delete from buscag_private.match_jobs');
+    const content={...payload,title:'Amatista bolso azul',description:'Amatista bolso azul cierre'};
+    const l=(await call(a,'select * from public.publish_item_once(gen_random_uuid(),$1)',[JSON.stringify(content)])).rows[0];
+    const f=(await call(b,'select * from public.publish_item_once(gen_random_uuid(),$1)',[JSON.stringify({...content,status:'encontrado'})])).rows[0];
+    const watcher=await db.fork(),worker=await db.fork();
+    try{
+      await watcher.query('begin');await watcher.query('set local role authenticated');await watcher.query("select set_config('request.jwt.claim.sub',$1,true)",[a]);
+      await watcher.query('select public.set_item_watch($1,true,0,0,3)',[l.id]);
+      await worker.query('begin');await worker.query('set local role service_role');await worker.query("set local statement_timeout='1000ms'");
+      const result=(await worker.query('select public.process_match_jobs(20) r')).rows[0].r;
+      assert.equal(result.failures,0);assert.equal(result.notifications,2);await worker.query('commit');
+      assert.equal((await db.query('select count(*)::int n from buscag_private.match_notices where lost_id=$1 and found_id=$2',[l.id,f.id])).rows[0].n,2);
+    }finally{
+      await Promise.allSettled([watcher.query('rollback'),worker.query('rollback')]);await Promise.all([watcher.end(),worker.end()]);
+    }
   });
   await test("read-only readiness verifies RPC ACLs and scheduler fails closed without pg_cron", async () => {
     const audit = await readFile(

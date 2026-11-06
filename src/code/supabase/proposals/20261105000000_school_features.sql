@@ -4,9 +4,27 @@
 begin;
 set local lock_timeout='5s';
 set local statement_timeout='60s';
-do $$ begin
- if to_regclass('buscag_private.match_jobs') is null or to_regprocedure('public.publish_item_once(uuid,jsonb)') is null
- then raise exception 'Install and verify the reviewed staging baseline first'; end if;
+do $$
+declare relation_name text; signature text;
+begin
+ foreach relation_name in array array['buscag_private.match_jobs','buscag_private.match_control','buscag_private.match_notices','buscag_private.message_receipts','buscag_private.publication_receipts','public.public_profiles'] loop
+  if to_regclass(relation_name) is null then raise exception 'Install and verify the reviewed staging baseline first';end if;
+ end loop;
+ foreach signature in array array['public.publish_item_once(uuid,jsonb)','public.send_message_once(uuid,uuid,uuid,text)','public.match_backend_enabled()','public.process_match_jobs(integer)','public.validate_item_content_write()','buscag_private.match_words(text)'] loop
+  if to_regprocedure(signature) is null then raise exception 'Install and verify the reviewed staging baseline first';end if;
+ end loop;
+ if exists(select from pg_catalog.pg_roles where rolname in ('anon','authenticated') and (rolsuper or rolbypassrls))
+ or has_schema_privilege('anon','buscag_private','USAGE') or has_schema_privilege('authenticated','buscag_private','USAGE') then
+  raise exception 'Security baseline role/private-schema drift';end if;
+ foreach relation_name in array array['public.items','public.messages','public.profiles','public.notifications'] loop
+  if not exists(select from pg_catalog.pg_class where oid=to_regclass(relation_name) and relrowsecurity and pg_get_userbyid(relowner)=current_user)
+  or has_any_column_privilege('anon',relation_name,'SELECT,INSERT,UPDATE') or has_table_privilege('anon',relation_name,'DELETE,TRUNCATE') then
+   raise exception 'Security baseline RLS/ACL drift';end if;
+ end loop;
+ if has_any_column_privilege('authenticated','public.items','INSERT') or has_any_column_privilege('authenticated','public.messages','INSERT') then
+  raise exception 'Security baseline requires RPC-only writes';end if;
+ if not exists(select from pg_catalog.pg_attribute where attrelid='public.items'::regclass and attname='date' and not attisdropped and atttypid in ('date'::regtype,'timestamptz'::regtype)) then
+  raise exception 'Unsupported items.date type';end if;
 end $$;
 create table if not exists buscag_private.item_watches (
  item_id uuid primary key references public.items(id) on delete cascade,
@@ -63,11 +81,14 @@ begin
  select to_jsonb(w)-'user_id' into result from buscag_private.item_watches w where item_id=p_item;
  return result;
 end $$;
+-- Serialize content/ownership changes without blocking the worker's FK KEY SHARE
+-- locks. No RPC changes the item primary key. FOR UPDATE can otherwise stall or
+-- deadlock with a worker that already holds the corresponding queue row.
 create or replace function public.set_item_watch(p_item uuid,p_enabled boolean,p_lat double precision,p_lng double precision,p_radius double precision) returns jsonb
 language plpgsql security definer set search_path='' as $$
 declare i public.items%rowtype;
 begin
- select * into i from public.items where id=p_item for update;
+ select * into i from public.items where id=p_item for no key update;
  if auth.uid() is null or i.owner_id is distinct from auth.uid() or i.status is distinct from 'perdido' then raise exception 'Lost item owner required' using errcode='42501'; end if;
  if p_enabled is null or p_lat is null or p_lng is null or p_radius is null
  or not(p_lat between -90 and 90 and p_lng between -180 and 180 and p_radius between 0.1 and 100) then raise exception 'Invalid search zone' using errcode='22023'; end if;
@@ -204,7 +225,7 @@ create or replace function public.manage_object_tag(p_item uuid,p_enabled boolea
 language plpgsql security definer set search_path='' as $$
 declare t buscag_private.object_tags%rowtype;
 begin
- perform 1 from public.items where id=p_item and owner_id=auth.uid() for update;
+ perform 1 from public.items where id=p_item and owner_id=auth.uid() for no key update;
  if not found or auth.uid() is null then raise exception 'Owner required' using errcode='42501';end if;
  if p_enabled is null or p_rotate is null then raise exception 'Invalid tag option' using errcode='22023';end if;
  insert into buscag_private.object_tags(item_id,enabled) values(p_item,p_enabled)
@@ -228,7 +249,7 @@ create or replace function public.request_item_recovery(p_item uuid,p_partner uu
 language plpgsql security definer set search_path='' as $$
 declare i public.items%rowtype; r buscag_private.recovery_confirmations%rowtype; new_id uuid;
 begin
- select * into i from public.items where id=p_item for update;
+ select * into i from public.items where id=p_item for no key update;
  if auth.uid() is null or i.owner_id is distinct from auth.uid() or coalesce(i.status not in ('perdido','encontrado'),true) then raise exception 'Active item owner required' using errcode='42501';end if;
  if p_partner is null or p_partner=auth.uid() or not exists(select from public.messages where item_id=p_item and ((sender_id=auth.uid() and recipient_id=p_partner) or (recipient_id=auth.uid() and sender_id=p_partner))) then raise exception 'Conversation participant required' using errcode='42501';end if;
  select * into r from buscag_private.recovery_confirmations where item_id=p_item and state='pending';
@@ -249,7 +270,7 @@ begin
  -- Consistent lock order with request_item_recovery.
  select * into r from buscag_private.recovery_confirmations where id=p_request;
  if not found or auth.uid() is null or auth.uid() not in (r.owner_id,r.partner_id) then raise exception 'Participant required' using errcode='42501';end if;
- select * into i from public.items where id=r.item_id for update;
+ select * into i from public.items where id=r.item_id for no key update;
  select * into r from buscag_private.recovery_confirmations where id=p_request for update;
  if p_accept is null then raise exception 'Decision required' using errcode='22023';end if;
  if p_accept and auth.uid()<>r.partner_id then raise exception 'Other participant must confirm' using errcode='42501';end if;

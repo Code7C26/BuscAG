@@ -827,7 +827,6 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   }
 
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm font-semibold text-slate-500">Cargando...</div>}>
     <div className="app-shell min-h-screen flex flex-col font-sans text-slate-800">
       {/* Mensaje flotante de alerta (Toast) */}
       {toastMessage && (
@@ -1036,13 +1035,13 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
             2. VISTA DE MAPA INTERACTIVO (LEAFLET)
            ========================================== */}
         {activeTab === 'map' && (
-          <MapView
+          <Suspense fallback={<p role="status" className="p-5">Cargando mapa…</p>}><MapView
             items={itemsWithDistance}
             onSelectPublication={(selected) => setSelectedDetailItem(selected)}
             userLat={userLocation?.lat}
             userLng={userLocation?.lng}
             onLocateMe={requestUserLocation}
-          />
+          /></Suspense>
         )}
 
         {/* ==========================================
@@ -1119,19 +1118,22 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       />
 
       {/* Modal 1: Formulario para publicar nuevo objeto perdido o encontrado */}
+      <Suspense fallback={isPublishOpen?<p role="status">Cargando formulario de publicación…</p>:null}>
       <PublishModal
         isOpen={isPublishOpen}
         onClose={() => setIsPublishOpen(false)}
         onSubmit={handlePublishSubmit}
         currentUser={currentUser}
       />
+      </Suspense>
 
-      {editingItem && <PublishModal
+      {editingItem && <Suspense fallback={<p role="status">Cargando edición…</p>}><PublishModal
         isOpen={Boolean(editingItem)} initialItem={editingItem}
         onClose={() => setEditingItem(null)} onSubmit={handleEditSubmit} currentUser={currentUser}
-      />}
+      /></Suspense>}
 
       {/* Modal 2: Vista detallada con fotos, descripción completa, mapa y acciones */}
+      <Suspense fallback={selectedDetailItem&&!viewingPublicUser?<p role="status">Cargando detalle…</p>:null}>
       <ItemDetailModal
         item={viewingPublicUser?null:items.find(item => item.id === selectedDetailItem?.id) ?? null}
         onClose={() => setSelectedDetailItem(null)}
@@ -1149,8 +1151,9 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
           setSelectedMatchComparison(match);
         }}
       />
+      </Suspense>
 
-      {viewingPublicUser&&<PublicProfileModal user={viewingPublicUser} items={items} onClose={()=>setViewingPublicUser(null)} onViewItem={item=>{setViewingPublicUser(null);setSelectedDetailItem(item);}}/>}
+      {viewingPublicUser&&<Suspense fallback={<p role="status">Cargando perfil público…</p>}><PublicProfileModal user={viewingPublicUser} items={items} onClose={()=>setViewingPublicUser(null)} onViewItem={item=>{setViewingPublicUser(null);setSelectedDetailItem(item);}}/></Suspense>}
 
       {/* Modal 3: Chat directo y opciones de contacto (llamada/WhatsApp) */}
       <ContactModal
@@ -1168,6 +1171,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       />
 
       {/* Modal 4: Comparación lado a lado de coincidencias sugeridas */}
+      <Suspense fallback={selectedMatchComparison?<p role="status">Cargando comparación…</p>:null}>
       <MatchComparisonModal
         match={matches.find(match => match.id === selectedMatchComparison?.id) ?? null}
         isOpen={Boolean(selectedMatchComparison)}
@@ -1182,8 +1186,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
         }}
         currentUser={currentUser}
       />
+      </Suspense>
       <FaqChat />
     </div>
-    </Suspense>
   );
 }

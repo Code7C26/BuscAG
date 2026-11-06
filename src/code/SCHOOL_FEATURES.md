@@ -44,7 +44,8 @@ No sustituir esta distinción por resultados del navegador con APIs simuladas.
    nuevas por objeto/hora. Registro conserva participantes/fechas y chat; FK RESTRICT
    evita borrar el objeto con historial, incluso cancelado. Una confirmación bilateral
    no puede reabrirse mediante edición de estado. No existe purga o retención temporal
-   automática; corrección excepcional requiere revisión administrativa. Recuperar
+   automática; las FK también bloquean la eliminación de cuentas vinculadas.
+   Corrección excepcional o anonimización requiere revisión administrativa. Recuperar
    individualmente sigue significando declaración del dueño, no certificación bilateral.
 6. **QR:** dueño genera PNG local, descarga, reemplaza o revoca. Token UUID aleatorio,
    sin teléfono/correo en URL ni proveedor QR externo. RPC anónima sólo devuelve
@@ -68,9 +69,16 @@ No sustituir esta distinción por resultados del navegador con APIs simuladas.
    Confirmar que el
    destino de SQL Editor sea **BuscAG-Staging, yiarlhpbgkofhhipkfha** y que las nueve
    migraciones y smoke anteriores sigan aprobados. No usar el proyecto original.
+   Obtener un catálogo reciente de **staging** con
+   `supabase/audit/production_diagnostic.sql` y revisar las expresiones RLS, no sólo
+   nombres de políticas/historial. Usar rol postgres/propietario. Si matching está
+   activo, autorizar su pausa antes del mantenimiento; conservar cola y ledger.
 2. Revisar/aprobar `supabase/proposals/20261105000000_school_features.sql`;
    aplicar **sólo ese archivo** en staging. Es transaccional y repetible, tiene
-   timeout de locks; no reescribe datos existentes ni cambia su tipo DATE.
+   timeout de locks; no reescribe datos existentes ni cambia su tipo DATE. El
+   preflight rechaza dependencias/RLS/ACL incompatibles, tipos no admitidos o roles
+   privilegiados antes de instalar la extensión. No reemplaza la revisión de las
+   expresiones de políticas del catálogo real.
    Detenerse ante errores; no omitir sentencias ni conceder permisos amplios.
    El smoke/instalador de la línea base se ejecuta **antes** de esta extensión:
    su comprobación estricta de triggers desconocidos puede detenerlo después de
@@ -160,7 +168,7 @@ entorno; no se reutilizó la clave del proyecto original para intentar conectars
 
 ## Resultados locales de esta entrega
 
-- `qa:local`: TypeScript y build aprobados; 121 casos de lógica/DOM y 48 E2E
+- `qa:local`: TypeScript y build aprobados; 121 casos de lógica/DOM y 50 E2E
   escritorio/móvil aprobados. Los E2E interceptan HTTP/Realtime; incluyen cambio
   de cuenta, devolución bilateral, controles ajenos, radio, preferencia y QR.
 - Runner de staging: ocho pruebas de protección aprobadas; una usa el SDK real
@@ -168,8 +176,8 @@ entorno; no se reutilizó la clave del proyecto original para intentar conectars
   antes de subir imágenes o crear publicaciones. No es una prueba de servicios reales.
 - El PNG QR generado por el frontend se decodificó en el navegador y coincidió con
   su URL esperada. Falta escaneo físico con la URL pública de staging.
-- SQL aislado: 12 grupos nuevos en cada una de tres variantes, tanto en PGlite como
-  PostgreSQL 17 nativo. La línea base nativa pasó 61/61/64 comprobaciones según
+- SQL aislado: tres variantes; 13 grupos por variante en PGlite y 14 por
+  variante en PostgreSQL 17 nativo (incluye concurrencia real). La línea base nativa pasó 61/61/64 comprobaciones según
   esquema, con prueba integrada de orden de activación. PostgreSQL nativo corrió
   sin red/puertos, con almacenamiento efímero; se retiró ese contenedor al terminar.
 - PWA: una prueba de build/navegador aprobada. Presentación: dos escenarios de
@@ -184,3 +192,7 @@ entorno; no se reutilizó la clave del proyecto original para intentar conectars
 - No se ejecutaron contra Supabase real las RPC nuevas, SMTP, push ni pg_cron.
   Tampoco se ejecutó PowerShell aquí; usar el ensayo School en Windows después
   de aprobar la activación. La restauración integral de Supabase sigue pendiente.
+
+Revisión adicional: [CI_E79322C_REVIEW.md](CI_E79322C_REVIEW.md) documenta el fallo
+reproducido de carga, aislamiento de Suspense, el bloqueo de FK del worker y su
+prueba concurrente. No se ampliaron timeouts ni se deshabilitaron pruebas.

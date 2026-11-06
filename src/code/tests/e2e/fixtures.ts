@@ -147,6 +147,7 @@ export async function mockBackend(
                 : [];
       if (path.endsWith("/rpc/buscag_capabilities"))
         data = { queued_match_notifications: false };
+      else if(path.endsWith('/rpc/resolve_object_tag'))data=items[0]?{item_id:items[0].id,category:items[0].category,status:items[0].status}:null;
       else if (path.endsWith('/rpc/recovery_context')) {
         const item=items.find(i=>i.id===body.p_item);
         data={version:2,status:item?.status,partners:[],requests:store.recoveries.filter(r=>r.item_id===body.p_item)};
@@ -217,11 +218,13 @@ export async function mockBackend(
       ) {
         const rows = table === "messages" ? messages : notifications;
         data = rows
-          .filter((r) =>
-            table === "messages"
-              ? r.recipient_id === actor.id
-              : r.user_id === actor.id,
-          )
+          .filter((r) => (table === "messages" ? r.recipient_id === actor.id : r.user_id === actor.id)
+            && [...url.searchParams].every(([column,filter])=>{
+              if(!(column in r))return true;
+              if(filter.startsWith('eq.'))return String(r[column])===filter.slice(3);
+              if(filter.startsWith('in.('))return filter.slice(4,-1).split(',').map(id=>id.replaceAll('"','')).includes(String(r[column]));
+              return true;
+            }))
           .map((r) => {
             r.is_read = true;
             return { id: r.id };
@@ -234,6 +237,10 @@ export async function mockBackend(
         Id: crypto.randomUUID(),
       };
     const total = Array.isArray(data) ? data.length : 1;
+    if(Array.isArray(data)&&request.method()==='GET') data=data.filter(row=>[...url.searchParams].every(([column,filter])=>{
+      if(!(column in row))return true;if(filter.startsWith('eq.'))return String(row[column])===filter.slice(3);
+      if(filter.startsWith('in.('))return filter.slice(4,-1).split(',').map(id=>id.replaceAll('"','')).includes(String(row[column]));return true;
+    }));
     if (Array.isArray(data)) {
       const offset = Number(url.searchParams.get("offset") || 0);
       data = data.slice(

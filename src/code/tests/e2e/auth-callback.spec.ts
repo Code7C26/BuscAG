@@ -1,5 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { mockBackend, userId } from "./fixtures";
+test('registration from a QR keeps its opaque destination in the email redirect',async({page})=>{
+ const backend=await mockBackend(page),tag='10000000-0000-4000-8000-000000000001';
+ await page.goto('/?tag='+tag);await page.getByRole('button',{name:'Ingresar para contactar',exact:true}).click();
+ await page.getByRole('button',{name:'Regístrate',exact:true}).click();await page.getByLabel('Nombre completo',{exact:true}).fill('Usuario de ensayo');await page.getByLabel('Correo electrónico',{exact:true}).fill('qr-test@example.invalid');await page.getByLabel('Contraseña',{exact:true}).fill('synthetic-password');
+ await page.locator('button[type=submit]').click();await expect(page.getByRole('status')).toContainText('no garantiza la entrega');
+ expect(backend.calls.find(c=>c.path==='/auth/v1/signup')?.redirect).toBe('http://127.0.0.1:3001/?tag='+tag);
+});
 function callback(type: "signup" | "recovery") {
   const payload = Buffer.from(
     JSON.stringify({

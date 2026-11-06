@@ -89,7 +89,7 @@ function getFaqAnswer(question: string) {
   return matchingEntry?.answer ?? 'No encontré una respuesta para eso en las preguntas frecuentes. Prueba con «publicar», «buscar», «contactar», «foto», «seguridad» o «gratis».';
 }
 
-export function FaqChat() {
+export function FaqChat({placement='default'}:{placement?:'default'|'map'}) {
   const [isOpen, setIsOpen] = useState(false);
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -113,7 +113,7 @@ export function FaqChat() {
   };
 
   return (
-    <div className="fixed bottom-24 right-4 z-50 sm:bottom-6 sm:right-6">
+    <div className={`faq-floating fixed bottom-24 right-4 z-50 sm:bottom-6 sm:right-6 ${placement==='map'?'faq-floating--map':''}`}>
       {isOpen && (
         <section
           aria-label="Chat de preguntas frecuentes"

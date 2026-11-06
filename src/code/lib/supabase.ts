@@ -162,6 +162,7 @@ export interface Database {
       set_item_follow:{Args:{p_item:string;p_follow:boolean;p_notify:boolean};Returns:boolean}
       my_item_follow:{Args:{p_item:string};Returns:{following:boolean;notify:boolean}}
       rate_recovery:{Args:{p_request:string;p_stars:number};Returns:string}
+      declare_independent_recovery:{Args:{p_item:string;p_reason:string};Returns:string}
       received_ratings:{Args:Record<string,never>;Returns:any[]}
       school_features:{Args:Record<string,never>;Returns:{version:number;matching_enabled:boolean}}
       get_item_watch:{Args:{p_item:string};Returns:import('./schoolFeatures').Watch|null}

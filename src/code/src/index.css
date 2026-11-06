@@ -7,6 +7,16 @@
 .community-tools button:disabled { opacity: .55; cursor: default; }
 .community-tools summary { font-weight: 650; cursor: pointer; padding: .4rem 0; }
 .community-tools button:focus-visible, .community-tools summary:focus-visible { outline: 3px solid #316b78; outline-offset: 3px; }
+.connection-status { padding: .5rem 1rem; background: #fdf2c8; color: #493e1c; font-size: .8rem; text-align: center; }
+.bottom-nav__content { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); }
+.bottom-nav__content > button { width: 100%; min-width: 0; }
+.bottom-nav__content > div { min-width: 0; }
+.map-view { height: calc(100dvh - 11rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); min-height: 160px; }
+.app-shell--map .app-main { padding-bottom: 0; }
+.map-view .leaflet-container { touch-action: none; overscroll-behavior: contain; }
+.map-view__preview { left: 4.5rem; right: 4.5rem; bottom: 1rem; }
+.faq-floating--map { left: 1rem; right: auto; bottom: calc(6rem + env(safe-area-inset-bottom)); }
+@media (min-width: 1024px) { .profile-view { max-width: 70rem; } }
 @theme {
   --color-slate-50: #faf7ef;
   --color-slate-100: #f1f5f1;
@@ -1459,3 +1469,15 @@ a:focus-visible,
 }
 
 .presentation-notice { background: var(--brand-cream); color: var(--brand-petroleum); border-bottom: 1px solid var(--brand-teal); padding: .6rem 1rem; text-align: center; font-size: .8rem; font-weight: 600; }
+
+@media (min-width: 1024px) {
+  .account-layout { grid-template-columns: minmax(15rem,18rem) minmax(0,1fr); gap: 2rem; }
+  .account-sidebar { position: sticky; top: calc(6rem + env(safe-area-inset-top)); }
+  .account-panel--settings { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 1rem; align-items: start; }
+  .account-panel--settings > .section-heading { grid-column: 1 / -1; }
+  .account-panel--settings > .community-tools { grid-column: 1; grid-row: 2 / span 3; }
+  .account-panel--settings > .settings-group, .account-panel--settings > .settings-information { grid-column: 2; }
+}
+.community-tools { min-width: 0; overflow-wrap: anywhere; }
+.modal-dialog { max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+@media (max-width: 640px) { .modal-dialog input, .modal-dialog textarea, .community-tools select { font-size: 16px; } }

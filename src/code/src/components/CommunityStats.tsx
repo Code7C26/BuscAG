@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { CommunityStats as Stats } from "../../lib/schoolFeatures";
 export function CommunityStats() {
+  const revision=useRef(0);
   const [stats, setStats] = useState<Stats | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const load = async () => {
     if (!supabase || busy) return;
+    const version=++revision.current;
     setBusy(true);
     setError("");
     try {
@@ -20,13 +22,14 @@ export function CommunityStats() {
         )
       )
         throw Error();
-      setStats(r.data);
+      if(r.data.lost+r.data.found+r.data.recovered>r.data.publications)throw Error();
+      if(version===revision.current)setStats(r.data);
     } catch {
-      setError(
-        "Estadísticas no disponibles. Requieren el backend escolar habilitado.",
+      if(version===revision.current)setError(
+        "Estadísticas no disponibles. Revisá la conexión o intentá más tarde.",
       );
     } finally {
-      setBusy(false);
+      if(version===revision.current)setBusy(false);
     }
   };
   return (
@@ -34,6 +37,7 @@ export function CommunityStats() {
       className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
       aria-label="Impacto de la comunidad"
     >
+      <p className="text-xs font-semibold">Estadísticas de la comunidad</p>
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-bold">Cada encuentro cuenta</h2>
         <button
@@ -53,6 +57,7 @@ export function CommunityStats() {
           {error}
         </p>
       )}
+      {(stats||busy)&&<button className="underline text-sm" onClick={()=>{++revision.current;setStats(null);setBusy(false);setError('');}}>Cerrar estadísticas</button>}
       {stats && (
         <>
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -68,11 +73,8 @@ export function CommunityStats() {
               </div>
             ))}
           </dl>
-          <p className="text-xs text-slate-500">
-            Datos visibles para tu cuenta según RLS. {stats.mine} publicaciones
-            tuyas. Recuperado indica el estado declarado; no certifica una
-            devolución bilateral.
-          </p>
+          {stats.publications>stats.lost+stats.found+stats.recovered&&<p className="text-xs">Sin estado informado: {stats.publications-stats.lost-stats.found-stats.recovered}</p>}
+          <p className="text-xs text-slate-500">Publicaciones visibles para tu cuenta; {stats.mine} son tuyas. Los recuperados incluyen declaraciones individuales y devoluciones confirmadas entre personas.</p>
         </>
       )}
     </section>

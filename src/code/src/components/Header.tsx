@@ -1,12 +1,13 @@
 import {Avatar} from './Avatar';
 import React from 'react';
-import { Bell, Compass, Sparkles } from 'lucide-react';
+import { Bell, Compass, Sparkles, MessageSquare } from 'lucide-react';
 import { User, TabType } from '../types';
 
 interface HeaderProps {
   currentUser: User;
   unreadNotificationsCount: number;
   matchesCount?: number;
+  unreadMessagesCount?: number;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
   onSelectTab: (tab: TabType) => void;
@@ -64,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </button>
 
+          <button className="hidden sm:flex gap-1 items-center text-xs font-bold p-2" onClick={()=>onSelectTab('messages')} aria-label="Abrir mensajes"><MessageSquare className="w-4 h-4"/>Mensajes</button>
           {/* Notifications button */}
           <button
             onClick={onOpenNotifications}

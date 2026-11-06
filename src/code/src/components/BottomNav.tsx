@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Map, Plus, Bell, User, Sparkles } from 'lucide-react';
+import { Home, Map, Plus, Bell, User, Sparkles, MessageSquare } from 'lucide-react';
 import { TabType } from '../types';
 
 interface BottomNavProps {
@@ -8,6 +8,7 @@ interface BottomNavProps {
   onOpenPublish: () => void;
   unreadNotificationsCount: number;
   matchesCount?: number;
+  unreadMessagesCount?: number;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -15,6 +16,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onSelectTab,
   onOpenPublish,
   unreadNotificationsCount,
+  unreadMessagesCount = 0,
   matchesCount = 0
 }) => {
   return (
@@ -57,6 +59,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
         {/* ✨ Coincidencias / Matches */}
         <button
+          aria-label="Coincidencias"
           onClick={() => onSelectTab('matches')}
           className={`relative flex flex-col items-center justify-center w-14 py-1 rounded-xl transition cursor-pointer ${
             activeTab === 'matches' ? 'text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-800'
@@ -70,9 +73,12 @@ export const BottomNav: React.FC<BottomNavProps> = ({
               </span>
             )}
           </div>
-          <span className="text-[11px] mt-0.5">Coincidencias</span>
+          <span className="text-[11px] mt-0.5">Coincid.</span>
         </button>
 
+        <button aria-current={activeTab==='messages'?'page':undefined} onClick={()=>onSelectTab('messages')} className="relative flex flex-col items-center justify-center w-14 py-1 rounded-xl" aria-label="Mensajes">
+          <MessageSquare className="w-5 h-5"/><span className="text-[11px] mt-0.5">Mensajes</span>{unreadMessagesCount>0&&<span className="absolute -top-1 right-0 rounded-full bg-blue-700 text-white text-[9px] px-1">{unreadMessagesCount}</span>}
+        </button>
         {/* 👤 Perfil */}
         <button
           onClick={() => onSelectTab('profile')}

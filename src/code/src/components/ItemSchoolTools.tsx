@@ -1,6 +1,5 @@
 import { SearchZoneMap } from "./SearchZoneMap";
 import React, { useEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
 import { supabase } from "../../lib/supabase";
 import {
   featureFailure,
@@ -93,7 +92,7 @@ export function ItemSchoolTools({
         setWatch(r.data);
         setNotice(
           enabled
-            ? "Vigilancia guardada. Los avisos requieren el worker activo."
+            ? "Vigilancia guardada. La recepción de avisos depende de la disponibilidad del servicio."
             : "Vigilancia desactivada.",
         );
       }
@@ -121,6 +120,7 @@ export function ItemSchoolTools({
         return;
       }
       const link = objectTagUrl(window.location.origin, r.data.token);
+      const {default:QRCode}=await import('qrcode');
       const image = await QRCode.toDataURL(link, {
         width: 280,
         margin: 4,
@@ -130,7 +130,7 @@ export function ItemSchoolTools({
         setUrl(link);
         setQr(image);
         setNotice(
-          "QR generado localmente. Sólo funcionará en otros dispositivos si esta dirección está publicada.",
+          "Etiqueta lista para compartir. El código anterior deja de funcionar si lo reemplazás.",
         );
       }
     });
@@ -153,8 +153,7 @@ export function ItemSchoolTools({
       {open && (
         <>
           <p className="text-xs text-slate-600">
-            Herramientas conectadas a Supabase. Su activación requiere el
-            backend escolar; no hay avisos simulados.
+            Administrá las alertas de este objeto y su etiqueta de contacto.
           </p>
           {notice && (
             <p role="status" className="text-sm">
@@ -193,12 +192,11 @@ export function ItemSchoolTools({
                 Recibir avisos internos de coincidencias en mi cuenta
               </label>
               <p className="text-xs text-slate-600">
-                Motor en segundo plano:{" "}
+                Avisos de coincidencias:{" "}
                 {worker
-                  ? "habilitado; su ejecución depende del worker programado"
-                  : "pendiente de activación"}
-                . No se usa seguimiento continuo de GPS. Push y email no están
-                certificados.
+                  ? "habilitados; la recepción puede demorar"
+                  : "todavía no habilitados"}
+                . La zona no hace seguimiento continuo de GPS.
               </p>
               {owner && item.status === "perdido" && (
                 <fieldset disabled={busy} className="space-y-3">
@@ -222,6 +220,8 @@ export function ItemSchoolTools({
                         : "Vigilancia desactivada"
                       : "Sin zona personalizada: se conserva el matching general existente."}
                   </p>
+                  {watch&&<p className="text-xs">Radio: {watch.radius_km} km · Centro: {watch.lat.toFixed(4)}, {watch.lng.toFixed(4)}{watch.updated_at&&` · Actualización: ${new Date(watch.updated_at).toLocaleString()}`}</p>}
+                  <p className="text-xs">La zona filtra los avisos de coincidencias compatibles. No es una alerta GPS continua ni un aviso de proximidad independiente.</p>
                   <div className="grid grid-cols-2 gap-2">
                     <label className="text-sm">
                       Latitud
@@ -276,12 +276,7 @@ export function ItemSchoolTools({
                     >
                       Activar o actualizar vigilancia
                     </button>
-                    <button
-                      className="rounded-xl border px-3 py-2 text-sm"
-                      onClick={() => updateWatch(false)}
-                    >
-                      Desactivar vigilancia
-                    </button>
+                    {watch?.enabled&&<button className="rounded-xl border px-3 py-2 text-sm" onClick={()=>updateWatch(false)}>Desactivar vigilancia</button>}
                   </div>
                 </fieldset>
               )}

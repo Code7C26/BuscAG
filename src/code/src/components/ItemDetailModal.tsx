@@ -336,16 +336,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Enlace de llamada rápida si el publicador configuró su teléfono */}
-            {item.user.phone && !isOwner && (
-              <a
-                href={`tel:${item.user.phone}`}
-                className="p-2.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-xl transition cursor-pointer"
-                title="Llamar directamente por teléfono"
-              >
-                <Phone className="w-4 h-4" />
-              </a>
-            )}
+
           </div>
         </div>
 
@@ -381,8 +372,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               )}
             </div>
           ) : (
-            /* Si es un visitante o persona que encontró/perdió el objeto */
-            <button
+            <>
+            {isRecovered&&!messages.some(message=>message.itemId===item.id&&((message.senderId===currentUser.id&&message.receiverId===item.user.id)||(message.receiverId===currentUser.id&&message.senderId===item.user.id))) ? <p className="text-sm font-semibold">Objeto recuperado · se conserva en el historial</p> : (<button
               onClick={() => {
                 onClose();
                 onContact(item);
@@ -390,8 +381,9 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white rounded-2xl font-extrabold text-sm sm:text-base shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 fill-current" />
-              Contactar al Publicador
-            </button>
+              {isRecovered?'Abrir conversación existente':'Contactar al Publicador'}
+            </button>)}
+            </>
           )}
         </div>
       </div>

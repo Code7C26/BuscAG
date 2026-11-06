@@ -29,6 +29,13 @@ export const MapView: React.FC<MapViewProps> = ({
   userLng,
   onLocateMe
 }) => {
+  const viewportRef=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    window.scrollTo({top:0,behavior:'instant'});
+    const resize=()=>{const element=viewportRef.current;if(!element)return;const nav=document.querySelector('.bottom-nav')?.getBoundingClientRect().height??80;element.style.height=`${Math.max(160,(window.visualViewport?.height??window.innerHeight)-element.getBoundingClientRect().top-nav-12)}px`;leafletMapRef.current?.invalidateSize();};
+    resize();window.addEventListener('resize',resize);window.visualViewport?.addEventListener('resize',resize);
+    return()=>{window.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('resize',resize);};
+  },[]);
   // Referencia al elemento <div> contenedor del mapa en el DOM
   const mapRef = useRef<HTMLDivElement>(null);
   // Instancia activa del mapa de Leaflet
@@ -255,7 +262,7 @@ export const MapView: React.FC<MapViewProps> = ({
   };
 
   return (
-    <div className="map-view relative w-full h-[calc(100vh-4rem-4rem)] min-h-[500px] overflow-hidden flex flex-col">
+    <div ref={viewportRef} className="map-view relative w-full overflow-hidden flex flex-col">
       {/* Barra superior flotante de búsqueda y filtros rápidos */}
       <div className="absolute top-3 left-3 right-3 z-20 max-w-xl mx-auto space-y-2">
         {/* Campo de búsqueda sobre el mapa */}
@@ -344,7 +351,7 @@ export const MapView: React.FC<MapViewProps> = ({
         title="Centrar en mi ubicación actual"
       >
         <Navigation className={`w-4 h-4 ${locating ? 'animate-spin text-blue-600' : 'fill-blue-600'}`} />
-        <span>{locating ? 'Ubicando...' : 'Mi ubicación'}</span>
+        <span className="hidden sm:inline">{locating ? 'Ubicando...' : 'Mi ubicación'}</span>
       </button>
 
       {/* Tarjeta flotante con vista previa del objeto seleccionado al hacer clic en un pin */}

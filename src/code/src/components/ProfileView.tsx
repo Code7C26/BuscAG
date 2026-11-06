@@ -167,8 +167,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <dd>{recovered.length}</dd>
             </div>
             <div>
-              <dt>Calificación</dt>
-              <dd>{currentUser.ratingCount ? `${currentUser.rating}/5 (${currentUser.ratingCount})` : 'Sin valoraciones'}</dd>
+              <dt>{currentUser.ratingCount ? `Calificación · ${currentUser.ratingCount} valoraciones` : 'Sin valoraciones'}</dt>
+              <dd>{currentUser.ratingCount ? `${currentUser.rating}/5` : '—'}</dd>
             </div>
           </dl>
           <section className="account-privacy-note">
@@ -210,7 +210,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             id={`${tabId}-panel`}
             aria-labelledby={`${tabId}-${activeSubTab}`}
             tabIndex={0}
-            className="account-panel"
+            className={`account-panel ${activeSubTab==='settings'?'account-panel--settings':''}`}
           >
             {activeSubTab === "settings" ? (
               <>

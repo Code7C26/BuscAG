@@ -1,4 +1,5 @@
 export interface Watch {
+  updated_at?: string;
   item_id: string;
   enabled: boolean;
   lat: number;
@@ -11,6 +12,9 @@ export interface Recovery {
   owner_id: string | null;
   partner_id: string | null;
   mode?: "bilateral" | "individual";
+  owner_statement?: string | null;
+  resolved_by?: string | null;
+  resolved_name?: string | null;
   owner_name?: string;
   partner_name?: string;
   disputed?: boolean;
@@ -67,4 +71,4 @@ export function watchZoneError(
     : null;
 }
 export const featureFailure =
-  "No se pudo completar la operación. Verificá la conexión y que las funciones escolares estén instaladas. No se confirmó ningún cambio.";
+  "No se pudo completar la operación. Verificá la conexión o intentá más tarde. No se confirmó ningún cambio.";

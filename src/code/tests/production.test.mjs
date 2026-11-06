@@ -83,7 +83,7 @@ function resetMock() {
     push:{ status:async()=>false,enable:async()=>{},disable:async()=>{},disconnect:async()=>{} }
   };
   mock.client={
-    rpc(){ return {single:async()=>({data:null,error:{code:'PGRST202'}})}; },
+    rpc(name,args){if(name==='send_message_once'){const query={table:'messages',operation:'rpc',payload:{text:args.p_text,item_id:args.p_item_id,recipient_id:args.p_recipient_id},filters:[]};mock.queries.push(query);return {single:()=>mock.result(query)};}return {single:async()=>({data:null,error:{code:'PGRST202'}})};},
     auth:{onAuthStateChange(cb){ mock.listeners.push(cb);return {data:{subscription:{unsubscribe(){mock.listeners=mock.listeners.filter(x=>x!==cb);}}}};},
       getSession:()=>startup.promise,signOut:async()=>{ mock.emit(null);return {error:null}; }},
     channel(){ const c={handlers:[],on(_type,filter,cb){this.handlers.push({filter,cb});return this;},subscribe(cb){this.status=cb;return this;}};mock.channels.push(c);return c;},
@@ -428,7 +428,7 @@ test('new publications never silently use a demo photo and successful saves clea
 });
 
 
-test('dropping a file validates it and reads a real selected image without navigation',async()=>{
+test('dropping a file prevents navigation and rejects invalid or undecodable image payloads',async()=>{
   const {host}=await mount(PublishModal,{isOpen:true,currentUser:user('a'),onClose:()=>{},onSubmit:async()=>{}},false,false);
   const target=host.querySelector('[aria-label="Subir foto"]');
   const OriginalReader=globalThis.FileReader;
@@ -442,7 +442,7 @@ test('dropping a file validates it and reads a real selected image without navig
   const drop=async file=>act(async()=>{const event=new window.Event('drop',{bubbles:true,cancelable:true});Object.defineProperty(event,'dataTransfer',{value:{files:[file]}});target.dispatchEvent(event);await readFinished;assert.equal(event.defaultPrevented,true);});
   try {
   await drop(new window.File(['not-image'],'bad.txt',{type:'text/plain'}));assert.match(host.textContent,/JPG, PNG o WebP/);assert.equal(host.querySelector('img'),null);
-  await drop(new window.File(['synthetic-image'],'photo.png',{type:'image/png'}));assert.match(host.querySelector('img').src,/^data:image\/png/);
+  await drop(new window.File(['synthetic-image'],'photo.png',{type:'image/png'}));await settle();assert.equal(host.querySelector('img'),null);assert.match(host.textContent,/No se pudo abrir la foto/);
   } finally {globalThis.FileReader=OriginalReader;}
 });
 
@@ -591,4 +591,23 @@ test('top modal still handles Escape when an asynchronous disabled control drops
  let closed=0;await mount(ItemDetailModal,{item:item(),currentUser:user('a'),onClose:()=>{closed++;},onContact:()=>{},allItems:[]});
  document.activeElement?.blur();assert.equal(document.activeElement,document.body);
  await act(async()=>document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true})));assert.equal(closed,1);
+});
+
+
+test('missing idempotent messaging service never falls back to an unsafe INSERT during retries',async()=>{
+  await mount(App);await emit('b');
+  mock.client.rpc=()=>({single:async()=>({data:null,error:{code:'PGRST202'}})});
+  await act(async()=>{await assert.rejects(mock.views.ContactModal.onSendMessage('item-a','Pending message','a'));});
+  assert.equal(mock.queries.filter(q=>q.table==='messages'&&q.operation==='insert').length,0);
+  assert.equal(mock.views.ContactModal.outbox[0].retryable,false);
+});
+
+test('a stale reconnect read cannot erase a message confirmed while that read was in flight',async()=>{
+  await mount(App);await emit('b');const pending=defer();let reads=0;
+  const saved={id:'acknowledged-during-read',itemId:'item-a',senderId:'b',receiverId:'a',text:'Confirmed',timestamp:new Date().toISOString(),isRead:false};
+  mock.data.loadMessages=async()=>++reads===1?pending.promise:[saved];mock.result=async()=>({data:saved,error:null});
+  await act(async()=>mock.channels.at(-1).handlers.find(h=>h.filter.table==='messages').cb());
+  await act(async()=>mock.views.ContactModal.onSendMessage('item-a','Confirmed','a'));
+  await act(async()=>pending.resolve([]));await settle();
+  assert.ok(mock.views.ContactModal.messages.some(row=>row.id===saved.id));assert.ok(reads>=2);
 });

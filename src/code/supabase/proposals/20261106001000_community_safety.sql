@@ -4,9 +4,41 @@ begin;
 set local lock_timeout='5s'; set local statement_timeout='60s';
 do $$ begin
  if to_regprocedure('public.recovery_context(uuid)') is null then raise exception 'Install secure recovery first';end if;
+ if exists(select from pg_class where oid in('public.profiles'::regclass,'public.items'::regclass,'public.messages'::regclass,'public.notifications'::regclass) and not relrowsecurity)
+ or has_any_column_privilege('anon','public.profiles','SELECT,INSERT,UPDATE')
+ or has_table_privilege('authenticated','public.profiles','INSERT,UPDATE')
+ or has_any_column_privilege('authenticated','public.messages','INSERT') then
+ raise exception 'Security baseline drift: review ACL/RLS before installing community safety';end if;
 end $$;
 alter table public.profiles add column if not exists phone_shared boolean not null default false;
 alter table public.profiles add column if not exists rating_count integer not null default 0;
+revoke insert(rating,rating_count,phone_shared),update(rating,rating_count,phone_shared) on public.profiles from public,anon,authenticated;
+-- Restrictive policies intersect permissive legacy policies; never weaken them.
+drop policy if exists community_profiles_read_self on public.profiles;
+create policy community_profiles_read_self on public.profiles as restrictive for select to authenticated using(id=(select auth.uid()));
+drop policy if exists community_profiles_update_self on public.profiles;
+create policy community_profiles_update_self on public.profiles as restrictive for update to authenticated using(id=(select auth.uid())) with check(id=(select auth.uid()));
+drop policy if exists community_profiles_insert_self on public.profiles;
+create policy community_profiles_insert_self on public.profiles as restrictive for insert to authenticated with check(id=(select auth.uid()));
+alter table buscag_private.recovery_confirmations add column if not exists owner_statement text check(char_length(owner_statement)<=500);
+alter table buscag_private.recovery_confirmations add column if not exists resolved_by uuid;
+create or replace function buscag_private.record_recovery_decision() returns trigger
+language plpgsql set search_path='' as $$ begin
+ if new.state in('confirmed','cancelled') and (tg_op='INSERT' or new.state is distinct from old.state) then new.resolved_by:=auth.uid();end if;
+ return new;
+end $$;
+revoke all on function buscag_private.record_recovery_decision() from public,anon,authenticated,service_role;
+drop trigger if exists record_recovery_decision on buscag_private.recovery_confirmations;
+create trigger record_recovery_decision before insert or update of state on buscag_private.recovery_confirmations for each row execute function buscag_private.record_recovery_decision();
+create or replace function buscag_private.anonymize_recovery_participant() returns trigger
+language plpgsql security definer set search_path='' as $$ begin
+ update buscag_private.recovery_confirmations
+ set owner_id=case when owner_id=old.id then null else owner_id end,
+ partner_id=case when partner_id=old.id then null else partner_id end,
+ resolved_by=case when resolved_by=old.id then null else resolved_by end
+ where owner_id=old.id or partner_id=old.id or resolved_by=old.id;
+ return old;
+end $$;
 create or replace function buscag_private.validate_phone_update() returns trigger
 language plpgsql set search_path='' as $$ begin
  if new.phone is distinct from old.phone and (new.phone is null or (new.phone<>'' and new.phone !~ '^\+[1-9][0-9]{7,14}$')) then
@@ -32,10 +64,12 @@ create table if not exists buscag_private.reports (
  created_at timestamptz not null default now(),updated_at timestamptz not null default now(),
  unique(reporter_id,target_kind,target_id));
 create index if not exists reports_queue on buscag_private.reports(state,created_at);
+create index if not exists reports_actor_rate on buscag_private.reports(reporter_id,created_at);
 create table if not exists buscag_private.moderation_actions (
  id uuid primary key default gen_random_uuid(),report_id uuid not null references buscag_private.reports(id),
  actor_id uuid references auth.users(id) on delete set null,from_state text not null,to_state text not null,
  note text not null check(char_length(note) between 1 and 2000),created_at timestamptz not null default now());
+create index if not exists moderation_report_actions on buscag_private.moderation_actions(report_id,created_at);
 create table if not exists buscag_private.item_followers (
  item_id uuid not null references public.items(id) on delete cascade,
  user_id uuid not null references auth.users(id) on delete cascade,notify boolean not null default true,
@@ -71,6 +105,9 @@ $$;
 create or replace function buscag_private.enforce_message_access() returns trigger
 language plpgsql security definer set search_path='' as $$ begin
  perform pg_advisory_xact_lock(hashtextextended('buscag:contact:'||least(new.sender_id,new.recipient_id)::text||greatest(new.sender_id,new.recipient_id)::text,0));
+ -- Serialize with recovery and the existing contact counter update. SHARE
+ -- would require a lock upgrade when concurrent messages update the counter.
+ perform 1 from public.items where id=new.item_id for no key update;
  if auth.uid() is null or new.sender_id is distinct from auth.uid() or not public.can_send_item_message(new.item_id,new.recipient_id) then
  raise exception 'Conversation unavailable' using errcode='42501';end if;
  return new;
@@ -171,7 +208,9 @@ $$;
 
 create or replace function public.set_item_follow(p_item uuid,p_follow boolean,p_notify boolean) returns boolean
 language plpgsql security definer set search_path='' as $$ begin
- if auth.uid() is null or p_follow is null or p_notify is null or not exists(select from public.items where id=p_item and owner_id<>auth.uid() and not buscag_private.blocked(owner_id,auth.uid())) then raise exception 'Item unavailable' using errcode='42501';end if;
+ if auth.uid() is null or p_item is null or p_follow is null or p_notify is null then raise exception 'Item unavailable' using errcode='42501';end if;
+ if not p_follow then delete from buscag_private.item_followers where item_id=p_item and user_id=auth.uid();return false;end if;
+ if not exists(select from public.items where id=p_item and owner_id<>auth.uid() and not buscag_private.blocked(owner_id,auth.uid())) then raise exception 'Item unavailable' using errcode='42501';end if;
  if p_follow then insert into buscag_private.item_followers(item_id,user_id,notify) values(p_item,auth.uid(),p_notify)
  on conflict(item_id,user_id) do update set notify=excluded.notify;
  else delete from buscag_private.item_followers where item_id=p_item and user_id=auth.uid();end if;
@@ -215,6 +254,27 @@ language sql stable security definer set search_path='' as $$
  from buscag_private.recovery_ratings r where r.target_id=auth.uid()
 $$;
 
+-- A conversation is not proof of a handover. An owner who recovered independently
+-- may explicitly declare that fact; this never confirms a bilateral request or
+-- earns a bilateral rating. Pending requests must be resolved/cancelled first.
+create or replace function public.declare_independent_recovery(p_item uuid,p_reason text) returns uuid
+language plpgsql security definer set search_path='' as $$
+declare i public.items%rowtype;r buscag_private.recovery_confirmations%rowtype;begin
+ select * into i from public.items where id=p_item for no key update;
+ if auth.uid() is null or i.owner_id is distinct from auth.uid() then raise exception 'Owner required' using errcode='42501';end if;
+ if p_reason is null or char_length(btrim(p_reason)) not between 20 and 500 then raise exception 'Explain independent recovery' using errcode='22023';end if;
+ select * into r from buscag_private.recovery_confirmations where item_id=p_item and state='confirmed' order by created_at desc limit 1;
+ if found then
+ if r.mode='individual' and r.owner_id=auth.uid() and r.owner_statement=btrim(p_reason) then return r.id;end if;
+ raise exception 'Recovery already completed' using errcode='22023';end if;
+ if coalesce(i.status not in('perdido','encontrado'),true) or exists(select from buscag_private.recovery_confirmations where item_id=p_item and state='pending') then raise exception 'Resolve pending recovery first' using errcode='22023';end if;
+ if(select count(*) from buscag_private.recovery_confirmations where item_id=p_item and owner_id=auth.uid() and created_at>now()-interval '1 hour')>=5 then raise exception 'recovery_rate_limited' using errcode='P0001';end if;
+ insert into buscag_private.recovery_confirmations(item_id,owner_id,mode,state,resolved_at,owner_statement)
+ values(p_item,auth.uid(),'individual','confirmed',now(),btrim(p_reason)) returning * into r;
+ update public.items set status='recuperado' where id=p_item;
+ return r.id;
+end $$;
+
 -- Existing recovery history is reused, with display names and dispute evidence.
 create or replace function public.recovery_context(p_item uuid) returns jsonb
 language plpgsql stable security definer set search_path='' as $$
@@ -223,23 +283,23 @@ declare i public.items%rowtype; partners jsonb; history jsonb;begin
  select * into i from public.items where id=p_item;
  if not found then raise exception 'Item unavailable' using errcode='42501';end if;
  partners:='[]'::jsonb;
- if i.owner_id=auth.uid() then select coalesce(jsonb_agg(jsonb_build_object('id',p.id,'name',coalesce(pr.full_name,'Cuenta no disponible')) order by p.id),'[]') into partners
+ if i.owner_id=auth.uid() then select coalesce(jsonb_agg(jsonb_build_object('id',p.id,'name',coalesce(nullif(btrim(pr.full_name),''),'Cuenta no disponible')) order by p.id),'[]') into partners
  from buscag_private.recovery_partners(i.id,i.owner_id) p left join public.profiles pr on pr.id=p.id;end if;
- select coalesce(jsonb_agg(to_jsonb(r)||jsonb_build_object('owner_name',coalesce(o.full_name,'Cuenta no disponible'),
- 'partner_name',coalesce(p.full_name,'Cuenta no disponible'),'disputed',exists(select from buscag_private.reports d where d.target_kind='recovery' and d.target_id=r.id and d.state in('open','reviewing')),
+ select coalesce(jsonb_agg(to_jsonb(r)||jsonb_build_object('owner_name',coalesce(nullif(btrim(o.full_name),''),'Cuenta no disponible'),
+ 'partner_name',coalesce(nullif(btrim(p.full_name),''),'Cuenta no disponible'),'resolved_name',actor.full_name,'disputed',exists(select from buscag_private.reports d where d.target_kind='recovery' and d.target_id=r.id and d.state in('open','reviewing')),
  'my_rating',(select stars from buscag_private.recovery_ratings where source_request=r.id and author_id=auth.uid())) order by r.created_at desc),'[]') into history
- from buscag_private.recovery_confirmations r left join public.profiles o on o.id=r.owner_id left join public.profiles p on p.id=r.partner_id
+ from buscag_private.recovery_confirmations r left join public.profiles o on o.id=r.owner_id left join public.profiles p on p.id=r.partner_id left join public.profiles actor on actor.id=r.resolved_by
  where r.item_id=p_item and auth.uid() in(r.owner_id,r.partner_id);
  return jsonb_build_object('version',2,'status',i.status,'partners',partners,'requests',history);
 end $$;
 
 -- Explicit allowlist. No grants on private tables, moderator enrollment or triggers.
 do $$ declare f record;begin
- for f in select p.oid::regprocedure signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace
- where (n.nspname='public' and p.proname in('can_send_item_message','can_share_contact','set_user_block','list_my_blocks','save_my_profile','my_community_settings','submit_report','list_reports','moderate_report','report_audit','set_item_follow','my_item_follow','rate_recovery','received_ratings','recovery_context'))
+ for f in select p.oid::regprocedure signature,n.nspname namespace from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+ where (n.nspname='public' and p.proname in('can_send_item_message','can_share_contact','set_user_block','list_my_blocks','save_my_profile','my_community_settings','submit_report','list_reports','moderate_report','report_audit','set_item_follow','my_item_follow','rate_recovery','received_ratings','recovery_context','declare_independent_recovery'))
  or (n.nspname='buscag_private' and p.proname in('blocked','enforce_message_access','notify_item_followers')) loop
  execute format('revoke all on function %s from public,anon,authenticated,service_role',f.signature);
- if f.signature::text !~ '^buscag_private\.' then execute format('grant execute on function %s to authenticated',f.signature);end if;
+ if f.namespace='public' then execute format('grant execute on function %s to authenticated',f.signature);end if;
  end loop;
 end $$;
 commit;

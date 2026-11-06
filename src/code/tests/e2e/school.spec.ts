@@ -231,10 +231,12 @@ test("statistics show RPC values and public QR requires login before contact wit
   const panel = page.getByRole("region", { name: "Impacto de la comunidad" });
   await expect(panel.locator("dd").first()).toHaveText("7");
   await expect(
-    panel.getByText("Datos visibles para tu cuenta según RLS.", {
+    panel.getByText("Publicaciones visibles para tu cuenta;", {
       exact: false,
     }),
   ).toBeVisible();
+  await panel.getByRole('button',{name:'Cerrar estadísticas',exact:true}).click();
+  await expect(panel.locator('dd')).toHaveCount(0);
 });
 test("foreign item exposes no watch or QR management and unavailable backend has no fake success", async ({
   page,

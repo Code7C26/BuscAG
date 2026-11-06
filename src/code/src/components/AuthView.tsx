@@ -79,7 +79,7 @@ export const AuthView: React.FC<{
     try {
       const redirectBase = import.meta.env?.VITE_APP_URL?.trim();
       const redirect = ["signup", "reset", "resend"].includes(mode)
-        ? authRedirectForApp(redirectBase, window.location.origin)
+        ? authRedirectForApp(redirectBase, window.location.href)
         : "";
       if (mode === "reset" || mode === "resend") {
         const { error } =

@@ -22,6 +22,7 @@ async function loadModule(file, responses) {
         range(from, to) { call.range = [from, to]; return query; },
         in(column, values) { call.ids = [column, values]; return query; },
         eq(column, value) { call.filter = [column, value]; return query; },
+        or(condition) { call.or = condition; return query; },
         maybeSingle() { return query; },
         then(resolve, reject) {
           if (typeof response === 'function') return Promise.resolve(response(call.range)).then(resolve,reject);
@@ -51,6 +52,18 @@ async function loadModule(file, responses) {
 }
 async function check(name, run) { await run(); passed++; console.log(`ok ${passed} - ${name}`); }
 try {
+  await check('repeated IDs in chat/notice snapshots do not duplicate unread counts while distinct equal-text messages remain distinct', async()=>{
+    const message={id:'one',item_id:item.id,sender_id:profile.id,recipient_id:'peer',sender_name:'Synthetic',sender_avatar:'',item_title:item.title,item_image:'',text:'Same text',created_at:'2026-11-06T12:00:00Z',is_read:false};
+    const notice={id:'notice-one',user_id:profile.id,title:'Notice',message:'Body',created_at:'2026-11-06T12:00:00Z',type:'system',is_read:false};
+    const {module,calls}=await loadModule('lib/database.ts',{
+      messages:{data:[message,{...message,is_read:true},{...message,id:'two'}],error:null},
+      notifications:{data:[notice,{...notice,is_read:true}],error:null}
+    });
+    const messages=await module.loadMessages(profile.id),notifications=await module.loadNotifications(profile.id);
+    assert.equal(messages.length,2);assert.equal(messages.find(row=>row.id==='one').isRead,true);
+    assert.equal(notifications.length,1);assert.equal(notifications[0].read,true);
+    assert.ok(calls.find(call=>call.table==='messages').or.includes(profile.id));
+  });
   await check('overlapping feed pages render each ID once and retain the actual owner even without a directory profile', async () => {
     const first = Array.from({length:100},(_,index)=>({...item,id:`item-${index}`}));
     const foreign = {...item,id:'foreign-item',owner_id:'another-account'};

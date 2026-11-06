@@ -94,7 +94,12 @@ export function authRedirectForApp(
       ),
       { code: "auth_redirect_mismatch" },
     );
-  return authRedirect(configured?.trim() || current, recovery);
+  const redirect=new URL(authRedirect(configured?.trim() || current,recovery));
+  // Preserve only an opaque public QR context, never arbitrary return URLs,
+  // callback tokens or account information from the current location.
+  const tag=new URL(currentOrigin).searchParams.get('tag');
+  if(!recovery&&tag&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tag))redirect.searchParams.set('tag',tag);
+  return redirect.toString();
 }
 export const AUTH_MAIL_COOLDOWN_MS = 60000;
 export function authMailMessage(mode: "signup" | "reset" | "resend"): string {

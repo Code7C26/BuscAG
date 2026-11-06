@@ -1,3 +1,8 @@
+import {ConnectionStatus} from './components/ConnectionStatus';
+import {AdvancedSearch} from './components/AdvancedSearch';
+import {filterPublications,emptyFilters,type AdvancedFilters} from './utils/publicationFilters';
+import {loadOutbox,saveOutbox,clearChatStorage,loadDraft,saveDraft,type QueuedMessage} from '../lib/chatStorage';
+import {MessagesView} from './components/MessagesView';
 import {CommunityStats} from './components/CommunityStats';
 import {PublicObjectTag} from './components/PublicObjectTag';
 import {tagFromUrl} from '../lib/schoolFeatures';
@@ -71,6 +76,7 @@ export default function App() {
         return;
       }
       if (!previous && !user) return;
+      if(previous)clearChatStorage(previous.user.id);
       previous?.guard.close(); // Before React renders the next account.
       if(user)setAuthNotice('');
       const next = user ? { user, guard: createSessionGuard(), key: ++sequence.current } : null;
@@ -136,6 +142,14 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   const messageIntents = useRef(createMessageIntents());
   const publications = useRef(createPublicationPublisher<Database['public']['Tables']['items']['Row']>());
   const messageRequests = useRef(new Map<string, Promise<void>>());
+  const [outbox,setOutbox] = useState<QueuedMessage[]>(()=>loadOutbox(authUser.id));
+  const outboxRef=useRef(outbox);
+  const queuedRequests=useRef(new Map<string,Promise<void>>());
+  const updateOutbox=(update:(previous:QueuedMessage[])=>QueuedMessage[])=>{
+    const next=update(outboxRef.current);outboxRef.current=next;setOutbox(next);
+    if(!saveOutbox(authUser.id,next)) triggerToast('No se pudo guardar el envío en esta pestaña. Mantenela abierta para reintentar.');
+  };
+
   const captureOperation = useCallback(() => {
     const sessionCurrent = sessionGuard.capture();
     const mounted = lifetime.current.capture();
@@ -151,16 +165,20 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   // ==========================================
 
   // items: Lista de todas las publicaciones (perdidos, encontrados, recuperados)
-  const [items, setItems] = useState<Item[]>([]);
+  const writes=useRef({items:0,messages:0,notifications:0});
+  const [items, replaceItems] = useState<Item[]>([]);
+  const setItems=(next:React.SetStateAction<Item[]>)=>{writes.current.items++;replaceItems(next);};
 
   // currentUser: Usuario que actualmente tiene la sesión iniciada
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // notifications: Historial de avisos y alertas del sistema
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, replaceNotifications] = useState<NotificationItem[]>([]);
+  const setNotifications=(next:React.SetStateAction<NotificationItem[]>)=>{writes.current.notifications++;replaceNotifications(next);};
 
   // messages: Historial de mensajes del chat de contacto interno
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, replaceMessages] = useState<Message[]>([]);
+  const setMessages=(next:React.SetStateAction<Message[]>)=>{writes.current.messages++;replaceMessages(next);};
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
@@ -183,6 +201,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   const [searchQuery, setSearchQuery] = useState('');
 
   // activeFilter: Filtro rápido por estado ('todos', 'encontrados', 'perdidos', 'cerca')
+  const [advancedFilters,setAdvancedFilters]=useState<AdvancedFilters>(emptyFilters);
+  const clearFilters=()=>{setAdvancedFilters(emptyFilters);setSearchQuery('');setActiveFilter('todos');setSelectedCategory('Todos');};
   const [activeFilter, setActiveFilter] = useState<FilterType>('todos');
 
   // selectedCategory: Filtro de categoría seleccionada ('Todos', 'Electrónicos', etc.)
@@ -228,15 +248,16 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
     let active = true;
     const refresh = createRefreshQueue<'items' | 'messages' | 'notifications'>(async keys => {
       if (!active || !current()) return;
+      const revision={...writes.current};
       const [loadedItems, loadedMessages, loadedNotifications] = await Promise.all([
         keys.has('items') ? loadItems(current) : undefined,
         keys.has('messages') ? loadMessages(authUser.id, current) : undefined,
         keys.has('notifications') ? loadNotifications(authUser.id, current) : undefined
       ]);
       if (!active || !current()) return;
-      if (loadedItems) setItems(loadedItems);
-      if (loadedMessages) setMessages(loadedMessages);
-      if (loadedNotifications) setNotifications(loadedNotifications);
+      if (loadedItems) {if(revision.items===writes.current.items)setItems(loadedItems);else void refresh.request('items').catch(()=>{});}
+      if (loadedMessages) {if(revision.messages===writes.current.messages)setMessages(loadedMessages);else void refresh.request('messages').catch(()=>{});}
+      if (loadedNotifications) {if(revision.notifications===writes.current.notifications)setNotifications(loadedNotifications);else void refresh.request('notifications').catch(()=>{});}
     });
 
     const syncError = 'No se pudieron resincronizar los datos. Se reintentará al recuperar la conexión.';
@@ -294,7 +315,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       })
       .catch(error => {
         reportError('No se pudieron cargar los datos de la cuenta:', error);
-        if (active && current()) setDataLoadError('No se pudieron cargar los datos. Verifica que hayas aplicado la migración de Supabase.');
+        if (active && current()) setDataLoadError('No se pudieron cargar los datos. Revisá la conexión o intentá más tarde.');
       })
       .finally(() => {
         if (active && current()) setIsLoadingData(false);
@@ -385,31 +406,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
    * useMemo: Aplica los filtros combinados de búsqueda por texto,
    * estado (encontrado/perdido/cerca) y categoría.
    */
-  const filteredItems = useMemo(() => {
-    return itemsWithDistance.filter(item => {
-      const queryLower = searchQuery.toLowerCase().trim();
-      
-      // Coincidencia con el texto ingresado en el buscador
-      const matchesSearch = queryLower === '' ||
-        item.title.toLowerCase().includes(queryLower) ||
-        item.description.toLowerCase().includes(queryLower) ||
-        item.locationName.toLowerCase().includes(queryLower) ||
-        item.category.toLowerCase().includes(queryLower);
-
-      // Coincidencia con el tipo de filtro activo
-      const matchesFilter =
-        activeFilter === 'todos' ? true :
-        activeFilter === 'encontrados' ? item.status === 'encontrado' :
-        activeFilter === 'perdidos' ? item.status === 'perdido' :
-        activeFilter === 'cerca' ? (item.distanceKm !== undefined && item.distanceKm <= NEARBY_RADIUS_KM) : true;
-
-      // Coincidencia con la categoría
-      const matchesCategory = selectedCategory === 'Todos' || item.category === selectedCategory;
-
-      // Debe cumplir todas las condiciones activas
-      return matchesSearch && matchesFilter && matchesCategory;
-    });
-  }, [itemsWithDistance, searchQuery, activeFilter, selectedCategory]);
+  const filteredItems = useMemo(() => filterPublications(itemsWithDistance,{query:searchQuery,category:selectedCategory,status:activeFilter,userId:authUser.id,advanced:advancedFilters}),[itemsWithDistance,searchQuery,selectedCategory,activeFilter,advancedFilters,authUser.id]);
 
   /**
    * useMemo: Ejecuta el motor de coincidencia automática (Lost & Found Matcher)
@@ -449,7 +446,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       lat:newItemData.lat,lng:newItemData.lng,date,image_url:newItemData.imageUrl,reward:newItemData.reward
     },{
       upload:key=>uploadItemImage(newItemData.imageUrl,currentUser.id,current,key),
-      allowLegacy:!['staging','presentation'].includes(import.meta.env?.MODE),
+      allowLegacy:false,
       rpc:args=>supabase.rpc('publish_item_once',args).single(),
       legacy:input=>supabase.from('items').insert(input).select('*').single(),isCurrent:current
     }).catch(error=>{
@@ -551,7 +548,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   /**
    * Guarda el mensaje y la base notifica al destinatario.
    */
-  const handleSendMessage = (itemId: string, text: string, recipientId: string): Promise<void> => {
+  const sendMessageNow = (itemId: string, text: string, recipientId: string, requestKey?: string): Promise<void> => {
     if (!currentUser || !supabase) return Promise.reject(new Error('Inicia sesión para enviar mensajes.'));
     const item = items.find(i => i.id === itemId);
     const body = text.trim();
@@ -570,8 +567,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
           item_id:item.id,sender_id:currentUser.id,recipient_id:recipientId,sender_name:currentUser.name,
           sender_avatar:currentUser.avatar,item_title:item.title,item_image:item.imageUrl,text:body
         };
-        const data = await deliverMessage(input,messageIntents.current.key(key),{
-          allowLegacy:!['staging','presentation'].includes(import.meta.env?.MODE),
+        const data = await deliverMessage(input,requestKey??messageIntents.current.key(key),{
+          allowLegacy:false,
           rpc:args=>supabase.rpc('send_message_once',args).single(),
           legacy:payload=>supabase.from('messages').insert(payload).select('*').single(),isCurrent:current
         });
@@ -586,6 +583,51 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
     messageRequests.current.set(key, request);
     return request;
   };
+
+  const handleSendMessage = (itemId:string,text:string,recipientId:string):Promise<void> => {
+    if(!currentUser)return Promise.reject(Error('Iniciá sesión para enviar mensajes.'));
+    const current=captureOperation(),body=text.trim(),key=JSON.stringify([itemId,recipientId,body]);
+    const inFlight=queuedRequests.current.get(key);if(inFlight)return inFlight;
+    if(!body||body.length>4000||recipientId===currentUser.id||!items.some(row=>row.id===itemId))return Promise.reject(Error('El mensaje o el destinatario no son válidos.'));
+    let queued=outboxRef.current.find(row=>row.key===key);
+    if(!queued) {
+      if(outboxRef.current.length>=50)return Promise.reject(Error('Tenés demasiados envíos pendientes. Revisá la bandeja.'));
+      queued={key,itemId,recipientId,text:body,requestKey:messageIntents.current.key(key),status:'pending',retryable:true};
+    }
+    const attempt=queued;
+    updateOutbox(rows=>[...rows.filter(row=>row.key!==key),{...attempt,status:'pending'}]);
+    const request=Promise.resolve().then(async()=>{try {
+      if(!navigator.onLine)throw Error('Sin conexión');
+      await sendMessageNow(itemId,body,recipientId,attempt.requestKey);
+      if(current())updateOutbox(rows=>rows.filter(row=>row.key!==key));
+    } catch(error) {
+      const code=(error as {code?:string}).code;
+      if(current())updateOutbox(rows=>rows.map(row=>row.key===key?{...row,status:'failed',retryable:!['42501','22023','P0001','PGRST202'].includes(code??'')}:row));
+      throw error;
+    }finally{queuedRequests.current.delete(key);}});
+    queuedRequests.current.set(key,request);return request;
+  };
+  const discardMessage=(entry:QueuedMessage)=>{
+    if(!window.confirm('¿Quitar este intento de los pendientes? Esto no borra un mensaje que el servidor ya haya recibido.'))return;
+    updateOutbox(rows=>rows.filter(row=>row.key!==entry.key));messageIntents.current.acknowledge(entry.key);
+    const thread=JSON.stringify([entry.itemId,entry.recipientId]);if(loadDraft(authUser.id,thread)===entry.text)saveDraft(authUser.id,thread,'');
+  };
+  const sendLatest=useRef(handleSendMessage);sendLatest.current=handleSendMessage;
+  useEffect(()=>{
+    if(!currentUser)return;
+    let active=true,running=false;
+    const retry=async()=>{
+      if(!active||running||!navigator.onLine)return;
+      running=true;
+      try{for(const row of [...outboxRef.current]) {
+        if(!active)break;
+        if(row.status==='failed'&&row.retryable)try{await sendLatest.current(row.itemId,row.text,row.recipientId);}catch{/* Visible failed state remains in the outbox. */}
+      }}finally{running=false;}
+    };
+    void retry();window.addEventListener('online',retry);
+    const timer=window.setInterval(retry,15000);
+    return()=>{active=false;window.removeEventListener('online',retry);clearInterval(timer);};
+  },[currentUser?.id]);
 
   const handleMarkThreadRead = useCallback((itemId: string, senderId: string) => {
     const userId = currentUser?.id;
@@ -725,11 +767,14 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
 
   const openContact = (item: Item) => {
     if (!currentUser) return;
+    const existing=messages.some(message=>message.itemId===item.id&&((message.senderId===currentUser.id&&message.receiverId===item.user.id)||(message.receiverId===currentUser.id&&message.senderId===item.user.id)));
+    if(item.status==='recuperado'&&!existing&&item.user.id!==currentUser.id){triggerToast('El objeto ya fue recuperado. No se abren conversaciones nuevas.');return;}
+    setSelectedDetailItem(null);
     setContactingItem(item);
     setContactingParticipantId(item.user.id === currentUser.id ? null : item.user.id);
   };
 
-  const handleSelectNotification = async (notification: NotificationItem) => {
+  const handleMarkNotificationRead = async (notification: NotificationItem) => {
     if (!supabase || !currentUser) return;
     const current = captureOperation();
 
@@ -754,9 +799,14 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       }
     }
 
-    if (!current() || !notification.relatedItemId) return;
+  };
+  const handleSelectNotification = async (notification:NotificationItem) => {
+    const current=captureOperation();
+    await handleMarkNotificationRead(notification);
+    if (!current()) return;
+    if(!notification.relatedItemId){triggerToast('Este aviso no tiene un destino disponible.');return;}
     const item = items.find(candidate => candidate.id === notification.relatedItemId);
-    if (!item) return;
+    if (!item) {triggerToast('La publicación de este aviso fue eliminada o no está disponible.');return;}
 
     if (notification.type === 'message') {
       const senderId = notification.relatedUserId ?? messages.find(message =>
@@ -765,7 +815,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       setContactingItem(item);
       setContactingParticipantId(senderId ?? null);
     } else {
-      setSelectedDetailItem(item);
+      setContactingItem(null);setContactingParticipantId(null);setSelectedDetailItem(item);
     }
   };
 
@@ -796,7 +846,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   }
 
   return (
-    <div className="app-shell min-h-screen flex flex-col font-sans text-slate-800">
+    <div className={`app-shell min-h-screen flex flex-col font-sans text-slate-800 ${activeTab==='map'?'app-shell--map':''}`}>
       {/* Mensaje flotante de alerta (Toast) */}
       {toastMessage && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white font-bold text-xs px-4 py-2.5 rounded-full shadow-2xl border border-slate-700 flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
@@ -808,6 +858,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       {/* Encabezado superior con logo, selector de usuario y acceso a notificaciones */}
       <Header
         currentUser={currentUser}
+        unreadMessagesCount={messages.filter(message=>message.receiverId===currentUser.id&&!message.isRead).length}
         unreadNotificationsCount={unreadNotificationsCount}
         matchesCount={matches.length}
         onOpenNotifications={() => setActiveTab('notifications')}
@@ -816,6 +867,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
         activeTab={activeTab}
       />
 
+      <ConnectionStatus/>
       {/* Área de contenido principal */}
       <main className="app-main flex-1 w-full mx-auto pb-20">
         {dataLoadError && (
@@ -827,6 +879,10 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
           <div className="px-4 py-3 text-xs font-medium text-slate-500">Sincronizando publicaciones y mensajes...</div>
         )}
         
+        {activeTab==='messages'&&<MessagesView outbox={outbox} onDiscard={discardMessage} messages={messages} items={items} userId={currentUser.id} onOpen={(itemId,participantId)=>{
+          const item=items.find(row=>row.id===itemId);if(!item){triggerToast('Esta publicación no está disponible.');return;}
+          setSelectedDetailItem(null);setContactingItem(item);setContactingParticipantId(participantId);
+        }}/>}
         {/* ==========================================
             1. VISTA DE INICIO (HOME)
            ========================================== */}
@@ -927,7 +983,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
                 </button>
 
                 <button
-                  onClick={handleNearMeFilter}
+                  onClick={()=>setActiveTab('map')}
                   className={`px-4 py-2 rounded-2xl text-xs font-extrabold transition cursor-pointer border flex items-center gap-1.5 ${
                     activeFilter === 'cerca'
                       ? 'bg-blue-600 text-white border-blue-600'
@@ -957,6 +1013,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
               ))}
             </div>
 
+            <AdvancedSearch value={advancedFilters} onChange={setAdvancedFilters} onClear={clearFilters}/>
             {/* Cuadrícula o lista de publicaciones filtradas */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -973,6 +1030,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
               {filteredItems.length === 0 ? (
                 <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center space-y-3">
                   <ShieldAlert className="w-12 h-12 text-slate-300 mx-auto" />
+                  <button className="underline text-sm" onClick={clearFilters}>Limpiar búsqueda y filtros</button>
                   <p className="font-bold text-slate-700 text-base">No se encontraron objetos</p>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
                     Prueba cambiando los filtros de búsqueda o publica un reporte nuevo si no encuentras lo que buscas.
@@ -1045,6 +1103,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
                   if (current()) triggerToast('No se pudieron actualizar las notificaciones.');
                 });
             }}
+            onMarkRead={notification=>void handleMarkNotificationRead(notification)}
             onSelectNotification={notification => void handleSelectNotification(notification)}
           />
         )}
@@ -1055,6 +1114,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
         {activeTab === 'profile' && (
           <ProfileView
             currentUser={currentUser}
+            onProfileSaved={()=>{const current=captureOperation();Promise.all([loadProfile(authUser,current),loadItems(current)]).then(([profile,rows])=>{if(current()){setCurrentUser(profile);setItems(rows);}}).catch(()=>{if(current())triggerToast('Perfil guardado; no se pudo actualizar la vista.');});}}
             userItems={items.filter(i => i.user.id === currentUser.id)}
             onEditItem={openEdit}
             onChangePassword={onChangePassword}
@@ -1083,6 +1143,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
           }
         }}
         onOpenPublish={() => setIsPublishOpen(true)}
+        unreadMessagesCount={messages.filter(message=>message.receiverId===currentUser.id&&!message.isRead).length}
         unreadNotificationsCount={unreadNotificationsCount}
         matchesCount={matches.length}
       />
@@ -1122,7 +1183,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       />
       </Suspense>
 
-      {viewingPublicUser&&<Suspense fallback={<p role="status">Cargando perfil público…</p>}><PublicProfileModal user={viewingPublicUser} items={items} onClose={()=>setViewingPublicUser(null)} onViewItem={item=>{setViewingPublicUser(null);setSelectedDetailItem(item);}}/></Suspense>}
+      {viewingPublicUser&&<Suspense fallback={<p role="status">Cargando perfil público…</p>}><PublicProfileModal currentUserId={currentUser.id} user={viewingPublicUser} items={items} onClose={()=>setViewingPublicUser(null)} onViewItem={item=>{setViewingPublicUser(null);setSelectedDetailItem(item);}}/></Suspense>}
 
       {/* Modal 3: Chat directo y opciones de contacto (llamada/WhatsApp) */}
       <ContactModal
@@ -1135,6 +1196,10 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
         currentUser={currentUser}
         messages={messages}
         participantId={contactingParticipantId}
+        outbox={outbox}
+        onDiscardMessage={discardMessage}
+        onRetryMessage={entry=>{void handleSendMessage(entry.itemId,entry.text,entry.recipientId).catch(()=>{});}}
+        onRecoveryChanged={()=>{const current=captureOperation();loadItems(current).then(rows=>{if(current())setItems(rows);}).catch(()=>{});}}
         onMarkThreadRead={handleMarkThreadRead}
         onSendMessage={handleSendMessage}
       />
@@ -1156,7 +1221,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
         currentUser={currentUser}
       />
       </Suspense>
-      <FaqChat />
+      <FaqChat placement={activeTab==='map'?'map':'default'}/>
     </div>
   );
 }

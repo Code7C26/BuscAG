@@ -1,3 +1,4 @@
+import {preparePhoto} from '../utils/preparePhoto';
 import {isItemCategory,isItemStatus,publicationTextError} from '../utils/itemContract';
 import { itemDateInput, parseItemDate } from '../utils/itemDate';
 import { reportError } from '../../lib/reportError';
@@ -61,6 +62,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   const [locationName, setLocationName] = useState(''); // Nombre legible del lugar
   const [lat, setLat] = useState(DEFAULT_CENTER.lat);                 // Coordenada latitud
   const [lng, setLng] = useState(DEFAULT_CENTER.lng);                 // Coordenada longitud
+  const [preparingPhoto,setPreparingPhoto]=useState(false);
   const [imageUrl, setImageUrl] = useState('');     // Foto del objeto (URL o Base64)
   const [reward, setReward] = useState('');                           // Recompensa voluntaria
   const [isSubmitting, setIsSubmitting] = useState(false);             // Estado de carga al enviar
@@ -68,8 +70,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
   const [cameraActive, setCameraActive] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const submitting = useRef(false);
-  const lifecycle = useRef(0);
-  useEffect(() => () => { lifecycle.current += 1; }, [isOpen]);
+  const lifecycle = useRef(0),photoRevision=useRef(0);
+  useEffect(() => {setPreparingPhoto(false);return()=>{lifecycle.current+=1;photoRevision.current+=1;};},[isOpen]);
 
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(isOpen, dialogRef, () => { if (!submitting.current) onClose(); });
@@ -178,10 +180,9 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     if (file.size > 5 * 1024 * 1024) {
       setSubmitError('La foto no puede superar los 5 MB.'); return false;
     }
-    setSubmitError(''); const version = lifecycle.current; const reader = new FileReader();
-    reader.onload = () => { if (version === lifecycle.current && typeof reader.result === 'string') setImageUrl(reader.result); };
-    reader.onerror = () => { if (version === lifecycle.current) setSubmitError('No se pudo leer la foto seleccionada.'); };
-    reader.readAsDataURL(file); return true;
+    setSubmitError('');const version=lifecycle.current,photo=++photoRevision.current;setPreparingPhoto(true);
+    void preparePhoto(file).then(image=>{if(version===lifecycle.current&&photo===photoRevision.current)setImageUrl(image);}).catch(()=>{if(version===lifecycle.current&&photo===photoRevision.current)setSubmitError('No se pudo abrir la foto. Elegí una imagen válida en JPG, PNG o WebP.');}).finally(()=>{if(version===lifecycle.current&&photo===photoRevision.current)setPreparingPhoto(false);});
+    return true;
   };
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -225,6 +226,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
     if (submitting.current) return;
     if (!isItemCategory(category)||!isItemStatus(status)) {setSubmitError('Selecciona categoría y estado válidos.');return;}
 
+    if(preparingPhoto){setSubmitError('Esperá a que termine la preparación de la foto.');return;}
     if (!imageUrl) { setSubmitError('Selecciona una foto propia o una imagen de muestra de forma explícita.'); return; }
     if (!locationConfirmed || !isValidCoordinates(lat, lng) || !locationName.trim()) {
       setSubmitError('Confirma una ubicación válida tocando el mapa, moviendo el pin o usando tu GPS.');
@@ -296,7 +298,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            disabled={isSubmitting}
+            disabled={isSubmitting||preparingPhoto}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-full transition cursor-pointer"
             title="Cerrar modal"
           >
@@ -345,6 +347,8 @@ export const PublishModal: React.FC<PublishModalProps> = ({
             </div>
           </div>
 
+          <p className="text-xs text-slate-600">Los campos con * son obligatorios. Fotos JPG, PNG o WebP: hasta 5 MB. Se optimizan en este dispositivo antes de subirlas.</p>
+          {preparingPhoto&&<p role="status">Preparando foto…</p>}
           {/* Subida o selección de imagen */}
           <div>
             <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
@@ -386,7 +390,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               className="hidden"
             />
 
@@ -532,7 +536,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting||preparingPhoto}
               className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white rounded-2xl font-extrabold text-base shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (

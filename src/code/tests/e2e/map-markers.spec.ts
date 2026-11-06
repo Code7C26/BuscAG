@@ -40,5 +40,5 @@ test('compiled maps render the red location pin and publication markers', async 
   await page.getByRole('button', { name: 'Ver publicación', exact: true }).click();
   await expect(page.locator('.mini-map-pin')).toBeVisible();
   expect(await page.locator('.mini-map-pin').locator('div').evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(156, 52, 39)');
-  expect(backend.calls.filter(call => call.method !== 'GET' && call.path.startsWith('/rest/') && !call.path.endsWith('/rpc/recovery_context'))).toHaveLength(0);
+  expect(backend.calls.filter(call => call.method !== 'GET' && call.path.startsWith('/rest/') && !['recovery_context','list_my_blocks','my_item_follow'].some(name=>call.path.endsWith('/rpc/'+name)))).toHaveLength(0);
 });

@@ -1,3 +1,8 @@
+import {communityCall} from '../../lib/community';
+import {supabase} from '../../lib/supabase';
+import {loadDraft,saveDraft,type QueuedMessage} from '../../lib/chatStorage';
+import {SafetyActions} from './SafetyActions';
+import {RecoveryPanel} from './RecoveryPanel';
 import { useDialogFocus } from '../utils/useDialogFocus';
 /**
  * MODAL DE CONTACTO Y CHAT DIRECTO (ContactModal.tsx)
@@ -18,9 +23,13 @@ interface ContactModalProps {
   isOpen: boolean;                                      // Si el modal está visible o no
   onClose: () => void;                                  // Cierra la ventana de chat
   currentUser: User;                                    // Usuario actual que envía los mensajes
-  messages: Message[];                                  // Todos los mensajes almacenados
+  messages: Message[];
+  outbox?:QueuedMessage[];
+  onRetryMessage?:(message:QueuedMessage)=>void;
+  onDiscardMessage?:(message:QueuedMessage)=>void;                                  // Todos los mensajes almacenados
   participantId: string | null;
   onMarkThreadRead: (itemId: string, senderId: string) => void;
+  onRecoveryChanged?: () => void;
   onSendMessage: (itemId: string, text: string, recipientId: string) => Promise<void>;
 }
 
@@ -38,14 +47,26 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   onClose,
   currentUser,
   messages,
+  outbox=[],
+  onRetryMessage,
+  onDiscardMessage,
   participantId,
   onMarkThreadRead,
-  onSendMessage
+  onSendMessage,
+  onRecoveryChanged = ()=>{}
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(isOpen, dialogRef, onClose);
 
+  const thread=JSON.stringify([item?.id,participantId]);
+  const failedDraft=useRef<string|null>(null);
   const [inputMessage, setInputMessage] = useState('');
+  const [draftNotice,setDraftNotice]=useState('');
+  const [sharedPhone,setSharedPhone]=useState('');
+  useEffect(()=>{let active=true;setSharedPhone('');if(!isOpen||!participantId||!supabase)return()=>{active=false;};
+    const refresh=async()=>{if(!isOpen||!participantId||!supabase)return;try{const allowed=await communityCall('can_share_contact',{p_target:participantId});if(!active)return;if(allowed!==true){setSharedPhone('');return;}const r=await supabase.from('public_profiles').select('phone').eq('id',participantId).maybeSingle();if(active)setSharedPhone(r.error?'':r.data?.phone??'');}catch{if(active)setSharedPhone('');}};
+    void refresh();const timer=setInterval(refresh,5000);return()=>{active=false;clearInterval(timer);};
+  },[isOpen,participantId,currentUser.id]);
   const [isSending, setIsSending] = useState(false);
   const sendLock = useRef(false);
   const threadVersion = useRef(0);
@@ -53,7 +74,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     threadVersion.current += 1;
     sendLock.current = false;
     setIsSending(false);
-    setInputMessage('');
+    setInputMessage(loadDraft(currentUser.id,thread));
+    failedDraft.current=null;
     return () => { threadVersion.current += 1; };
   }, [item?.id, participantId, isOpen, currentUser.id]);
 
@@ -61,8 +83,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     && message.senderId === participantId && message.receiverId === currentUser.id && !message.isRead)
     .map(message => message.id).join(',');
   useEffect(() => {
-    if (isOpen && item && participantId && unreadKey) onMarkThreadRead(item.id, participantId);
+    const mark=()=>{if(document.visibilityState!=='hidden'&&isOpen&&item&&participantId&&unreadKey)onMarkThreadRead(item.id,participantId);};
+    mark();document.addEventListener('visibilitychange',mark);return()=>document.removeEventListener('visibilitychange',mark);
   }, [item?.id, participantId, currentUser.id, isOpen, unreadKey, onMarkThreadRead]);
+
+  useEffect(()=>{
+    const text=failedDraft.current;
+    if(!text||!item||!participantId||outbox.some(row=>row.itemId===item.id&&row.recipientId===participantId&&row.text===text.trim()))return;
+    if(messages.some(row=>row.itemId===item.id&&row.senderId===currentUser.id&&row.receiverId===participantId&&row.text===text.trim())) {
+      setInputMessage(previous=>{if(previous===text){saveDraft(currentUser.id,thread,'');return '';}return previous;});failedDraft.current=null;
+    }
+  },[messages,outbox,item?.id,participantId,currentUser.id]);
 
   // Si no está abierto o no hay objeto, no renderiza nada
   if (!isOpen || !item) return null;
@@ -94,10 +125,11 @@ export const ContactModal: React.FC<ContactModalProps> = ({
     try {
       await onSendMessage(item.id, text.trim(), participantId);
       if (version === threadVersion.current && clearDraft) {
-        setInputMessage(previous => previous === text ? '' : previous);
+        setInputMessage(previous => {if(previous===text){saveDraft(currentUser.id,thread,'');return '';}return previous;});
       }
     } catch {
-      // App reports the failure; retain the draft for an explicit retry.
+      if(version===threadVersion.current)failedDraft.current=text;
+      // The outbox retains this attempt with the same idempotency key.
     } finally {
       if (version === threadVersion.current) {
         sendLock.current = false;
@@ -135,9 +167,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({
 
           <div className="flex items-center gap-1">
             {/* Opción de llamada telefónica directa */}
-            {participantId === item.user.id && item.user.phone && (
+            {sharedPhone && (
               <a
-                href={`tel:${item.user.phone}`}
+                href={`tel:${sharedPhone}`}
                 className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition"
                 title="Llamar directamente"
               >
@@ -163,12 +195,16 @@ export const ContactModal: React.FC<ContactModalProps> = ({
           <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
             item.status === 'perdido' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
           }`}>
-            {item.status === 'perdido' ? 'Perdido' : 'Encontrado'}
+            {item.status === 'recuperado' ? 'Objeto recuperado' : item.status === 'perdido' ? 'Perdido' : 'Encontrado'}
           </span>
         </div>
 
         {/* Flujo de Mensajes (Burbujas tipo WhatsApp / Mensajería moderna) */}
         <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-slate-50/50">
+          <details className="chat-context-tools"><summary>Devolución y seguridad</summary>
+            <RecoveryPanel key={item.id+currentUser.id} item={item} userId={currentUser.id} onChanged={onRecoveryChanged}/>
+            {participantId&&<SafetyActions key={participantId+currentUser.id} userId={currentUser.id} targetUserId={participantId}/>}
+          </details>
           {itemMessages.length === 0 ? (
             /* Estado vacío si no hay mensajes previos */
             <div className="h-full flex flex-col items-center justify-center text-center p-4">
@@ -198,14 +234,17 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                   </div>
                   <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-1 px-1">
                     <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    {isMe && <CheckCheck className={`w-3 h-3 ${msg.isRead ? 'text-blue-500' : 'text-slate-400'}`} />}
+                    {isMe && <>{msg.isRead?<CheckCheck aria-hidden="true" className="w-3 h-3 text-blue-500"/>:<Check aria-hidden="true" className="w-3 h-3 text-slate-400"/>}<span>{msg.isRead?'Leído':'Enviado'}</span></>}
                   </div>
                 </div>
               );
             })
           )}
+          {outbox.filter(row=>row.itemId===item.id&&row.recipientId===participantId).map(row=><div key={row.key} className="border border-amber-300 rounded-xl p-3 text-sm"><p>{row.text}</p><p role="status">{row.status==='pending'?'Pendiente de confirmación del servidor':row.retryable?'Fallido. Se reintentará al recuperar conexión.':'Fallido. Revisá la disponibilidad o las restricciones del servicio antes de reintentar.'}</p>{row.status==='failed'&&<><button onClick={()=>onRetryMessage?.(row)} className="underline">Reintentar mensaje</button> <button className="underline" onClick={()=>onDiscardMessage?.(row)}>Descartar pendiente</button></>}</div>)}
         </div>
 
+        <p className="px-4 text-xs text-slate-500">Borradores privados en esta pestaña: caducan tras 24 h sin cambios. Cerrar sesión borra borradores y pendientes.</p>
+        {draftNotice&&<p role="status" className="text-xs px-4">{draftNotice}</p>}
         {/* Respuestas rápidas prediseñadas en carrusel horizontal */}
         <div className="px-3 py-2 bg-white border-t border-slate-100">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
@@ -231,7 +270,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
             type="text"
             value={inputMessage}
             maxLength={4000}
-            onChange={(e) => setInputMessage(e.target.value)}
+            onChange={(e) => {const value=e.target.value.slice(0,4000);setInputMessage(value);if(!saveDraft(currentUser.id,thread,value))setDraftNotice('El borrador sólo está en memoria: el almacenamiento de esta pestaña no está disponible.');}}
             placeholder="Escribe un mensaje..."
             className="flex-1 px-4 py-2.5 rounded-2xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 outline-none font-medium"
           />

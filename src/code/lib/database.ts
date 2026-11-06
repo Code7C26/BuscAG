@@ -186,14 +186,14 @@ export async function loadMessages(userId: string, isCurrent: () => boolean = ()
   const rows = await readAll<MessageRow>((from, to) => client().from('messages')
     .select('*', from === 0 ? { count: 'exact' } : {}).or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
     .order('created_at').order('id').range(from, to), isCurrent);
-  return rows.map(mapMessage);
+  return [...new Map(rows.map(row=>[row.id,row])).values()].map(mapMessage);
 }
 
 export async function loadNotifications(userId: string, isCurrent: () => boolean = () => true): Promise<NotificationItem[]> {
   const rows = await readAll<NotificationRow>((from, to) => client().from('notifications')
     .select('*', from === 0 ? { count: 'exact' } : {}).eq('user_id', userId)
     .order('created_at', { ascending: false }).order('id').range(from, to), isCurrent);
-  return rows.map(mapNotification);
+  return [...new Map(rows.map(row=>[row.id,row])).values()].map(mapNotification);
 }
 
 export async function uploadItemImage(imageUrl: string, userId: string, isCurrent: () => boolean = () => true, objectId?: string): Promise<string> {

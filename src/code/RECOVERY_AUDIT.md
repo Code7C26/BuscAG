@@ -1,5 +1,10 @@
 # Auditoría del flujo de recuperación
 
+Nota posterior: la mejora integral agrega una declaración individual explícita
+para recuperaciones independientes aunque haya una conversación previa. No cierra
+solicitudes pendientes ni habilita valoraciones bilaterales. Ver la propuesta
+`20261106001000_community_safety.sql` y el informe integral para el comportamiento actual.
+
 Fecha: 6 de noviembre de 2026. Rama: Alexis. Base: 5bc98a5.
 
 Estado: implementación y pruebas locales completadas. **Pendientes: verificación

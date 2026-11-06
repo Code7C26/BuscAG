@@ -66,6 +66,7 @@ export function PublicProfileModal({
             objetos recuperados
           </p>
         </div>
+        <p className="px-4 text-sm">{user.ratingCount ? `Valoración: ${user.rating}/5 · ${user.ratingCount} devoluciones valoradas` : 'Sin valoraciones verificadas todavía'}</p>
         <p className="public-profile-privacy">
           <LockKeyhole size={17} />
           Este perfil muestra sólo información pública. Para contactar, abrí una

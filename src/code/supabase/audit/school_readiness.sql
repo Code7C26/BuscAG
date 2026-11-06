@@ -21,3 +21,16 @@ from buscag_private.match_control where singleton;
 select count(*) as queued_jobs,count(*) filter(where attempts>0) as retrying_jobs from buscag_private.match_jobs;
 select conname,pg_get_constraintdef(oid) as definition from pg_constraint where conrelid=to_regclass('buscag_private.recovery_confirmations') and contype='f';
 -- If pg_cron was authorized, additionally inspect its job status in Dashboard.
+
+-- Account deletion uses this BEFORE trigger to avoid crossed FK cascade failures.
+select t.tgname,t.tgenabled,p.prosecdef,p.proconfig,
+ pg_get_userbyid(p.proowner) as owner,
+ has_function_privilege('anon',p.oid,'EXECUTE') as anon_execute,
+ has_function_privilege('authenticated',p.oid,'EXECUTE') as authenticated_execute,
+ has_function_privilege('service_role',p.oid,'EXECUTE') as service_execute
+from pg_trigger t join pg_proc p on p.oid=t.tgfoid
+where t.tgrelid=to_regclass('auth.users')
+ and t.tgname='buscag_anonymize_recovery_participant' and not t.tgisinternal;
+select attname,attnotnull from pg_attribute
+where attrelid=to_regclass('buscag_private.recovery_confirmations')
+ and attname in ('owner_id','partner_id') and not attisdropped;

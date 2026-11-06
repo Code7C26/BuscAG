@@ -42,22 +42,59 @@ create table if not exists buscag_private.object_tags (
  item_id uuid primary key references public.items(id) on delete cascade,
  token uuid not null unique default gen_random_uuid(), enabled boolean not null default true
 );
--- RESTRICT deliberately preserves bilateral evidence; no cascading conversation deletion.
+-- Item deletion removes its history. Account deletion anonymizes participants.
+-- Keep confirmed state on surviving items; NULL never authorizes a caller.
 create table if not exists buscag_private.recovery_confirmations (
  id uuid primary key default gen_random_uuid(),
- item_id uuid not null references public.items(id) on delete restrict,
- owner_id uuid not null references auth.users(id) on delete restrict,
- partner_id uuid not null references auth.users(id) on delete restrict,
+ item_id uuid not null references public.items(id) on delete cascade,
+ owner_id uuid references auth.users(id) on delete set null,
+ partner_id uuid references auth.users(id) on delete set null,
  state text not null default 'pending' check(state in ('pending','confirmed','cancelled')),
  created_at timestamptz not null default now(), resolved_at timestamptz,
  check(owner_id<>partner_id)
 );
+-- Do not silently retain an older RESTRICT schema on a repeated installation.
+do $$ begin
+ if exists(select from pg_attribute where attrelid='buscag_private.recovery_confirmations'::regclass
+   and attname in ('owner_id','partner_id') and not attisdropped and attnotnull)
+ or (select count(*) from pg_constraint where conrelid='buscag_private.recovery_confirmations'::regclass
+   and contype='f')<>3
+ or not exists(select from pg_constraint where conrelid='buscag_private.recovery_confirmations'::regclass
+   and contype='f' and confrelid='public.items'::regclass and confdeltype='c' and convalidated
+   and conkey=array[(select attnum from pg_attribute where attrelid='buscag_private.recovery_confirmations'::regclass and attname='item_id')]::smallint[])
+ or (select count(*) from pg_constraint where conrelid='buscag_private.recovery_confirmations'::regclass
+   and contype='f' and confrelid='auth.users'::regclass and confdeltype='n' and convalidated
+   and conkey in (array[(select attnum from pg_attribute where attrelid='buscag_private.recovery_confirmations'::regclass and attname='owner_id')]::smallint[],
+                  array[(select attnum from pg_attribute where attrelid='buscag_private.recovery_confirmations'::regclass and attname='partner_id')]::smallint[]))<>2 then
+  raise exception 'Recovery retention schema drift: review separately, do not overwrite existing history';
+ end if;
+end $$;
 create unique index if not exists recovery_pending_item on buscag_private.recovery_confirmations(item_id) where state='pending';
+create index if not exists recovery_item_history on buscag_private.recovery_confirmations(item_id);
+create index if not exists recovery_owner_history on buscag_private.recovery_confirmations(owner_id);
+create index if not exists recovery_partner_history on buscag_private.recovery_confirmations(partner_id);
 alter table buscag_private.item_watches enable row level security;
 alter table buscag_private.alert_preferences enable row level security;
 alter table buscag_private.object_tags enable row level security;
 alter table buscag_private.recovery_confirmations enable row level security;
 revoke all on buscag_private.item_watches,buscag_private.alert_preferences,buscag_private.object_tags,buscag_private.recovery_confirmations from public,anon,authenticated,service_role;
+
+-- Null participant references BEFORE account cascades delete owned items.
+-- Otherwise PostgreSQL may SET NULL on a history row whose item is being deleted
+-- in the same cascade, failing its item FK. No application rows are touched here;
+-- this trigger runs only when an already-authorized account deletion occurs.
+create or replace function buscag_private.anonymize_recovery_participant() returns trigger
+language plpgsql security definer set search_path='' as $$ begin
+ update buscag_private.recovery_confirmations
+ set owner_id=case when owner_id=old.id then null else owner_id end,
+     partner_id=case when partner_id=old.id then null else partner_id end
+ where owner_id=old.id or partner_id=old.id;
+ return old;
+end $$;
+revoke all on function buscag_private.anonymize_recovery_participant() from public,anon,authenticated,service_role;
+drop trigger if exists buscag_anonymize_recovery_participant on auth.users;
+create trigger buscag_anonymize_recovery_participant before delete on auth.users
+ for each row execute function buscag_private.anonymize_recovery_participant();
 
 -- A bilateral confirmation is evidence, distinct from self-declared recovery.
 create or replace function buscag_private.protect_confirmed_recovery() returns trigger
@@ -254,7 +291,7 @@ begin
  if p_partner is null or p_partner=auth.uid() or not exists(select from public.messages where item_id=p_item and ((sender_id=auth.uid() and recipient_id=p_partner) or (recipient_id=auth.uid() and sender_id=p_partner))) then raise exception 'Conversation participant required' using errcode='42501';end if;
  select * into r from buscag_private.recovery_confirmations where item_id=p_item and state='pending';
  if found then
- if r.partner_id<>p_partner then raise exception 'Resolve pending request first' using errcode='22023';end if;
+ if r.partner_id is distinct from p_partner then raise exception 'Resolve pending request first' using errcode='22023';end if;
  return r.id;
  end if;
  if (select count(*) from buscag_private.recovery_confirmations where item_id=p_item and owner_id=auth.uid() and created_at>now()-interval '1 hour')>=5 then raise exception 'recovery_rate_limited' using errcode='P0001';end if;
@@ -269,19 +306,24 @@ declare r buscag_private.recovery_confirmations%rowtype; i public.items%rowtype;
 begin
  -- Consistent lock order with request_item_recovery.
  select * into r from buscag_private.recovery_confirmations where id=p_request;
- if not found or auth.uid() is null or auth.uid() not in (r.owner_id,r.partner_id) then raise exception 'Participant required' using errcode='42501';end if;
+ if not found or auth.uid() is null or (auth.uid() is distinct from r.owner_id and auth.uid() is distinct from r.partner_id) then raise exception 'Participant required' using errcode='42501';end if;
  select * into i from public.items where id=r.item_id for no key update;
  select * into r from buscag_private.recovery_confirmations where id=p_request for update;
+ -- Recheck after waiting: an account/item deletion may have changed the row.
+ if not found or (auth.uid() is distinct from r.owner_id and auth.uid() is distinct from r.partner_id) then raise exception 'Participant required' using errcode='42501';end if;
  if p_accept is null then raise exception 'Decision required' using errcode='22023';end if;
- if p_accept and auth.uid()<>r.partner_id then raise exception 'Other participant must confirm' using errcode='42501';end if;
+ if p_accept and auth.uid() is distinct from r.partner_id then raise exception 'Other participant must confirm' using errcode='42501';end if;
  if r.state<>'pending' then return r.state;end if;
  if p_accept then
+ if r.owner_id is null or r.partner_id is null then raise exception 'Participant account deleted; cancel the request' using errcode='22023';end if;
  if i.owner_id is distinct from r.owner_id or coalesce(i.status not in ('perdido','encontrado'),true) then raise exception 'Item changed; cancel the request' using errcode='22023';end if;
  update public.items set status='recuperado' where id=r.item_id;
  end if;
  update buscag_private.recovery_confirmations set state=case when p_accept then 'confirmed' else 'cancelled' end,resolved_at=now() where id=p_request returning * into r;
+ if (case when auth.uid()=r.owner_id then r.partner_id else r.owner_id end) is not null then
  insert into public.notifications(user_id,title,message,type,related_item_id,related_user_id)
  values(case when auth.uid()=r.owner_id then r.partner_id else r.owner_id end,'Confirmación de devolución',case when p_accept then 'Ambas partes confirmaron la devolución.' else 'La solicitud de confirmación fue cancelada.' end,'system',r.item_id,auth.uid());
+ end if;
  return r.state;
 end $$;
 -- INVOKER: counts only rows the current authenticated user can actually SELECT.

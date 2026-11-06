@@ -27,7 +27,11 @@ export async function schoolChecks(db, users) {
   await db.exec(sql);
   await db.exec(sql);
   assert.deepEqual(await snapshot(), before);
-  let checks = 2; // preflight rejection plus repeatable installation
+  await db.exec('alter table buscag_private.recovery_confirmations drop constraint recovery_confirmations_item_id_fkey; alter table buscag_private.recovery_confirmations add constraint recovery_confirmations_item_id_fkey foreign key(item_id) references public.items(id) on delete restrict');
+  await assert.rejects(db.exec(sql),e=>e.message.includes('Recovery retention schema drift'));
+  await db.exec('rollback');
+  await db.exec('alter table buscag_private.recovery_confirmations drop constraint recovery_confirmations_item_id_fkey; alter table buscag_private.recovery_confirmations add constraint recovery_confirmations_item_id_fkey foreign key(item_id) references public.items(id) on delete cascade');
+  let checks = 3; // preflight rejection plus repeatable installation
   const test = async (name, fn) => {
     await fn();
     checks++;
@@ -214,7 +218,7 @@ export async function schoolChecks(db, users) {
       [],
     );
   });
-  await test("second participant confirms once; messages/history survive; deletion is blocked", async () => {
+  await test("second participant confirms once; messages/history survive until explicit deletion", async () => {
     assert.equal(
       (
         await call(b, "select public.resolve_item_recovery($1,true) s", [
@@ -249,10 +253,7 @@ export async function schoolChecks(db, users) {
       ).rows.length,
       1,
     );
-    await assert.rejects(
-      call(a, "delete from public.items where id=$1", [lost.id]),
-      (e) => ["23503", "23001"].includes(e.code),
-    );
+
   });
   await test("statistics use real rows and respect caller RLS", async () => {
     const stats = (await call(a, "select public.community_statistics() s"))
@@ -387,6 +388,59 @@ export async function schoolChecks(db, users) {
         ])
       ).rows[0].t,
     );
+  });
+  await test("item deletion cascades history without granting third-party deletion", async () => {
+    const removed = await call(c, "delete from public.items where id=$1 returning id", [lost.id]);
+    assert.equal(removed.rows.length, 0);
+    await call(a, "delete from public.items where id=$1", [lost.id]);
+    assert.equal((await db.query("select count(*)::int n from buscag_private.recovery_confirmations where item_id=$1", [lost.id])).rows[0].n, 0);
+  });
+  await test("account deletion anonymizes pending/confirmed history without weakening authorization", async () => {
+    // Roll back dedicated synthetic identities and deletion to preserve other matrix checks.
+    await db.exec('begin');
+    try {
+      const owner='90000000-0000-4000-8000-000000000001';
+      const partner='90000000-0000-4000-8000-000000000002';
+      await db.query("insert into auth.users(id) values($1),($2)", [owner,partner]);
+      const item=(await db.query("insert into public.items(owner_id,title,description,category,status,location_name,lat,lng,date,image_url) values($1,'Synthetic','Synthetic','Otros','recuperado','Synthetic',0,0,'2026-11-05','https://images.invalid/a.png') returning id", [owner])).rows[0].id;
+      const history=(await db.query("insert into buscag_private.recovery_confirmations(item_id,owner_id,partner_id,state) values($1,$2,$3,'confirmed'),($1,$2,$3,'pending'),($1,$2,$3,'cancelled') returning id,state", [item,owner,partner])).rows;
+      await db.query('delete from auth.users where id=$1',[partner]);
+      assert.equal((await db.query('select count(*)::int n from buscag_private.recovery_confirmations where item_id=$1 and partner_id is null',[item])).rows[0].n,3);
+      await db.exec('set local role authenticated');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[c]);
+      const pending=history.find(r=>r.state==='pending').id;
+      await db.exec('savepoint denied_foreign');
+      await assert.rejects(db.query('select public.resolve_item_recovery($1,false)',[pending]),e=>e.code==='42501');
+      await db.exec('rollback to savepoint denied_foreign');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[owner]);
+      await db.exec('savepoint reopen');
+      await assert.rejects(db.query("update public.items set status='perdido' where id=$1",[item]),e=>e.code==='42501');
+      await db.exec('rollback to savepoint reopen');
+      assert.equal((await db.query('select public.resolve_item_recovery($1,false) s',[pending])).rows[0].s,'cancelled');
+      await db.exec('reset role');
+      // An item without an owner simulates another legitimate ownership path;
+      // deleting the referenced account must still NULL its history reference.
+      const cascaded=(await db.query("insert into public.items(owner_id,title,description,category,status,location_name,lat,lng,date,image_url) values($1,'Synthetic','Synthetic','Otros','perdido','Synthetic',0,0,'2026-11-05','https://images.invalid/a.png') returning id", [owner])).rows[0].id;
+      await db.query("insert into buscag_private.recovery_confirmations(item_id,owner_id,partner_id,state) values($1,$2,$3,'cancelled')",[cascaded,owner,c]);
+      await db.query('update public.items set owner_id=null where id=$1',[item]);
+      const orphan=(await db.query("insert into buscag_private.recovery_confirmations(item_id,owner_id,partner_id,state) values($1,$2,$3,'pending') returning id",[item,owner,c])).rows[0].id;
+      await db.query('delete from auth.users where id=$1',[owner]);
+      assert.equal((await db.query('select count(*)::int n from buscag_private.recovery_confirmations where item_id=$1 and owner_id is null and partner_id is null',[item])).rows[0].n,3);
+      assert.equal((await db.query('select count(*)::int n from public.items where id=$1',[cascaded])).rows[0].n,0);
+      assert.equal((await db.query('select count(*)::int n from buscag_private.recovery_confirmations where item_id=$1',[cascaded])).rows[0].n,0);
+      await db.exec('set local role authenticated');
+      await db.query("select set_config('request.jwt.claim.sub',$1,true)",[c]);
+      await db.exec('savepoint missing_owner');
+      await assert.rejects(db.query('select public.resolve_item_recovery($1,true)',[orphan]),e=>e.code==='22023');
+      await db.exec('rollback to savepoint missing_owner');
+      assert.equal((await db.query('select public.resolve_item_recovery($1,false) s',[orphan])).rows[0].s,'cancelled');
+      await db.exec('savepoint both_deleted');
+      await assert.rejects(db.query('select public.resolve_item_recovery($1,false)',[pending]),e=>e.code==='42501');
+      await db.exec('rollback to savepoint both_deleted');
+      await db.exec('reset role');
+      await db.query('delete from public.items where id=$1',[item]);
+      assert.equal((await db.query('select count(*)::int n from buscag_private.recovery_confirmations where item_id=$1',[item])).rows[0].n,0);
+    } finally { await db.exec('rollback'); }
   });
   console.log(
     `PASS: ${checks} school feature integration/security groups; repeatable SQL, isolated database only`,

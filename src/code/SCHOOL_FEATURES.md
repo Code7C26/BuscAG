@@ -41,11 +41,14 @@ No sustituir esta distinción por resultados del navegador con APIs simuladas.
 5. **Devolución bilateral:** dueño elige participante de un chat real; el otro
    acepta o cualquiera cancela. Sólo destinatario confirma, reintentos no duplican
    resultado ni avisos; bloqueos consistentes en servidor. Máximo cinco solicitudes
-   nuevas por objeto/hora. Registro conserva participantes/fechas y chat; FK RESTRICT
-   evita borrar el objeto con historial, incluso cancelado. Una confirmación bilateral
-   no puede reabrirse mediante edición de estado. No existe purga o retención temporal
-   automática; las FK también bloquean la eliminación de cuentas vinculadas.
-   Corrección excepcional o anonimización requiere revisión administrativa. Recuperar
+   nuevas por objeto/hora. Registro conserva participantes/fechas mientras existen. Borrar la publicación
+   elimina su historial por CASCADE; borrar una cuenta desvincula su identidad
+   con SET NULL si el objeto sobrevive. El chat mantiene sus cascadas anteriores. Una confirmación bilateral
+   no puede reabrirse mediante edición de estado. No existe purga temporal automática. Un participante eliminado nunca habilita
+   a terceros a decidir; la confirmación sigue protegiendo el estado del objeto
+   sobreviviente. Si falta el interlocutor, el dueño puede cancelar una solicitud
+   pendiente antes de crear otra. El historial no es un archivo de auditoría
+   inmutable independiente de publicaciones y cuentas. Recuperar
    individualmente sigue significando declaración del dueño, no certificación bilateral.
 6. **QR:** dueño genera PNG local, descarga, reemplaza o revoca. Token UUID aleatorio,
    sin teléfono/correo en URL ni proveedor QR externo. RPC anónima sólo devuelve
@@ -87,7 +90,7 @@ No sustituir esta distinción por resultados del navegador con APIs simuladas.
 3. Ejecutar `supabase/audit/school_readiness.sql`, sólo lectura. Verificar cuatro
    tablas privadas con RLS, sin SELECT/DML directos; únicamente `resolve_object_tag`
    ejecutable por anon; estadísticas INVOKER y RPC de escritura DEFINER con
-   search_path vacío; worker sólo service_role. Nuevas FK de historial RESTRICT.
+   search_path vacío; worker sólo service_role. FK item_id CASCADE; owner_id y partner_id SET NULL y anulables.
 4. **Elegir un solo programador del worker existente**:
    - Reutilizar la Edge Function `process-matches` y scheduler ya documentados,
      o el runner `demo:worker -- --watch` en un proceso de servidor/PC que permanezca
@@ -197,3 +200,13 @@ entorno; no se reutilizó la clave del proyecto original para intentar conectars
 Revisión adicional: [CI_E79322C_REVIEW.md](CI_E79322C_REVIEW.md) documenta el fallo
 reproducido de carga, aislamiento de Suspense, el bloqueo de FK del worker y su
 prueba concurrente. No se ampliaron timeouts ni se deshabilitaron pruebas.
+
+
+## Revisión de retención y estado del diagnóstico
+
+Ver `SCHOOL_INSTALLATION_FINAL.md` para la revisión actual. Las cifras anteriores
+son evidencia histórica del commit previo; no sustituyen los resultados nuevos.
+Las 26 comprobaciones preflight verdaderas son un resultado comunicado por el
+operador. No se recibieron los cuerpos reales de las 13 funciones; 12 huellas
+distintas no permiten concluir si cambiaron formato, comportamiento o seguridad.
+No ejecutar la propuesta hasta cerrar esa comparación.

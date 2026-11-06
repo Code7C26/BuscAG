@@ -111,6 +111,8 @@ async function counts(db){return (await db.query(`select
  (select count(*)::int from public.items) items,(select count(*)::int from public.messages) messages,
  (select count(*)::int from public.notifications) notifications,(select count(*)::int from public.push_subscriptions) subscriptions`)).rows[0];}
 export async function installStaging(db,{apply=false,onStep=()=>{}}={}){
+  if((await db.query("select to_regclass('buscag_private.recovery_confirmations') is not null present")).rows[0].present)
+    throw publicError('BUSCAG_PREFLIGHT','Instalación escolar existente: usar --upgrade-plan; no reinstalar el baseline.');
   if(!apply)return planStaging(db);
   await db.query("select pg_advisory_lock(214726,926)");
   try{
@@ -177,8 +179,11 @@ export async function verifyInstalled(db){
 }
 async function main(){
   const args=process.argv.slice(2),refIndex=args.indexOf('--project-ref'),ref=args[refIndex+1];
+  const upgrade=args.includes('--upgrade-plan')||args.includes('--upgrade-verify');
   const mode=args.includes('--apply')?'apply':args.includes('--verify')?'verify':args.includes('--smoke')?'smoke':'plan';
-  requireState(refIndex>=0&&args.length===3&&['--plan','--apply','--verify','--smoke'].some(x=>args.includes(x)),'Uso: npm run prepare:staging -- --project-ref REF --plan|--apply|--verify|--smoke');
+  requireState(refIndex>=0&&args.length===3&&['--plan','--apply','--verify','--smoke','--upgrade-plan','--upgrade-verify'].some(x=>args.includes(x)),'Uso: npm run prepare:staging -- --project-ref REF --plan|--apply|--verify|--smoke|--upgrade-plan|--upgrade-verify');
+  if(upgrade)requireState(ref==='yiarlhpbgkofhhipkfha','La actualización está fijada exclusivamente a BuscAG Prueba.');
+  if(upgrade){const {invalidateUpgradeArtifacts}=await import('./staging-upgrade.mjs');await invalidateUpgradeArtifacts();}
   const trust=await loadStagingCa();
   const config=connectionConfig(process.env.BUSCAG_STAGING_DATABASE_URL,ref,trust.ca);
   if(trust.fingerprint256)console.log('CA configurada SHA-256: '+trust.fingerprint256);
@@ -186,7 +191,18 @@ async function main(){
   try{
     await db.connect();await db.query("set statement_timeout='120s';set lock_timeout='10s'");
     requireState((await db.query('select current_user')).rows[0].current_user==='postgres','Se requiere el operador postgres de staging.');
-    if(mode==='smoke'){await verifyBootstrap(db);const {smokeStaging}=await import('./staging-smoke.mjs');console.log(JSON.stringify(await smokeStaging(db),null,2));}
+    if(upgrade){
+      const {planUpgrade,saveUpgradeArtifacts}=await import('./staging-upgrade.mjs');
+      // No remote mutation, not even a journal or rollback-only synthetic users.
+      await db.query("begin isolation level repeatable read read only;set local search_path=pg_catalog,public");
+      let plan;try{plan=await planUpgrade(db);}finally{await db.query('rollback');}
+      const artifacts=await saveUpgradeArtifacts(plan);
+      const {catalog,_expectedFinal,sources,comparisons,...summary}=plan;
+      console.log(JSON.stringify({...summary,artifacts},null,2));
+      requireState(plan.compatible_catalog,'Catálogo desconocido o con diferencias: revisar plan.json; no se preparó SQL ejecutable.');
+      if(args.includes('--upgrade-verify'))requireState(plan.installed_final_catalog,'La instalación final aún no está completa.');
+    }
+    else if(mode==='smoke'){await verifyBootstrap(db);const {smokeStaging}=await import('./staging-smoke.mjs');console.log(JSON.stringify(await smokeStaging(db),null,2));}
     else if(mode==='verify')console.log(JSON.stringify(await verifyInstalled(db),null,2));
     else {const plan=await installStaging(db,{apply:mode==='apply',onStep:(file,state)=>console.log(`${state}: ${file}`)});console.log(JSON.stringify(plan.map(({file,sha256,applied})=>({file,sha256,applied})),null,2));}
   }finally{await db.end();}

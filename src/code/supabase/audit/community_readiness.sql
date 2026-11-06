@@ -1,4 +1,6 @@
 -- READ ONLY: catalog/configuration only, no personal rows, endpoint keys or tokens.
+-- *_installed below means presence ONLY, not compatibility/security certification.
+-- See upgrade_catalog.sql and STAGING_UPGRADE.md before any installation.
 select to_regprocedure('public.my_community_settings()') is not null as community_installed,
  to_regprocedure('public.declare_independent_recovery(uuid,text)') is not null as independent_recovery_installed,
  to_regprocedure('public.set_user_block(uuid,boolean)') is not null as blocks_installed,

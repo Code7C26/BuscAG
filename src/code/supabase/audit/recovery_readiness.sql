@@ -1,5 +1,7 @@
 -- READ ONLY. Catalog inspection only; no application rows, user identities or writes.
 -- Run manually against Supabase Prueba to compare deployed state with this commit.
+-- *_installed below means presence ONLY. Use upgrade_catalog.sql and the reviewed
+-- --upgrade-plan/--upgrade-verify flow to compare definitions, security and structure.
 select to_regprocedure('public.recovery_context(uuid)') is not null as secure_context_installed,
  to_regprocedure('public.request_item_recovery(uuid,uuid)') is not null as request_installed,
  to_regprocedure('public.resolve_item_recovery(uuid,boolean)') is not null as resolution_installed,

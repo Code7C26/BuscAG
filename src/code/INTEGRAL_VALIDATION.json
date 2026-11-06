@@ -1,0 +1,101 @@
+{
+  "services": "simulated_or_disposable",
+  "remote_staging": "not_tested",
+  "production": "not_contacted",
+  "results": [
+    {
+      "step": "test",
+      "passed": true,
+      "elapsed_ms": 4682
+    },
+    {
+      "step": "lint",
+      "passed": true,
+      "elapsed_ms": 10566
+    },
+    {
+      "step": "test:staging-frontend",
+      "passed": true,
+      "elapsed_ms": 963
+    },
+    {
+      "step": "test:release",
+      "passed": true,
+      "elapsed_ms": 876
+    },
+    {
+      "step": "test:staging-live-tools",
+      "passed": true,
+      "elapsed_ms": 10283
+    },
+    {
+      "step": "test:visitors",
+      "passed": true,
+      "elapsed_ms": 289
+    },
+    {
+      "step": "test:staging-worker-tools",
+      "passed": true,
+      "elapsed_ms": 229
+    },
+    {
+      "step": "test:presentation",
+      "passed": true,
+      "elapsed_ms": 829
+    },
+    {
+      "step": "test:staging-tools",
+      "passed": true,
+      "elapsed_ms": 5290
+    },
+    {
+      "step": "test:backend",
+      "passed": true,
+      "elapsed_ms": 12079
+    },
+    {
+      "step": "build",
+      "passed": true,
+      "elapsed_ms": 4030
+    },
+    {
+      "step": "test:e2e",
+      "passed": true,
+      "elapsed_ms": 221496
+    },
+    {
+      "step": "test:pwa-browser",
+      "passed": true,
+      "elapsed_ms": 8915
+    },
+    {
+      "step": "test:presentation-browser",
+      "passed": true,
+      "elapsed_ms": 7937
+    },
+    {
+      "step": "client-security",
+      "passed": true
+    }
+  ],
+  "native_postgresql": {
+    "passed": true,
+    "local_disposable_only": true,
+    "matrices": [
+      "repository/date",
+      "repository/timestamptz",
+      "observed/date"
+    ],
+    "base_checks": [
+      61,
+      61,
+      64
+    ],
+    "school_groups_each": 17,
+    "recovery_groups_each": 8,
+    "community_groups_each": 15
+  },
+  "application_test_count": 133,
+  "browser_e2e_test_count": 84,
+  "client_security_check_count": 18
+}

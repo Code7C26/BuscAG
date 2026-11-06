@@ -7,6 +7,16 @@ self.addEventListener('push', event => {
     body: typeof payload.body === 'string' ? payload.body.slice(0,500) : 'Tienes una nueva notificación.',
     data: { url: typeof payload.url === 'string' ? payload.url : '/' }
   };
+  // Webhooks/providers can redeliver. Replace the visible notification for the
+  // same persisted notice instead of showing several copies of it.
+  try {
+    const destination = new URL(options.data.url, self.location.origin);
+    const id = destination.searchParams.get('notification');
+    if (destination.origin === self.location.origin && id && /^[a-zA-Z0-9-]{1,128}$/.test(id)) {
+      options.tag = 'buscag-notice-' + id;
+      options.renotify = false;
+    }
+  } catch { /* Invalid links keep the safe default notification behavior. */ }
   event.waitUntil(self.registration.showNotification(title, options));
 });
 

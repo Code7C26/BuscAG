@@ -3,6 +3,7 @@ import { STAGING_APP_URL } from "./stagingEnvironment.mjs";
 export const PUBLIC_AUTH_REDIRECTS = Object.freeze([
   PRESENTATION_APP_URL + "/",
   PRESENTATION_APP_URL + "/?auth=recovery",
+  PRESENTATION_APP_URL + "/**",
 ]);
 export function visitorSettingsError(settings) {
   if (settings.auth_settings_complete !== true)

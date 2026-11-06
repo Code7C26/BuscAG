@@ -29,7 +29,7 @@ test("visitors require open registration and confirmed email; missing or permiss
   assert.ok(visitorSettingsError({}));
 });
 test("email rehearsal defaults to the public Firebase origin and only accepts an explicit staging local alternative", () => {
-  assert.equal(stagingMailOrigin({}), "https://buscag-2677c.web.app");
+  assert.equal(stagingMailOrigin({}), "https://buscag-prueba.web.app");
   assert.equal(
     stagingMailOrigin({
       BUSCAG_STAGING_TEST_APP_ORIGIN: "http://127.0.0.1:3001",
@@ -40,14 +40,15 @@ test("email rehearsal defaults to the public Firebase origin and only accepts an
     "http://localhost:3000",
     "https://evil.invalid",
     "https://hczcqtodcnurdrroczle.supabase.co",
-    "https://buscag-2677c.web.app/",
+    "https://buscag-prueba.web.app/",
   ])
     assert.throws(() =>
       stagingMailOrigin({ BUSCAG_STAGING_TEST_APP_ORIGIN: origin }),
     );
   assert.deepEqual(PUBLIC_AUTH_REDIRECTS, [
-    "https://buscag-2677c.web.app/",
-    "https://buscag-2677c.web.app/?auth=recovery",
+    "https://buscag-prueba.web.app/",
+    "https://buscag-prueba.web.app/?auth=recovery",
+    "https://buscag-prueba.web.app/**",
   ]);
 });
 test("visitor preflight needs only a public staging key and cannot select a production backend", () => {
@@ -55,7 +56,7 @@ test("visitor preflight needs only a public staging key and cannot select a prod
     { BUSCAG_STAGING_PUBLISHABLE_KEY: "sb_publishable_fixture_key" },
     ["--visitor-preflight"],
   );
-  assert.equal(config.mailOrigin, "https://buscag-2677c.web.app");
+  assert.equal(config.mailOrigin, "https://buscag-prueba.web.app");
   assert.deepEqual(config.accounts, []);
   assert.throws(() =>
     liveConfiguration({ BUSCAG_STAGING_PUBLISHABLE_KEY: "sb_secret_PRIVATE" }, [
@@ -100,12 +101,12 @@ test("signup rehearsal requests signed public redirects without prematurely requ
         },
       },
     }),
-    "https://buscag-2677c.web.app",
+    "https://buscag-prueba.web.app",
   );
   assert.equal(calls.length, 2);
   assert.ok(
     calls.every(
-      (c) => c.options.emailRedirectTo === "https://buscag-2677c.web.app/",
+      (c) => c.options.emailRedirectTo === "https://buscag-prueba.web.app/",
     ),
   );
   assert.deepEqual(result, { requests_accepted: 2, delivery_verified: false });
@@ -120,7 +121,7 @@ test("signup rehearsal requests signed public redirects without prematurely requ
           }),
         },
       }),
-      "https://buscag-2677c.web.app",
+      "https://buscag-prueba.web.app",
     ),
     /sesión inmediata/,
   );
@@ -131,14 +132,14 @@ test("public-email rehearsal refuses old SPA HTML and production manifests befor
   const good = {
     mode: "presentation",
     project_ref: "yiarlhpbgkofhhipkfha",
-    app_origin: "https://buscag-2677c.web.app",
+    app_origin: "https://buscag-prueba.web.app",
     commit: "a".repeat(40),
   };
   const result = await verifyPublicStagingArtifact(async (url, options) => {
     calls++;
     assert.equal(
       url,
-      "https://buscag-2677c.web.app/presentation-manifest.json",
+      "https://buscag-prueba.web.app/presentation-manifest.json",
     );
     assert.equal(options.method, "GET");
     assert.equal(options.redirect, "error");

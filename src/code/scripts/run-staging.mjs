@@ -5,7 +5,7 @@ import {checkStagingPublic} from './check-staging-public.mjs';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {stagingEnvironment,STAGING_URL,STAGING_APP_URL} from '../lib/stagingEnvironment.mjs';
 export function stagingProcessEnvironment(source){
-  const selected=stagingEnvironment(source.BUSCAG_STAGING_PUBLISHABLE_KEY);
+  const selected=stagingEnvironment(source.BUSCAG_STAGING_PUBLISHABLE_KEY,source.BUSCAG_STAGING_VAPID_PUBLIC_KEY);
   const result=Object.fromEntries(Object.entries(source).filter(([name])=>!name.startsWith('VITE_')));
   delete result.BUSCAG_STAGING_DATABASE_URL;
   return {...result,...selected};

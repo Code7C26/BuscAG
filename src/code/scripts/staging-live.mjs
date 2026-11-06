@@ -1,3 +1,4 @@
+import {PRESENTATION_APP_URL} from '../lib/presentationEnvironment.mjs';
 import {runSchoolChecks} from './school-live-checks.mjs';
 // Opt-in REAL staging API checks. Never imports dotenv or production settings.
 import { createClient } from "@supabase/supabase-js";
@@ -158,7 +159,7 @@ export async function runLiveChecks(config, report = console.log) {
       return;
     }
     if (config.mode === "--email-requests") {
-      if (config.mailOrigin === "https://buscag-2677c.web.app") {
+      if (config.mailOrigin === PRESENTATION_APP_URL) {
         try {
           await verifyPublicStagingArtifact();
         } catch {

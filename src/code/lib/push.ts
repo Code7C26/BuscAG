@@ -39,14 +39,16 @@ export async function getPushNotificationStatus(userId: string): Promise<boolean
 export async function enablePushNotifications(userId: string, isCurrent: () => boolean = () => true): Promise<void> {
   if (!isCurrent()) throw new Error('La sesión cambió.');
   if (!isPushAvailable()) {
-    throw new Error('Este navegador no admite notificaciones push. Prueba con un navegador compatible y una conexión segura (HTTPS).');
+    throw new Error(/iPad|iPhone|iPod/.test(navigator.userAgent)?'En iPhone, instalá BuscAG en la pantalla de inicio y abrila desde su icono (iOS 16.4 o posterior).':'Este navegador no admite push. Podés consultar los avisos dentro de BuscAG.');
   }
 
   const applicationServerKey = import.meta.env.VITE_VAPID_PUBLIC_KEY?.trim();
   if (!applicationServerKey) {
-    throw new Error('Falta configurar VITE_VAPID_PUBLIC_KEY para habilitar las notificaciones.');
+    throw new Error('Las notificaciones push de este sitio aún no están habilitadas. Podés seguir consultando los avisos dentro de BuscAG.');
   }
 
+  let decodedKey:Uint8Array;
+  try{decodedKey=decodeApplicationServerKey(applicationServerKey);if(decodedKey.length!==65||decodedKey[0]!==4)throw Error();}catch{throw Error('La configuración push del sitio no es válida. Podés seguir consultando los avisos en la aplicación.');}
   const permission = await Notification.requestPermission();
   if (!isCurrent()) throw new Error('La sesión cambió.');
   if (permission !== 'granted') {
@@ -55,15 +57,24 @@ export async function enablePushNotifications(userId: string, isCurrent: () => b
       : 'Debes permitir las notificaciones para recibir avisos.');
   }
 
-  const registration = await navigator.serviceWorker.register('/sw.js');
+  let registration:ServiceWorkerRegistration;
+  try{registration=await navigator.serviceWorker.register('/sw.js',{scope:'/'});}catch{throw Error('No se pudo preparar este dispositivo para recibir avisos. Revisá la conexión segura e intentá nuevamente.');}
   if (!isCurrent()) throw new Error('La sesión cambió.');
-  await navigator.serviceWorker.ready;
+  let timer:ReturnType<typeof setTimeout>;
+  try{await Promise.race([navigator.serviceWorker.ready,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('El dispositivo tardó demasiado en preparar los avisos. Intentá nuevamente.')),15000);})]);}finally{clearTimeout(timer!);}
   if (!isCurrent()) throw new Error('La sesión cambió.');
-  const existing = await registration.pushManager.getSubscription();
+  let existing = await registration.pushManager.getSubscription();
+  if (!isCurrent()) throw new Error('La sesión cambió.');
+  const existingKey=existing?.options?.applicationServerKey;
+  if(existing&&existingKey&&Array.from(new Uint8Array(existingKey)).join(',')!==Array.from(decodedKey).join(',')){
+    const {error}=await requireClient().from('push_subscriptions').delete().eq('user_id',userId).eq('endpoint',existing.endpoint);if(error)throw error;
+    if(!isCurrent())throw new Error('La sesión cambió.');
+    await existing.unsubscribe();existing=null;
+  }
   if (!isCurrent()) throw new Error('La sesión cambió.');
   const subscription = existing ?? await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: decodeApplicationServerKey(applicationServerKey)
+      applicationServerKey: decodedKey as Uint8Array<ArrayBuffer>
     });
   const keys = subscription.toJSON().keys;
 

@@ -2,11 +2,12 @@ import {
   STAGING_REF,
   STAGING_URL,
   stagingKeyError,
+  vapidPublicKeyError,
 } from "./stagingEnvironment.mjs";
-export const PRESENTATION_APP_URL = "https://buscag-2677c.web.app";
+export const PRESENTATION_APP_URL = "https://buscag-prueba.web.app";
 export const PRESENTATION_STORAGE_KEY = `buscag-presentation-${STAGING_REF}-auth`;
 export function presentationEnvironment(source) {
-  const error = stagingKeyError(source.BUSCAG_STAGING_PUBLISHABLE_KEY);
+  const error = stagingKeyError(source.BUSCAG_STAGING_PUBLISHABLE_KEY)||vapidPublicKeyError(source.BUSCAG_STAGING_VAPID_PUBLIC_KEY);
   if (error) throw Error(error);
   // Ignore ambient production client settings; this is an explicitly separate artifact.
   const base = Object.fromEntries(
@@ -16,6 +17,7 @@ export function presentationEnvironment(source) {
   );
   return {
     ...base,
+    ...(source.BUSCAG_STAGING_VAPID_PUBLIC_KEY?{VITE_VAPID_PUBLIC_KEY:source.BUSCAG_STAGING_VAPID_PUBLIC_KEY}:{}),
     VITE_APP_ENV: "presentation",
     VITE_APP_URL: PRESENTATION_APP_URL,
     VITE_SUPABASE_URL: STAGING_URL,
@@ -35,6 +37,7 @@ export function validatePresentationEnvironment(env) {
         name.startsWith("VITE_") &&
         value &&
         ![
+          "VITE_VAPID_PUBLIC_KEY",
           "VITE_APP_ENV",
           "VITE_APP_URL",
           "VITE_SUPABASE_URL",
@@ -42,8 +45,8 @@ export function validatePresentationEnvironment(env) {
         ].includes(name),
     )
   )
-    return "La presentación sólo permite sus cuatro variables públicas revisadas.";
-  return stagingKeyError(env.VITE_SUPABASE_PUBLISHABLE_KEY);
+    return "La presentación sólo permite sus variables públicas revisadas.";
+  return stagingKeyError(env.VITE_SUPABASE_PUBLISHABLE_KEY)||vapidPublicKeyError(env.VITE_VAPID_PUBLIC_KEY);
 }
 export const PRESENTATION_CSP = [
   "default-src 'self'",

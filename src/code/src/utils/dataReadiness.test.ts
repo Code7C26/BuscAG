@@ -69,5 +69,7 @@ test('Vite configuration rejects server-only variable names without revealing th
     const error=validateEnvironment({...base,[name]:'DO_NOT_PRINT'},true);
     assert.match(error!,/privada/);assert.equal(error!.includes('DO_NOT_PRINT'),false);
   }
-  assert.equal(validateEnvironment({...base,VITE_VAPID_PUBLIC_KEY:'synthetic-public',SUPABASE_SERVICE_ROLE_KEY:'server-only'},true),null);
+  assert.ok(validateEnvironment({...base,VITE_VAPID_PUBLIC_KEY:'synthetic-public'},true));
+  const publicEncoding=btoa(String.fromCharCode(4)+'x'.repeat(64)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  assert.equal(validateEnvironment({...base,VITE_VAPID_PUBLIC_KEY:publicEncoding,SUPABASE_SERVICE_ROLE_KEY:'server-only'},true),null);
 });

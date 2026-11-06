@@ -55,6 +55,8 @@ test("presentation Hosting is separate, preserves routing/headers and forbids pr
   );
   assert.equal(normal.hosting.public, "dist");
   assert.equal(school.hosting.public, "dist-presentation");
+  assert.equal(school.hosting.site, "buscag-prueba");
+  assert.equal(PRESENTATION_APP_URL, "https://buscag-prueba.web.app");
   assert.deepEqual(school.hosting.rewrites, normal.hosting.rewrites);
   const headers = school.hosting.headers.find((h) => h.source === "**").headers;
   assert.equal(
@@ -95,4 +97,11 @@ test("real Vite presentation config isolates dotenv, target and output without e
     for (const [key, value] of Object.entries(old))
       if (key.startsWith("VITE_")) process.env[key] = value;
   }
+});
+
+test('presentation supports a separately reviewed public VAPID key without forwarding private values',()=>{
+ const fixture=btoa(String.fromCharCode(4)+'x'.repeat(64)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+ const env=presentationEnvironment({...source,BUSCAG_STAGING_VAPID_PUBLIC_KEY:fixture,VITE_VAPID_PRIVATE_KEY:'private-fixture'});
+ assert.equal(env.VITE_VAPID_PUBLIC_KEY,fixture);assert.equal(validatePresentationEnvironment(env),null);
+ assert.equal('VITE_VAPID_PRIVATE_KEY' in env,false);assert.throws(()=>presentationEnvironment({...source,BUSCAG_STAGING_VAPID_PUBLIC_KEY:'private-fixture'}));
 });

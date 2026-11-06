@@ -1,10 +1,11 @@
 {
   "purpose": "MANUAL_REVIEW_ONLY_NOT_AN_EXECUTABLE_MANAGEMENT_API_PAYLOAD",
   "project_ref": "yiarlhpbgkofhhipkfha",
-  "site_url": "https://buscag-2677c.web.app",
+  "site_url": "https://buscag-prueba.web.app",
   "redirect_urls": [
-    "https://buscag-2677c.web.app/",
-    "https://buscag-2677c.web.app/?auth=recovery"
+    "https://buscag-prueba.web.app/",
+    "https://buscag-prueba.web.app/?auth=recovery",
+    "https://buscag-prueba.web.app/**"
   ],
   "email_provider_enabled": true,
   "new_users_allowed": true,
@@ -31,6 +32,7 @@
   "production_changes_allowed": false,
   "local_rehearsal_redirect_urls": [
     "http://127.0.0.1:3001/",
-    "http://127.0.0.1:3001/?auth=recovery"
+    "http://127.0.0.1:3001/?auth=recovery",
+    "http://127.0.0.1:3001/**"
   ]
 }

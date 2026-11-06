@@ -65,3 +65,12 @@ test('real Vite staging server ignores env files, serves pinned variables and re
 });
 
 test('visitor launcher explicitly requests strict signup checks without changing the offline build mode',()=>{assert.deepEqual(stagingArguments(['--visitors']),{build:false,visitors:true});assert.deepEqual(stagingArguments(['--build','--visitors']),{build:true,visitors:true});for(const args of [['--production'],['--visitors','--visitors'],['--force']])assert.throws(()=>stagingArguments(args));});
+
+// Synthetic encoding fixture only; never used to subscribe or configure a site.
+test('launchers accept only an explicit public VAPID encoding and discard ambient keys',()=>{
+ const fixture=btoa(String.fromCharCode(4)+'x'.repeat(64)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+ const result=stagingProcessEnvironment({BUSCAG_STAGING_PUBLISHABLE_KEY:publicKey,BUSCAG_STAGING_VAPID_PUBLIC_KEY:fixture,VITE_VAPID_PUBLIC_KEY:'ambient-key-must-be-ignored'});
+ assert.equal(result.VITE_VAPID_PUBLIC_KEY,fixture);assert.equal(validateStagingEnvironment(result),null);
+ assert.equal(stagingProcessEnvironment({BUSCAG_STAGING_PUBLISHABLE_KEY:publicKey,VITE_VAPID_PUBLIC_KEY:fixture}).VITE_VAPID_PUBLIC_KEY,undefined);
+ for(const value of ['private-key-fixture','-----BEGIN PRIVATE KEY-----','sb_secret_fixture'])assert.throws(()=>stagingProcessEnvironment({BUSCAG_STAGING_PUBLISHABLE_KEY:publicKey,BUSCAG_STAGING_VAPID_PUBLIC_KEY:value}));
+});

@@ -1,3 +1,5 @@
+import {vapidPublicKeyError} from './vapid.mjs';
+export {vapidPublicKeyError} from './vapid.mjs';
 // Public target identifiers, never credentials. Shared by Vite, browser and tools.
 export const STAGING_REF='yiarlhpbgkofhhipkfha';
 export const STAGING_URL=`https://${STAGING_REF}.supabase.co`;
@@ -13,13 +15,14 @@ export function stagingKeyError(key){
   }catch{}
   return 'Usa una clave publicable de staging o un JWT anon de ese proyecto; nunca service_role ni claves privadas.';
 }
-export function stagingEnvironment(key){
+export function stagingEnvironment(key,vapid){
   const error=stagingKeyError(key);if(error)throw Error(error);
-  return {VITE_APP_ENV:'staging',VITE_SUPABASE_URL:STAGING_URL,VITE_SUPABASE_PUBLISHABLE_KEY:key.trim(),VITE_APP_URL:STAGING_APP_URL};
+  if(vapidPublicKeyError(vapid))throw Error(vapidPublicKeyError(vapid));
+  return {...(vapid?{VITE_VAPID_PUBLIC_KEY:vapid}:{}),VITE_APP_ENV:'staging',VITE_SUPABASE_URL:STAGING_URL,VITE_SUPABASE_PUBLISHABLE_KEY:key.trim(),VITE_APP_URL:STAGING_APP_URL};
 }
 export function validateStagingEnvironment(env){
   if(env.VITE_SUPABASE_URL!==STAGING_URL||env.VITE_APP_URL!==STAGING_APP_URL||env.VITE_APP_ENV!=='staging')return 'Staging sólo admite el proyecto yiarlhpbgkofhhipkfha y http://127.0.0.1:3001. No se conectará a otro destino.';
-  return stagingKeyError(env.VITE_SUPABASE_PUBLISHABLE_KEY);
+  return stagingKeyError(env.VITE_SUPABASE_PUBLISHABLE_KEY)||vapidPublicKeyError(env.VITE_VAPID_PUBLIC_KEY);
 }
 export const STAGING_CSP=[
   "default-src 'self'",

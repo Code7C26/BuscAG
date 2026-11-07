@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { communityCall, REPORT_REASONS } from "../../lib/community";
+import { communityCall, REPORT_REASONS, ServiceUnavailableError } from "../../lib/community";
 export function SafetyActions({
   userId,
   targetUserId,
@@ -18,9 +18,11 @@ export function SafetyActions({
   const [kind, setKind] = useState(itemId ? "item" : "user"),
     [reason, setReason] = useState("spam"),
     [description, setDescription] = useState("");
+  const [revision,setRevision]=useState(0);
   useEffect(() => {
     let active = true;
     setReady(false);
+    setNotice('');
     Promise.all([
       communityCall("list_my_blocks"),
       itemId ? communityCall("my_item_follow", { p_item: itemId }) : null,
@@ -32,12 +34,15 @@ export function SafetyActions({
         setNotify(follow?.notify ?? true);
         setReady(true);
       })
-      .catch(() => {});
+      .catch(error => {if(active)setNotice(error instanceof ServiceUnavailableError
+        ? 'Seguimiento, bloqueos y denuncias todavía no están habilitados. Podés contactar por chat.'
+        : 'No se pudo consultar la disponibilidad de estas opciones. Revisá la conexión.');});
     return () => {
       active = false;
     };
-  }, [userId, targetUserId, itemId]);
+  }, [userId, targetUserId, itemId,revision]);
   if (!targetUserId || targetUserId === userId) return null;
+  if(!ready)return <section aria-label="Seguridad y seguimiento" className="community-tools"><p role="status">{notice||'Consultando opciones de seguridad…'}</p>{notice&&<button onClick={()=>setRevision(v=>v+1)}>Comprobar disponibilidad</button>}</section>;
   const run = async (action: () => Promise<void>) => {
     if (busy) return;
     setBusy(true);

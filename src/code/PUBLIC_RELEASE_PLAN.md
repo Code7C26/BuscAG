@@ -1,5 +1,9 @@
 # Lanzamiento público: decisión y procedimiento reproducible
 
+**Plan histórico de producción.** La candidata vigente de Prueba sigue
+[V1_RELEASE_CANDIDATE.md](V1_RELEASE_CANDIDATE.md), exclusivamente en Alexis.
+No aplicar las instrucciones de integración/producción de este documento a esa candidata.
+
 **Cambio de alcance:** el objetivo vigente es una presentación escolar, no este
 lanzamiento masivo. Consultar SCHOOL_PRESENTATION.md: ruta con staging real, cuentas
 confirmadas y sin exigir SMTP comercial. Este documento conserva el plan de

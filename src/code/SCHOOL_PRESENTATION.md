@@ -1,5 +1,10 @@
 # BuscAG: presentación escolar, sin infraestructura comercial
 
+**Procedimiento vigente para la candidata 1.0:** [V1_RELEASE_CANDIDATE.md](V1_RELEASE_CANDIDATE.md).
+Se trabaja/publica la candidata desde Alexis, sin integrar main/German ni actualizar
+el backend. Las instrucciones de integración históricas de este documento no se
+aplican a esa candidata. La publicación continúa sujeta a validación y autorización.
+
 **Actualización de alcance:** se requiere registro real de visitantes con su propio
 correo y confirmación activa. Ver [VISITOR_REGISTRATION.md](VISITOR_REGISTRATION.md).
 Las cuentas preconfirmadas son sólo contingencia y no prueban recepción de email.

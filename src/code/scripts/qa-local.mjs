@@ -25,6 +25,7 @@ for (const name of Object.keys(fixtureEnv))
 const steps = [
   "test",
   "lint",
+  "test:v1",
   "test:staging-frontend",
   "test:staging-tls",
   "test:release",

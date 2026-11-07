@@ -1,8 +1,8 @@
 // Explicit staging-backed school artifact. Never deploys or modifies remote services.
 import { spawnSync } from "node:child_process";
-import { readFile, readdir, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import {inventoryCandidate} from '../lib/candidateArtifact.mjs';
 import {
   presentationEnvironment,
   validatePresentationEnvironment,
@@ -10,7 +10,8 @@ import {
 } from "../lib/presentationEnvironment.mjs";
 const root = fileURLToPath(new URL("..", import.meta.url));
 try {
-  if (process.argv.length !== 2)
+  const candidate=process.argv.length===3&&process.argv[2]==='--rc';
+  if (process.argv.length !== 2&&!candidate)
     throw Error(
       "build:presentation no admite argumentos ni destinos alternativos.",
     );
@@ -25,6 +26,8 @@ try {
     });
   const sha = git(["rev-parse", "HEAD"]);
   const status = git(["status", "--porcelain"]);
+  const branch=git(['branch','--show-current']);
+  if(candidate&&(branch.status!==0||branch.stdout.trim()!=='Alexis'))throw Error('La candidata requiere Alexis.');
   if (sha.status !== 0 || status.status !== 0 || status.stdout.trim())
     throw Error(
       "La presentación requiere checkout limpio y commit identificable.",
@@ -42,33 +45,16 @@ try {
     { cwd: root, env, stdio: "inherit" },
   );
   if (result.status !== 0) throw Error("No se pudo compilar la presentación.");
-  const files = [];
-  async function walk(relative = "") {
-    for (const entry of await readdir(
-      new URL(`../dist-presentation/${relative}`, import.meta.url),
-      { withFileTypes: true },
-    )) {
-      const name = relative + entry.name;
-      if (entry.isDirectory()) await walk(name + "/");
-      else if (entry.isFile()) {
-        const bytes = await readFile(
-          new URL(`../dist-presentation/${name}`, import.meta.url),
-        );
-        files.push({
-          path: name,
-          bytes: bytes.length,
-          sha256: createHash("sha256").update(bytes).digest("hex"),
-        });
-      } else throw Error("Artefacto inesperado; no se admiten enlaces.");
-    }
-  }
-  await walk();
+  const files=await inventoryCandidate(fileURLToPath(new URL('../dist-presentation/',import.meta.url)));
+  const pkg=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));
   await writeFile(
     new URL("../dist-presentation/presentation-manifest.json", import.meta.url),
     JSON.stringify(
       {
         commit: sha.stdout.trim(),
         mode: "presentation",
+        version:pkg.version,
+        release_candidate:candidate,
         backend: "BuscAG-Staging",
         project_ref: "yiarlhpbgkofhhipkfha",
         app_origin: PRESENTATION_APP_URL,

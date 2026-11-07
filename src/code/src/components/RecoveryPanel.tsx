@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import type { Recovery } from "../../lib/schoolFeatures";
 import type { Item } from "../types";
-import { communityCall } from "../../lib/community";
+import { communityCall, ServiceUnavailableError } from "../../lib/community";
 
 type Context = {
   version: number;
@@ -31,6 +31,7 @@ export function RecoveryPanel({
     sequence = useRef(0),
     pending = useRef(false);
   const latest = useRef({ item, onChanged });
+  const unavailable=useRef(false);
   latest.current = { item, onChanged };
   const owner = item.user.id === userId;
 
@@ -38,6 +39,7 @@ export function RecoveryPanel({
     const request = ++sequence.current;
     const result = await supabase!.rpc("recovery_context", { p_item: item.id });
     if (lifecycle !== epoch.current || request !== sequence.current) return;
+    if(result.error?.code==='PGRST202'||result.data?.version===1)throw new ServiceUnavailableError();
     if (
       result.error ||
       result.data?.version !== 2 ||
@@ -46,19 +48,22 @@ export function RecoveryPanel({
     )
       throw Error("unavailable");
     setContext(result.data);
+    unavailable.current=false;
     setNotice("");
     if (result.data.status !== latest.current.item.status)
       latest.current.onChanged();
   }
   useEffect(() => {
     const lifecycle = ++epoch.current;
+    unavailable.current=false;setContext(null);setNotice('');
     const update = () => {
-      if (!supabase || pending.current) return;
-      void refresh(lifecycle).catch(() => {
+      if (!supabase || pending.current||unavailable.current) return;
+      void refresh(lifecycle).catch(error => {
         if (lifecycle === epoch.current) {
+          unavailable.current=error instanceof ServiceUnavailableError;
           setContext(null);
           setNotice(
-            "Recuperación segura no disponible. Revisá la conexión o intentá más tarde. No se cambió el estado.",
+            unavailable.current?'Recuperación segura no disponible todavía. La confirmación requiere la actualización pendiente del servicio. No se cambió el estado.':"Recuperación segura no disponible. Revisá la conexión o intentá más tarde. No se cambió el estado.",
           );
         }
       });
@@ -115,7 +120,7 @@ export function RecoveryPanel({
               ? "Pendiente de confirmación"
               : request?.state === "cancelled"
                 ? "Confirmación rechazada"
-                : "La publicación sigue activa hasta confirmar la recuperación."}
+              : context ? "La publicación sigue activa hasta confirmar la recuperación." : item.status==='recuperado' ? 'Recuperado · estado registrado en la publicación' : 'La publicación conserva su estado. No hay una nueva confirmación registrada.'}
       </p>
       {notice && (
         <p role="alert" className="text-sm">

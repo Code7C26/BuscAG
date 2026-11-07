@@ -1,7 +1,7 @@
 {
   "name": "react-example",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0-rc.1",
   "type": "module",
   "scripts": {
     "test:pwa-browser": "node tests/pwa-browser.mjs",
@@ -14,7 +14,7 @@
     "check:staging-public": "node scripts/check-staging-public.mjs",
     "test:staging-frontend": "tsx --test tests/staging-frontend.test.ts",
     "build": "vite build",
-    "test": "tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs tests/storage-backup.test.mjs tests/restore-safety.test.mjs tests/mail-templates.test.mjs",
+    "test": "node --import tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs tests/storage-backup.test.mjs tests/restore-safety.test.mjs tests/mail-templates.test.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
@@ -35,7 +35,10 @@
     "test:presentation-browser": "node tests/presentation-browser.mjs",
     "demo:worker": "node scripts/staging-match-worker.mjs",
     "test:staging-worker-tools": "node --test tests/staging-worker-tools.test.mjs",
-    "test:visitors": "node --test tests/visitor-auth.test.mjs"
+    "test:visitors": "node --test tests/visitor-auth.test.mjs",
+    "build:rc": "node scripts/build-presentation.mjs --rc",
+    "verify:rc": "node scripts/verify-candidate.mjs",
+    "test:v1": "node --import tsx --test tests/v1-compatibility.test.tsx tests/v1-school-backend.test.mjs tests/candidate-artifact.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

@@ -1,5 +1,8 @@
 import { supabase } from "./supabase";
 import { UUID_PATTERN } from "./schoolFeatures";
+export class ServiceUnavailableError extends Error {
+  constructor() { super("Esta función todavía no está disponible en este servicio."); }
+}
 export type CommunityMethod =
   | "my_community_settings"
   | "save_my_profile"
@@ -21,6 +24,7 @@ export async function communityCall(
 ): Promise<any> {
   if (!supabase) throw Error("Servicio no disponible.");
   const { data, error } = await supabase.rpc(name, args);
+  if (error?.code === 'PGRST202') throw new ServiceUnavailableError();
   if (error || data == null)
     throw Error(
       "No se pudo confirmar la operación. Verificá la conexión y la disponibilidad del servicio.",

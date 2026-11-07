@@ -1,4 +1,4 @@
-import {communityCall} from '../../lib/community';
+import {communityCall,ServiceUnavailableError} from '../../lib/community';
 import {supabase} from '../../lib/supabase';
 import {loadDraft,saveDraft,type QueuedMessage} from '../../lib/chatStorage';
 import {SafetyActions} from './SafetyActions';
@@ -63,8 +63,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({
   const [inputMessage, setInputMessage] = useState('');
   const [draftNotice,setDraftNotice]=useState('');
   const [sharedPhone,setSharedPhone]=useState('');
-  useEffect(()=>{let active=true;setSharedPhone('');if(!isOpen||!participantId||!supabase)return()=>{active=false;};
-    const refresh=async()=>{if(!isOpen||!participantId||!supabase)return;try{const allowed=await communityCall('can_share_contact',{p_target:participantId});if(!active)return;if(allowed!==true){setSharedPhone('');return;}const r=await supabase.from('public_profiles').select('phone').eq('id',participantId).maybeSingle();if(active)setSharedPhone(r.error?'':r.data?.phone??'');}catch{if(active)setSharedPhone('');}};
+  useEffect(()=>{let active=true,unavailable=false;setSharedPhone('');if(!isOpen||!participantId||!supabase)return()=>{active=false;};
+    const refresh=async()=>{if(!active||unavailable||!isOpen||!participantId||!supabase)return;try{const allowed=await communityCall('can_share_contact',{p_target:participantId});if(!active)return;if(allowed!==true){setSharedPhone('');return;}const r=await supabase.from('public_profiles').select('phone').eq('id',participantId).maybeSingle();if(active)setSharedPhone(r.error?'':r.data?.phone??'');}catch(error){if(error instanceof ServiceUnavailableError)unavailable=true;if(active)setSharedPhone('');}};
     void refresh();const timer=setInterval(refresh,5000);return()=>{active=false;clearInterval(timer);};
   },[isOpen,participantId,currentUser.id]);
   const [isSending, setIsSending] = useState(false);

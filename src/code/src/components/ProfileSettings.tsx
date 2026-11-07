@@ -1,6 +1,6 @@
 import { preparePhoto } from "../utils/preparePhoto";
 import React, { useEffect, useState, useRef } from "react";
-import { communityCall, normalizePhone, validPhone } from "../../lib/community";
+import { communityCall, normalizePhone, validPhone, ServiceUnavailableError } from "../../lib/community";
 import { supabase } from "../../lib/supabase";
 import { uploadItemImage } from "../../lib/database";
 export function ProfileSettings({
@@ -27,28 +27,40 @@ export function ProfileSettings({
     [moderator, setModerator] = useState(false),
     [audit, setAudit] = useState<any[]>([]);
   const [note, setNote] = useState("");
+  const [mode, setMode] = useState<'loading'|'basic'|'community'>('loading');
+  const [extrasReady, setExtrasReady] = useState(false);
   useEffect(() => {
     ++lifecycle.current;
     let alive = true;
-    Promise.all([
-      communityCall("my_community_settings"),
-      communityCall("list_my_blocks"),
-      communityCall("list_reports"),
-      communityCall("received_ratings"),
-    ])
-      .then(([profile, blocks, reports, ratings]) => {
+    setReady(false);setMode('loading');setExtrasReady(false);setNotice('');
+    setBlocks([]);setReports([]);setRatings([]);setModerator(false);setAudit([]);
+    const load = async () => {
+      let profile;
+      try { profile = await communityCall('my_community_settings'); }
+      catch(error) {
+        // Only an unavailable RPC permits the existing, owner-bound baseline.
+        // Permission/network/validation failures must never bypass the new API.
+        if(!(error instanceof ServiceUnavailableError)||!supabase)throw error;
+        const result=await supabase.from('profiles').select('full_name,avatar_url,location').eq('id',userId).maybeSingle();
+        if(result.error||!result.data)throw Error();
+        if(alive){setForm({name:result.data.full_name??'',avatar:result.data.avatar_url??'',location:result.data.location??'',phone:'',share_phone:false});setMode('basic');setReady(true);}
+        return;
+      }
+      if(!alive)return;
+      setForm(profile);setMode('community');setModerator(profile.moderator===true);setReady(true);
+      try {
+        const [blocks,reports,ratings]=await Promise.all([communityCall('list_my_blocks'),communityCall('list_reports'),communityCall('received_ratings')]);
         if (!alive) return;
-        setForm(profile);
         setBlocks(blocks);
         setReports(reports);
         setRatings(ratings);
-        setModerator(profile.moderator === true);
-        setReady(true);
-      })
-      .catch(() => {
+        setExtrasReady(true);
+      }catch{if(alive)setNotice('El perfil está disponible. No se pudieron cargar bloqueos, denuncias o valoraciones; no se muestran listados incompletos.');}
+    };
+    void load().catch(() => {
         if (alive)
           setNotice(
-            "Configuración no disponible. Verificá la conexión y la instalación del servicio.",
+            "No se pudo cargar el perfil. Revisá la conexión e intentá abrir la configuración nuevamente.",
           );
       });
     return () => {
@@ -58,16 +70,17 @@ export function ProfileSettings({
   }, [userId]);
   const run = async (action: () => Promise<void>) => {
     if (busy) return;
+    const version=lifecycle.current;
     setBusy(true);
     setNotice("");
     try {
       await action();
     } catch {
-      setNotice(
+      if(version===lifecycle.current)setNotice(
         "No se pudo confirmar el cambio. Revisá los datos y la conexión.",
       );
     } finally {
-      setBusy(false);
+      if(version===lifecycle.current)setBusy(false);
     }
   };
   const field = (key: string, value: any) =>
@@ -78,6 +91,7 @@ export function ProfileSettings({
       aria-label="Privacidad y perfil"
     >
       <h3>Tu perfil y privacidad</h3>
+      {mode==='basic'&&<p role="status">Perfil básico disponible. Compartir teléfono, bloqueos, denuncias y valoraciones todavía no están habilitados. Podés seguir usando el chat.</p>}
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -89,13 +103,23 @@ export function ProfileSettings({
             return;
           }
           void run(async () => {
-            await communityCall("save_my_profile", {
+            const version=lifecycle.current;
+            if(mode==='basic'){
+              const name=form.name.trim(),avatar=form.avatar.trim();
+              if(name.length<2||name.length>100||form.location.length>200||avatar.length>2048)throw Error();
+              if(avatar){const url=new URL(avatar);if(url.protocol!=='https:'||url.username||url.password)throw Error();}
+              const identity=await supabase!.auth.getUser();
+              if(identity.error||identity.data.user?.id!==userId||version!==lifecycle.current)throw Error();
+              const result=await supabase!.from('profiles').update({full_name:name,avatar_url:avatar,location:form.location.trim()}).eq('id',userId).select('id').maybeSingle();
+              if(result.error||result.data?.id!==userId)throw Error();
+            }else if(mode==='community')await communityCall("save_my_profile", {
               p_name: form.name,
               p_avatar: form.avatar,
               p_phone: phone,
               p_share: form.share_phone,
               p_location: form.location,
-            });
+            });else throw Error();
+            if(version!==lifecycle.current)return;
             setNotice("Perfil guardado.");
             onSaved?.();
           });
@@ -156,7 +180,7 @@ export function ProfileSettings({
               }}
             />
           </label>
-          <label className="block">
+          {mode==='community'&&<><label className="block">
             Teléfono privado
             <input
               type="tel"
@@ -177,7 +201,7 @@ export function ProfileSettings({
           <p className="text-xs">
             Privado por defecto. El chat es el contacto principal; un bloqueo
             también oculta el teléfono.
-          </p>
+          </p></>}
           <label className="block">
             Zona del perfil (privada)
             <input
@@ -187,11 +211,11 @@ export function ProfileSettings({
             />
           </label>
           <button type="submit">
-            {busy ? "Guardando…" : "Guardar perfil y privacidad"}
+            {busy ? "Guardando…" : mode==='basic' ? 'Guardar perfil' : "Guardar perfil y privacidad"}
           </button>
         </fieldset>
       </form>
-      <details>
+      {extrasReady&&<><details>
         <summary>Usuarios bloqueados ({blocks.length})</summary>
         {blocks.length === 0 ? (
           <p>No tenés usuarios bloqueados.</p>
@@ -329,6 +353,7 @@ export function ProfileSettings({
           </p>
         ))}
       </details>
+      </>}
       {notice && <p role="status">{notice}</p>}
     </section>
   );

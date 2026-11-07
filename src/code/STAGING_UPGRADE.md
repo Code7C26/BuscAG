@@ -10,6 +10,10 @@ posterior. No utilizar `main`, `German`, Producción ni otro project ref.
 
 ## 1. Estado conocido y evidencia faltante
 
+Actualización 2026-11-07: [análisis del plan remoto aportado](STAGING_PLAN_REVIEW.md).
+Explica las diferencias concretas frente a school y la evidencia que aún impide
+aceptarlas. Las clasificaciones nuevas son informativas; no autorizan instalación.
+
 Los siguientes son resultados manuales aportados por el operador, no consultas
 realizadas por Codex en esta misión:
 

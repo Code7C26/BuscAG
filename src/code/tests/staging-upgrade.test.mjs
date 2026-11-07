@@ -158,3 +158,49 @@ test('upgrade CLI refuses a different project before loading credentials or conn
  assert.notEqual(result.status,0);assert.match(result.stderr,/exclusivamente a BuscAG Prueba/);
  assert.ok(!result.stderr.includes('synthetic-secret'));
 });
+test('operator Prueba catalog is reproduced exactly; PG18 not-null representation and named ACL/event differences are explained, never waived',async()=>{
+ const delta=JSON.parse(await readFile(new URL('./fixtures/prueba-school-drift.json',import.meta.url),'utf8'));
+ const db=await fixture('timestamptz');try{
+  await db.query('begin read only');await db.query(await read('audit/upgrade_event_trigger_review.sql'));await db.query('rollback');
+  const clean=await readUpgradeCatalog(db);
+  const observed=structuredClone(clean);
+  for(const fn of delta.functions){
+   const i=observed.functions.findIndex(f=>f.schema===fn.schema&&f.name===fn.name&&f.arguments===fn.arguments);
+   assert.ok(i>=0);observed.functions[i]=fn;
+  }
+  observed.constraints=delta.constraints;observed.event_triggers=delta.event_triggers;
+  assert.equal(fingerprint(observed),delta.source_plan_fingerprint);
+  const analyze=catalog=>planUpgrade({query:async()=>({rows:[{catalog}]})});
+  const plan=await analyze(observed);
+  assert.equal(plan.stage,'unknown_or_drifted');assert.equal(plan.compatible_catalog,false);
+  assert.deepEqual(plan.candidates,[]);await assert.rejects(upgradeBundle(plan),/No reviewed/);
+  const review=plan.review;assert.equal(review.reference_stage,'school');
+  assert.deepEqual(review.constraint_counts,{expected:131,actual:52,missing:79,added:0,changed:0});
+  assert.ok(review.constraints.missing.every(c=>c.classification==='not_null_catalog_representation'));
+  assert.equal(review.functions.changed.length,2);
+  assert.ok(review.functions.changed.every(c=>c.classification==='buscag_service_execute_variant_requires_acl_review'));
+  assert.equal(review.event_triggers.length,6);
+  assert.ok(review.event_triggers.every(t=>t.classification==='supabase_wiring_candidate_unverified'&&!t.automatic_acceptance));
+  const mutations=[
+   c=>{c.functions.find(f=>f.name==='canonicalize_message_display').auth_execute=true;},
+   c=>{c.functions.find(f=>f.name==='can_send_item_message').body_hash='changed';},
+   c=>{c.constraints=c.constraints.filter(k=>k.name!=='messages_sender_id_fkey');},
+   c=>{c.constraints.find(k=>k.name==='messages_text_check').definition_hash='changed';},
+   c=>{c.columns.find(k=>k.schema==='public'&&k.table==='messages'&&k.name==='text').not_null=false;},
+   c=>{c.event_triggers[0].function='public.forged()';},
+   c=>{c.event_triggers[0].function_hash='unreviewed-body';},
+   c=>{c.event_triggers.push({name:'unknown_hook',function:'public.unknown()',event:'ddl_command_end',enabled:'O',tags:null});},
+  ];
+  for(const [i,mutate] of mutations.entries()){
+   const altered=structuredClone(observed);mutate(altered);const blocked=await analyze(altered);
+   assert.equal(blocked.compatible_catalog,false);assert.deepEqual(blocked.candidates,[]);
+   await assert.rejects(upgradeBundle(blocked),/No reviewed/);
+   if(i<5){
+    // The dangerous change must also block a clean reference, without the
+    // pre-existing event drift masking a broken security comparison.
+    const isolated=structuredClone(clean);mutate(isolated);
+    assert.equal((await analyze(isolated)).compatible_catalog,false);
+   }
+  }
+ }finally{await db.close();}
+});

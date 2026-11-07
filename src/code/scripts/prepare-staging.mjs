@@ -197,7 +197,10 @@ async function main(){
       await db.query("begin isolation level repeatable read read only;set local search_path=pg_catalog,public");
       let plan;try{plan=await planUpgrade(db);}finally{await db.query('rollback');}
       const artifacts=await saveUpgradeArtifacts(plan);
-      const {catalog,_expectedFinal,sources,comparisons,...summary}=plan;
+      const {catalog,_expectedFinal,sources,comparisons,review,...summary}=plan;
+      if(review)summary.review_summary={reference_stage:review.reference_stage,constraints:review.constraint_counts,
+        changed_functions:review.functions.changed.map(f=>({object:f.object,classification:f.classification})),
+        event_triggers:review.event_triggers.map(t=>({name:t.trigger.name,classification:t.classification})),automatic_acceptance:false};
       console.log(JSON.stringify({...summary,artifacts},null,2));
       requireState(plan.compatible_catalog,'Catálogo desconocido o con diferencias: revisar plan.json; no se preparó SQL ejecutable.');
       if(args.includes('--upgrade-verify'))requireState(plan.installed_final_catalog,'La instalación final aún no está completa.');

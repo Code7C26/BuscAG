@@ -5,6 +5,7 @@ import {readFile, mkdir, writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {stagingReference} from './staging-reference.mjs';
 import {files} from './prepare-staging.mjs';
+import {reviewCatalog} from './staging-catalog-review.mjs';
 
 export const PRUEBA_REF='yiarlhpbgkofhhipkfha';
 export const upgrades=[
@@ -53,6 +54,8 @@ export async function planUpgrade(db){
  const states=dateType?await references(dateType):[];
  const match=states.find(s=>fingerprint(s.catalog)===fingerprint(catalog));
  const comparisons=states.map(s=>({stage:s.stage,differences:catalogDifferences(s.catalog,catalog)}));
+ const closest=match?null:comparisons.reduce((best,s)=>!best||s.differences.length<best.differences.length?s:best,null);
+ const review=closest?reviewCatalog(states.find(s=>s.stage===closest.stage).catalog,catalog,closest.stage):null;
  const stageIndex=states.indexOf(match);
  const candidates=match?upgrades.slice(stageIndex):[];
  const sources=await Promise.all([...files,...upgrades].map(async file=>({file,sha256:sha(await read(file))})));
@@ -62,6 +65,7 @@ export async function planUpgrade(db){
   compatible_catalog:Boolean(match),installed_final_catalog:match?.stage==='community',
   candidates:candidates.map(file=>sources.find(s=>s.file===file)),sources,
   comparisons:match?[]:comparisons,
+  review,
   backup:'not_checked',remote_behaviour:'not_tested',authorization_to_apply:false,
   blockers:match?[]:['Catalog differs from every reviewed reference. Review differences; no install SQL generated.'],
   catalog,

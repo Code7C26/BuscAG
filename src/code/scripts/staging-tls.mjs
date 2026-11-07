@@ -3,13 +3,27 @@ import {readFile,stat} from 'node:fs/promises';
 import {X509Certificate} from 'node:crypto';
 const publicErrors=new WeakSet(),contexts=new WeakMap(),secondaryErrors=new WeakMap();
 const stages={configuration:'configuración',tcp:'TCP',tls:'TLS',authentication:'autenticación',queries:'consultas',closing:'cierre'};
+export const stagingSteps=Object.freeze(Object.fromEntries([
+ 'session.settings','session.identity','transaction.begin','transaction.rollback','catalog.collect','evidence.collect',
+ 'official.sources','official.validate','reference.import','reference.bootstrap','reference.snapshot','reference.close','reference.school','reference.secure','reference.community',
+ 'catalog.compare','sources.hash','artifacts.save','plan.output','plan.acceptance',...Array.from({length:9},(_,i)=>`reference.baseline.${i+1}`),
+].map(id=>[id,id])));
+export async function stagingStep(db,id,work){
+ if(!Object.hasOwn(stagingSteps,id))throw publicError('BUSCAG_DIAGNOSTIC_STEP','Paso interno de diagnóstico no registrado. Actualiza la copia de Alexis.');
+ if(typeof db?.step==='function')return db.step(id,work);
+ try{return await work();}catch(error){throw stageFailure(error,{stage:'queries',step:id});}
+}
 const sqlClasses=new Set('00 01 02 03 08 09 0A 0B 0F 0L 0P 0Z 20 21 22 23 24 25 26 27 28 2B 2D 2F 34 38 39 3B 3D 3F 40 42 44 53 54 55 57 58 72 F0 HV P0 XX'.split(' '));
 export function publicError(code,message){const error=new Error(message);error.code=code;error.publicMessage=message;publicErrors.add(error);return error;}
 export function stageFailure(error,context){
-  if(contexts.has(error))return error;
   const wrapped=error&&typeof error==='object'?error:new Error('Staging operation failed',{cause:error});
-  contexts.set(wrapped,{stage:stages[context.stage]?context.stage:'configuration',lastCompleted:stages[context.lastCompleted]?context.lastCompleted:null,
-    queryNumber:Number.isSafeInteger(context.queryNumber)&&context.queryNumber>0?context.queryNumber:null});
+  const previous=contexts.get(wrapped)??{};
+  const incoming={stage:stages[context.stage]?context.stage:undefined,lastCompleted:stages[context.lastCompleted]?context.lastCompleted:undefined,
+    queryNumber:Number.isSafeInteger(context.queryNumber)&&context.queryNumber>0?context.queryNumber:undefined,
+    lastQueryNumber:Number.isSafeInteger(context.lastQueryNumber)&&context.lastQueryNumber>=0?context.lastQueryNumber:undefined,
+    origin:['query','local','connection'].includes(context.origin)?context.origin:undefined,
+    step:Object.hasOwn(stagingSteps,context.step)?context.step:undefined};
+  contexts.set(wrapped,Object.fromEntries(Object.keys(incoming).map(k=>[k,previous[k]??incoming[k]])));
   return wrapped;
 }
 export function addSecondaryFailure(primary,secondary){
@@ -53,7 +67,12 @@ export function stagingDiagnostic(error){
     stage:stages[context?.stage??inferredStage??'configuration'],
     last_completed:stages[context?.lastCompleted]??'ninguno',
     query_number:context?.queryNumber??null,
-    secondary:(secondaryErrors.get(error)??[]).map(e=>{const d=stagingDiagnostic(e);return {stage:d.stage,category:d.category,code:d.code,message:d.message};})});
+    last_query_number:context?.lastQueryNumber??null,
+    origin:context?.origin??null,step:context?.step??null,
+    error_kind:typeof code==='string'&&/^[0-9A-Z]{5}$/.test(code)&&sqlClasses.has(code.slice(0,2))?'sqlstate':
+      code.startsWith('BUSCAG_JS_')?'javascript':code==='BUSCAG_WASM_RUNTIME'?'webassembly':
+      candidates.some(e=>publicErrors.has(e)&&e.code===code)?'validation':'other',
+    secondary:(secondaryErrors.get(error)??[]).map(e=>{const d=stagingDiagnostic(e);return {stage:d.stage,category:d.category,code:d.code,message:d.message,step:d.step,query_number:d.query_number};})});
   const knownMessages=new Map([
     ['The server does not support SSL connections',['TLS','BUSCAG_PG_SSL_REFUSED','El endpoint rechazó PostgreSQL SSLRequest. Usa el pooler de sesión oficial en 5432; un puerto TCP abierto no demuestra soporte TLS. No desactives TLS.','tls']],
     ['There was an error establishing an SSL connection',['TLS','BUSCAG_PG_SSL_RESPONSE','El endpoint no devolvió una respuesta PostgreSQL SSL válida. Verifica host/puerto del pooler y posibles proxies de red.','tls']],
@@ -71,6 +90,7 @@ export function stagingDiagnostic(error){
   const trust=new Set(['SELF_SIGNED_CERT_IN_CHAIN','DEPTH_ZERO_SELF_SIGNED_CERT','UNABLE_TO_VERIFY_LEAF_SIGNATURE','UNABLE_TO_GET_ISSUER_CERT_LOCALLY','UNABLE_TO_GET_ISSUER_CERT']);
   for(const item of candidates){
     const code=item?.code;
+    if(context?.origin==='local'&&['ENOENT','ENOSPC','EACCES','EPERM','EROFS'].includes(code))return finish('archivo local','BUSCAG_LOCAL_FILE','Falló un archivo o permiso local en el paso indicado. Revisa la copia de Alexis, npm ci, espacio y permisos locales; no cambies permisos en Supabase.','queries');
     if(knownMessages.has(item.message))return finish(...knownMessages.get(item.message));
     if(item instanceof URIError||item.message==='URI malformed')return finish('configuración','BUSCAG_URI_ENCODING','La URI contiene escapes % inválidos o bytes no UTF-8. Codifica la contraseña original una sola vez con encodeURIComponent; un % literal debe ser %25. No imprimas la URI.','configuration');
     if(typeof item.message==='string'&&item.message.startsWith('SASL:'))return finish('autenticación','BUSCAG_SCRAM_PROTOCOL','Falló el intercambio SCRAM. Verifica usuario/ref y codificación de la contraseña; usa Node compatible y npm ci. No omitas la validación de integridad.','authentication');
@@ -88,9 +108,16 @@ export function stagingDiagnostic(error){
     if(typeof code==='string'&&/^[0-9A-Z]{5}$/.test(code)&&sqlClasses.has(code.slice(0,2)))return finish('estructura/SQL',code,'Falló una comprobación u operación SQL. Revisa el esquema de staging y el paso pendiente; no reejecutes bootstrap.','queries');
     if(code==='ERR_MODULE_NOT_FOUND'||code==='MODULE_NOT_FOUND')return finish('dependencias','BUSCAG_DEPENDENCY_MISSING','Falta una dependencia local. Ejecuta npm ci desde src/code con la versión Node compatible del proyecto.','configuration');
     if(code==='ENOENT'||code==='ENOSPC')return finish('archivo local','BUSCAG_LOCAL_FILE','No se pudo leer/escribir un archivo local del plan. Revisa la copia del repositorio, espacio y permisos locales; no es un diagnóstico de contraseña.','queries');
-    if(publicErrors.has(item))return finish(code.includes('CA_')||code.includes('TLS_')?'configuración TLS':code.includes('CLOSE_')?'cierre':'preflight',code,item.publicMessage,code.includes('CLOSE_')?'closing':'configuration');
+    if(item instanceof TypeError||item instanceof SyntaxError||item instanceof ReferenceError||item instanceof RangeError){
+      const name=item instanceof TypeError?'TYPE':item instanceof SyntaxError?'SYNTAX':item instanceof ReferenceError?'REFERENCE':'RANGE';
+      return finish('JavaScript',`BUSCAG_JS_${name}`,'Falló el procesamiento JavaScript en el paso indicado; no es por sí solo un rechazo SQL. Verifica la copia de Alexis, npm ci y la forma de los resultados del driver.','configuration');
+    }
+    if(typeof WebAssembly!=='undefined'&&(item instanceof WebAssembly.CompileError||item instanceof WebAssembly.RuntimeError||item instanceof WebAssembly.LinkError))return finish('referencia local','BUSCAG_WASM_RUNTIME','Falló WebAssembly al construir referencias locales. Reinstala con npm ci y usa Node compatible; no se corrige ejecutando migraciones remotas.','queries');
+    if(publicErrors.has(item))return finish(code.includes('CA_')||code.includes('TLS_')?'configuración TLS':code.includes('CLOSE_')?'cierre':context?.origin==='local'?'validación local':'preflight',code,item.publicMessage,code.includes('CLOSE_')?'closing':'configuration');
   }
   const phase=context?.stage??'configuration';
+  if(phase==='queries'&&context?.origin==='local')return finish('procesamiento local','BUSCAG_LOCAL_PROCESSING_FAILURE','Falló un paso local del planificador sin código reconocido. El paso y la última consulta completada identifican el punto; no se atribuye este error a PostgreSQL.','queries');
+  if(phase==='queries'&&context?.origin==='query')return finish('driver de consulta','BUSCAG_DRIVER_QUERY_FAILURE','Falló la llamada de consulta indicada sin SQLSTATE reconocido. Revisa pg y el intercambio de protocolo; no se imprime el mensaje privado ni se presupone un error de permisos.','queries');
   const fallbacks={configuration:['BUSCAG_SETUP_FAILURE','Falló la preparación local sin un código reconocido. Actualiza Alexis, ejecuta npm ci y verifica la configuración privada.'],tcp:['BUSCAG_TCP_FAILURE','Falló la apertura TCP sin código reconocido. Revisa DNS, salida al pooler de sesión/5432 y estado del proyecto.'],tls:['BUSCAG_TLS_FAILURE','TCP abrió, pero TLS no quedó confirmado. Revisa CA, hostname y proxies; no desactives TLS.'],authentication:['BUSCAG_AUTH_FAILURE','TLS quedó confirmado, pero la sesión PostgreSQL no terminó de autenticarse. Revisa usuario/ref y contraseña codificada una sola vez.'],queries:['BUSCAG_QUERY_FAILURE','La sesión abrió, pero falló una consulta o planificación sin código reconocido. Usa el número de consulta y verifica dependencias/catálogo; no reejecutes migraciones.'],closing:['BUSCAG_CLOSE_FAILURE','Falló el cierre del cliente. Reintenta sólo el diagnóstico de lectura; no repitas operaciones de escritura a ciegas.']};
   const category={configuration:'preflight',tcp:'conexión',tls:'TLS',authentication:'autenticación',queries:'consultas',closing:'cierre'}[phase];
   return finish(category,...fallbacks[phase],phase);
@@ -98,7 +125,19 @@ export function stagingDiagnostic(error){
 export function formatStagingDiagnostic(error){
   const d=stagingDiagnostic(error);
   const query=d.query_number?`; consulta #${d.query_number}`:'';
-  const lines=[`Preparación detenida [etapa: ${d.stage}; último paso confirmado: ${d.last_completed}${query}] [${d.category}] ${d.code}. ${d.message}`];
-  for(const e of d.secondary)lines.push(`Error secundario [${e.stage}] ${e.code}. ${e.message}`);
+  const last=d.last_query_number!==null?`; última SQL completada #${d.last_query_number}`:'';
+  const point=d.step?`; paso: ${d.step}`:'';
+  const origin=d.origin?`; origen: ${d.origin}`:'';
+  const lines=[`Preparación detenida [etapa: ${d.stage}; último paso confirmado: ${d.last_completed}${origin}${point}${query}${last}] [${d.category}] ${d.code}. ${d.message}`];
+  for(const e of d.secondary)lines.push(`Error secundario [${e.stage}${e.step?`; paso: ${e.step}`:''}${e.query_number?`; consulta #${e.query_number}`:''}] ${e.code}. ${e.message}`);
   return lines.join('\n');
+}
+export function formatStagingProgress(event){
+ const status=event.status==='ok'?'OK':'iniciando';
+ const step=Object.hasOwn(stagingSteps,event.step)?event.step:null;
+ if(event.stage==='queries'&&event.origin==='query'&&Number.isSafeInteger(event.queryNumber)&&event.queryNumber>0)
+  return `[SQL #${event.queryNumber}${step?` · ${step}`:''}] ${status}`;
+ if(event.stage==='queries'&&event.origin==='local'&&step)
+  return `[local · ${step}] ${status}${Number.isSafeInteger(event.lastQueryNumber)?` (última SQL completada #${event.lastQueryNumber})`:''}`;
+ return `[${stages[event.stage]??'configuración'}] ${status}`;
 }

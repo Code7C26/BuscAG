@@ -8,6 +8,7 @@ import {files} from './prepare-staging.mjs';
 import {reviewCatalog} from './staging-catalog-review.mjs';
 import {validateOfficialEvents} from './staging-official-evidence.mjs';
 import {portableReference,finalEvidence} from './staging-equivalence.mjs';
+import {stagingStep,publicError,addSecondaryFailure} from './staging-tls.mjs';
 
 export const PRUEBA_REF='yiarlhpbgkofhhipkfha';
 export const upgrades=[
@@ -21,10 +22,28 @@ const stable=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Array.i
 const literal=s=>"'"+s.replaceAll("'","''")+"'";
 export const fingerprint=catalog=>sha(stable(catalog));
 export async function readUpgradeCatalog(db){
- return (await db.query(await read('audit/upgrade_catalog.sql'))).rows[0].catalog;
+ return stagingStep(db,'catalog.collect',async()=>{
+  const result=await db.query(await read('audit/upgrade_catalog.sql'));
+  const catalog=documentResult(result,'catalog');
+  if(!catalog||catalog.version!==1||!['columns','functions','constraints','relations','policies','triggers','indexes'].every(k=>Array.isArray(catalog[k]))||
+   !(catalog.event_triggers===null||Array.isArray(catalog.event_triggers)))throw publicError('BUSCAG_CATALOG_RESULT','El resultado JSON del catálogo no tiene la estructura esperada. Verifica pg, npm ci y parsers JSON/JSONB locales; no cambies permisos del servidor por un error de forma.');
+  return catalog;
+ });
 }
 export async function readUpgradeEvidence(db){
- return (await db.query(await read('audit/upgrade_evidence.sql'))).rows[0].evidence??null;
+ return stagingStep(db,'evidence.collect',async()=>{
+  const evidence=documentResult(await db.query(await read('audit/upgrade_evidence.sql')),'evidence');
+  if(evidence!==null&&(evidence.version!==1||!Number.isInteger(evidence.server_version_num)||
+   !(evidence.event_triggers===null||Array.isArray(evidence.event_triggers))||
+   !(evidence.service_function_acls===null||Array.isArray(evidence.service_function_acls))))throw publicError('BUSCAG_EVIDENCE_RESULT','El JSON de evidencia no tiene la estructura esperada. Verifica la copia de consultas de Alexis y los parsers locales de pg; no es un rechazo de autenticación.');
+  return evidence;
+ });
+}
+function documentResult(result,field){
+ if(!result||!Array.isArray(result.rows)||result.rows.length!==1||!Object.hasOwn(result.rows[0]??{},field)||
+  (result.rows[0][field]!==null&&(typeof result.rows[0][field]!=='object'||Array.isArray(result.rows[0][field]))))
+  throw publicError(field==='catalog'?'BUSCAG_CATALOG_RESULT':'BUSCAG_EVIDENCE_RESULT','El driver no devolvió una fila JSON/JSONB con la columna esperada. Ejecuta npm ci y verifica la copia de Alexis y los parsers de pg. No se imprime el contenido recibido.');
+ return result.rows[0][field];
 }
 export function catalogDifferences(expected,actual,path=''){
  if(stable(expected)===stable(actual))return [];
@@ -35,30 +54,35 @@ export function catalogDifferences(expected,actual,path=''){
  return [...new Set([...Object.keys(expected),...Object.keys(actual)])].flatMap(k=>catalogDifferences(expected[k],actual[k],path+'/'+k)).slice(0,100);
 }
 const referenceCache=new Map();
-async function references(dateType){
+async function references(dateType,traceDb){
  if(!referenceCache.has(dateType))referenceCache.set(dateType,(async()=>{
-  const {PGlite}=await import('@electric-sql/pglite');
-  const db=await stagingReference(PGlite,{dateType});
+  const {PGlite}=await stagingStep(traceDb,'reference.import',()=>import('@electric-sql/pglite'));
+  const db=await stagingStep(traceDb,'reference.bootstrap',()=>stagingReference(PGlite,{dateType}));
+  db.step=(_id,work)=>stagingStep(traceDb,'reference.snapshot',work);
+  let states,failure;
   try{
-   for(const file of files)await db.query(await read(file));
+   for(const [i,file] of files.entries())await stagingStep(traceDb,`reference.baseline.${i+1}`,async()=>db.query(await read(file)));
    await db.query('set search_path=pg_catalog,public');
-   const states=[{stage:'baseline',catalog:await readUpgradeCatalog(db)}];
+   states=[{stage:'baseline',catalog:await readUpgradeCatalog(db)}];
    for(const [i,file] of upgrades.entries()){
-    await db.query(await read(file));
+    await stagingStep(traceDb,['reference.school','reference.secure','reference.community'][i],async()=>db.query(await read(file)));
     states.push({stage:['school','secure_recovery','community'][i],catalog:await readUpgradeCatalog(db)});
    }
-   return states;
-  }finally{await db.close();}
+  }catch(error){failure=traceDb?.captureFailure?traceDb.captureFailure(error):error;}
+  try{await stagingStep(traceDb,'reference.close',()=>db.close());}catch(error){failure=failure?addSecondaryFailure(failure,error):error;}
+  if(failure)throw failure;
+  return states;
  })());
  return referenceCache.get(dateType);
 }
 export async function planUpgrade(db){
  const catalog=await readUpgradeCatalog(db);
  const evidence=await readUpgradeEvidence(db);
- const official=await validateOfficialEvents(catalog,evidence);
+ const official=await validateOfficialEvents(catalog,evidence,db);
  const type=catalog.columns?.find(c=>c.schema==='public'&&c.table==='items'&&c.name==='date')?.type;
  const dateType=type==='date'?'date':type==='timestamp with time zone'?'timestamptz':null;
- const rawStates=dateType?await references(dateType):[];
+ const rawStates=dateType?await references(dateType,db):[];
+ return stagingStep(db,'catalog.compare',async()=>{
  const states=rawStates.map(s=>{const p=portableReference(s.catalog,s.stage,catalog,evidence,official);return {...s,catalog:p.catalog,equivalences:p.accepted};});
  const match=states.find(s=>fingerprint(s.catalog)===fingerprint(catalog));
  const comparisons=states.map(s=>({stage:s.stage,differences:catalogDifferences(s.catalog,catalog)}));
@@ -66,7 +90,7 @@ export async function planUpgrade(db){
  const review=closest?reviewCatalog(states.find(s=>s.stage===closest.stage).catalog,catalog,closest.stage,evidence,official):null;
  const stageIndex=states.indexOf(match);
  const candidates=match?upgrades.slice(stageIndex):[];
- const sources=await Promise.all([...files,...upgrades].map(async file=>({file,sha256:sha(await read(file))})));
+ const sources=await stagingStep(db,'sources.hash',()=>Promise.all([...files,...upgrades].map(async file=>({file,sha256:sha(await read(file))}))));
  return {
   version:1,project_ref:PRUEBA_REF,mode:'read_only_plan',
   stage:match?.stage??'unknown_or_drifted',catalog_fingerprint:fingerprint(catalog),date_type:dateType,
@@ -82,6 +106,7 @@ export async function planUpgrade(db){
   _expectedFinal:states.at(-1)?.catalog,
   _expectedFinalEvidence:finalEvidence(evidence),
  };
+ });
 }
 const stripTransaction=sql=>{
  const start=sql.search(/^begin;\s*$/im);

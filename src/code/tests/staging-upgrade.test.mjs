@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile,mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {readFile,mkdtemp,writeFile,rm,mkdir,cp,readdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {pathToFileURL} from 'node:url';
+import {pathToFileURL,fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {stagingReference} from '../scripts/staging-reference.mjs';
@@ -113,8 +113,18 @@ test('official evidence permits only proved PG17, service ACL and Supabase varia
   const original=registry.provenance.files[0];
   const bytes=await readFile(new URL('../supabase/reference/supabase-postgres/'+original.file,import.meta.url));
   assert.doesNotThrow(()=>verifyOfficialBytes(original,bytes));
-  assert.throws(()=>verifyOfficialBytes(original,Buffer.concat([bytes,Buffer.from('-- changed')])) ,/integrity/);
-  assert.throws(()=>verifyOfficialBytes({...original,git_blob:'0'.repeat(40)},bytes),/integrity/);
+  assert.throws(()=>verifyOfficialBytes(original,Buffer.concat([bytes,Buffer.from('-- changed')])) ,e=>e.code==='BUSCAG_OFFICIAL_INTEGRITY');
+  assert.throws(()=>verifyOfficialBytes({...original,git_blob:'0'.repeat(40)},bytes),e=>e.code==='BUSCAG_OFFICIAL_INTEGRITY');
+  // Reproduce Git autocrlf checkout for all eleven immutable upstream sources.
+  for(const entry of registry.provenance.files){
+   const raw=await readFile(new URL('../supabase/reference/supabase-postgres/'+entry.file,import.meta.url));
+   const canonical=verifyOfficialBytes(entry,raw).bytes;
+   const windows=Buffer.from(canonical.toString('utf8').replaceAll('\n','\r\n'));
+   const verified=verifyOfficialBytes(entry,windows);
+   assert.equal(verified.normalizedCRLF,true);assert.deepEqual(verified.bytes,canonical);
+   for(const changed of [Buffer.concat([windows,Buffer.from('-- modified')]),Buffer.concat([Buffer.from([239,187,191]),windows]),Buffer.from(canonical.toString().replace('\n','\r'))])
+    assert.throws(()=>verifyOfficialBytes(entry,changed),e=>e.code==='BUSCAG_OFFICIAL_INTEGRITY');
+  }
   const delta=JSON.parse(await readFile(new URL('./fixtures/prueba-school-drift.json',import.meta.url),'utf8'));
   const catalog=await readUpgradeCatalog(db);
   for(const fn of delta.functions)catalog.functions[catalog.functions.findIndex(f=>f.schema===fn.schema&&f.name===fn.name&&f.arguments===fn.arguments)]=fn;
@@ -276,7 +286,7 @@ test('operator Prueba catalog is reproduced exactly; PG18 not-null representatio
   }
   observed.constraints=delta.constraints;observed.event_triggers=delta.event_triggers;
   assert.equal(fingerprint(observed),delta.source_plan_fingerprint);
-  const analyze=catalog=>planUpgrade({query:async()=>({rows:[{catalog}]})});
+  const analyze=catalog=>planUpgrade({query:async sql=>({rows:[sql.includes('as evidence;')?{evidence:null}:{catalog}]})});
   const plan=await analyze(observed);
   assert.equal(plan.stage,'unknown_or_drifted');assert.equal(plan.compatible_catalog,false);
   assert.deepEqual(plan.candidates,[]);await assert.rejects(upgradeBundle(plan),/No reviewed/);
@@ -309,4 +319,34 @@ test('operator Prueba catalog is reproduced exactly; PG18 not-null representatio
    }
   }
  }finally{await db.close();}
+});
+test('a full CRLF checkout builds the same safe school plan and review bundle without altering the pinned references',async()=>{
+ const parent=new URL('../test-results/',import.meta.url);await mkdir(parent,{recursive:true});
+ const folder=await mkdtemp(fileURLToPath(parent)+'windows-checkout-');
+ const target=pathToFileURL(folder+'/');const db=await fixture('timestamptz');
+ try{
+  await mkdir(new URL('scripts/',target),{recursive:true});
+  for(const name of ['prepare-staging','staging-tls','staging-session','staging-upgrade','staging-reference','staging-catalog-review','staging-official-evidence','staging-equivalence']){
+   const text=await readFile(new URL('../scripts/'+name+'.mjs',import.meta.url),'utf8');
+   await writeFile(new URL('scripts/'+name+'.mjs',target),text.replace(/\r?\n/g,'\r\n'));
+  }
+  for(const name of ['migrations','proposals','audit','reference'])await cp(new URL('../supabase/'+name+'/',import.meta.url),new URL('supabase/'+name+'/',target),{recursive:true});
+  const windowsFiles=async dir=>{
+   for(const entry of await readdir(dir,{withFileTypes:true})){
+    const url=new URL(entry.name+(entry.isDirectory()?'/':''),dir);
+    if(entry.isDirectory())await windowsFiles(url);
+    else if(entry.isFile())await writeFile(url,(await readFile(url,'utf8')).replace(/\r?\n/g,'\r\n'));
+   }
+  };
+  await windowsFiles(new URL('supabase/',target));
+  const windows=await import(new URL('scripts/staging-upgrade.mjs',target));
+  await db.query('begin read only');let plan;
+  try{plan=await windows.planUpgrade(db);}finally{await db.query('rollback');}
+  assert.equal(plan.stage,'school',JSON.stringify(plan.comparisons));assert.equal(plan.authorization_to_apply,false);
+  assert.equal(plan.official_validation.reference_crlf_files,11);
+  assert.deepEqual(plan.candidates.map(c=>c.file),upgrades.slice(1));
+  const bundle=await windows.upgradeBundle(plan);
+  assert.match(bundle,/begin;/);assert.match(bundle,/Final evidence mismatch/);
+  assert.equal((await db.query("select to_regprocedure('public.my_community_settings()') is null absent")).rows[0].absent,true);
+ }finally{await db.close();await rm(folder,{recursive:true,force:true});}
 });

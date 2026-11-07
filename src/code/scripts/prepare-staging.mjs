@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {checkServerIdentity} from 'node:tls';
-import {loadStagingCa,publicError,stageFailure,formatStagingDiagnostic} from './staging-tls.mjs';
+import {loadStagingCa,publicError,stageFailure,formatStagingDiagnostic,formatStagingProgress,stagingStep} from './staging-tls.mjs';
 import {withStagingSession,withStagingRollback} from './staging-session.mjs';
 import {createRequire} from 'node:module';
 export const PRODUCTION_REF='hczcqtodcnurdrroczle';
@@ -187,7 +187,7 @@ async function main(){
   const mode=args.includes('--apply')?'apply':args.includes('--verify')?'verify':args.includes('--smoke')?'smoke':'plan';
   requireState(refIndex>=0&&args.length===3&&['--plan','--apply','--verify','--smoke','--upgrade-plan','--upgrade-verify'].some(x=>args.includes(x)),'Uso: npm run prepare:staging -- --project-ref REF --plan|--apply|--verify|--smoke|--upgrade-plan|--upgrade-verify');
   if(upgrade)requireState(ref==='yiarlhpbgkofhhipkfha','La actualización está fijada exclusivamente a BuscAG Prueba.');
-  console.log(`BuscAG prepare:staging · diagnóstico 2 · Node ${process.versions.node}`);
+  console.log(`BuscAG prepare:staging · diagnóstico 3 · Node ${process.versions.node} · ${process.platform}/${process.arch}`);
   if(upgrade){const {invalidateUpgradeArtifacts}=await import('./staging-upgrade.mjs');await invalidateUpgradeArtifacts();}
   const trust=await loadStagingCa();
   const config=connectionConfig(process.env.BUSCAG_STAGING_DATABASE_URL,ref,trust.ca);
@@ -196,28 +196,34 @@ async function main(){
   const pgVersion=createRequire(import.meta.url)('pg/package.json').version;
   if(/^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?$/.test(pgVersion))console.log(`Driver pg ${pgVersion}`);
   let client;try{client=new Client(config);}catch(error){throw stageFailure(error,{stage:'configuration',lastCompleted:'configuration'});}
-  const labels={tcp:'TCP',tls:'TLS',authentication:'autenticación',queries:'consultas',closing:'cierre'};
   await withStagingSession(client,async db=>{
-    await db.query("set statement_timeout='120s';set lock_timeout='10s'");
-    requireState((await db.query('select current_user')).rows[0].current_user==='postgres','Se requiere el operador postgres de staging.');
+    await stagingStep(db,'session.settings',()=>db.query("set statement_timeout='120s';set lock_timeout='10s'"));
+    await stagingStep(db,'session.identity',async()=>{
+      const result=await db.query('select current_user');
+      if(!Array.isArray(result?.rows)||result.rows.length!==1||typeof result.rows[0]?.current_user!=='string')
+        throw publicError('BUSCAG_IDENTITY_RESULT','La consulta de identidad no devolvió una fila con el formato esperado. Revisa pg y npm ci; no se imprime el resultado recibido.');
+      requireState(result.rows[0].current_user==='postgres','Se requiere el operador postgres de staging.');
+    });
     if(upgrade){
       const {planUpgrade,saveUpgradeArtifacts}=await import('./staging-upgrade.mjs');
       // No remote mutation, not even a journal or rollback-only synthetic users.
-      await db.query("begin isolation level repeatable read read only;set local search_path=pg_catalog,public");
+      await stagingStep(db,'transaction.begin',()=>db.query("begin isolation level repeatable read read only;set local search_path=pg_catalog,public"));
       const plan=await withStagingRollback(db,()=>planUpgrade(db));
-      const artifacts=await saveUpgradeArtifacts(plan);
+      const artifacts=await stagingStep(db,'artifacts.save',()=>saveUpgradeArtifacts(plan));
       const {catalog,evidence,_expectedFinal,_expectedFinalEvidence,sources,comparisons,review,...summary}=plan;
       if(review)summary.review_summary={reference_stage:review.reference_stage,constraints:review.constraint_counts,
         changed_functions:review.functions.changed.map(f=>({object:f.object,classification:f.classification})),
         event_triggers:review.event_triggers.map(t=>({name:t.trigger.name,classification:t.classification})),automatic_acceptance:false};
-      console.log(JSON.stringify({...summary,artifacts},null,2));
-      requireState(plan.compatible_catalog,'Catálogo desconocido o con diferencias: revisar plan.json; no se preparó SQL ejecutable.');
-      if(args.includes('--upgrade-verify'))requireState(plan.installed_final_catalog,'La instalación final aún no está completa.');
+      await stagingStep(db,'plan.output',()=>console.log(JSON.stringify({...summary,artifacts},null,2)));
+      await stagingStep(db,'plan.acceptance',()=>{
+        requireState(plan.compatible_catalog,'Catálogo desconocido o con diferencias: revisar plan.json; no se preparó SQL ejecutable.');
+        if(args.includes('--upgrade-verify'))requireState(plan.installed_final_catalog,'La instalación final aún no está completa.');
+      });
     }
     else if(mode==='smoke'){await verifyBootstrap(db);const {smokeStaging}=await import('./staging-smoke.mjs');console.log(JSON.stringify(await smokeStaging(db),null,2));}
     else if(mode==='verify')console.log(JSON.stringify(await verifyInstalled(db),null,2));
     else {const plan=await installStaging(db,{apply:mode==='apply',onStep:(file,state)=>console.log(`${state}: ${file}`)});console.log(JSON.stringify(plan.map(({file,sha256,applied})=>({file,sha256,applied})),null,2));}
-  },{onProgress:({stage,status})=>console.log(`[${labels[stage]}] ${status==='ok'?'OK':'iniciando'}`)});
+  },{onProgress:event=>console.log(formatStagingProgress(event))});
 }
 async function withStagingRollbackOnError(db,work){
   try{return await work();}catch(error){return withStagingRollback(db,()=>{throw error;});}

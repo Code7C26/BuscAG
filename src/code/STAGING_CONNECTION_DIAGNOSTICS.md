@@ -1,5 +1,9 @@
 # Diagnóstico de conexión de BuscAG Prueba
 
+El [diagnóstico 3](STAGING_QUERY_DIAGNOSTICS.md) amplía este procedimiento con SQL
+numerada, pasos locales y compatibilidad CRLF. La información de conexión/TLS que
+sigue se conserva; la versión actual del banner es **diagnóstico 3**.
+
 Rama `Alexis`. No se modificaron Supabase, Firebase, datos ni secretos. No se
 desactivó TLS ni se intentó conectar con credenciales reales en esta revisión.
 
@@ -43,7 +47,7 @@ ese nombre tiene semántica de lifecycle de npm y podría ejecutar la herramient
 instalar dependencias. Si el comando anterior `run prepare` imprimía la CA, había
 un alias/copia local diferente; usar el comando versionado evita esa ambigüedad.
 
-La salida debe empezar con `BuscAG prepare:staging · diagnóstico 2`, indicar Node/pg
+La salida debe empezar con `BuscAG prepare:staging · diagnóstico 3`, indicar Node/pg
 y mostrar fases TCP, TLS, autenticación, consultas y cierre. `iniciando` no significa
 éxito; `OK` confirma la fase. La CA impresa sólo acredita el archivo cargado.
 En un error aparecen **etapa**, **último paso confirmado**, número de consulta si

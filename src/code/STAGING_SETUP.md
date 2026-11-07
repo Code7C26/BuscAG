@@ -1,9 +1,10 @@
 # BuscAG-Staging: instalación automática desde la computadora del operador
 
-**Conexión bloqueada o error UNKNOWN:** consultar
-[diagnóstico seguro por etapa](STAGING_CONNECTION_DIAGNOSTICS.md). En Windows usar
+**Conexión bloqueada o fallo de planificación:** consultar
+[diagnóstico 3 de consultas y procesamiento local](STAGING_QUERY_DIAGNOSTICS.md)
+y [diagnóstico de conexión/TLS](STAGING_CONNECTION_DIAGNOSTICS.md). En Windows usar
 `npm.cmd run prepare:staging -- --project-ref yiarlhpbgkofhhipkfha --upgrade-plan`;
-debe mostrar el banner **diagnóstico 2** y nunca requiere desactivar TLS.
+debe mostrar el banner **diagnóstico 3** y nunca requiere desactivar TLS.
 
 ## Actualización de una instalación existente
 

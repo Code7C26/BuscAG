@@ -5,6 +5,11 @@ Fuentes de **supabase/postgres**, commit inmutable
 `provenance.json` registra ruta original, Git blob y SHA-256. Los bytes se verificaron
 contra los blobs originales. Se conserva la licencia PostgreSQL/Supabase en LICENSE.
 
+Para un checkout Windows, se permite CRLF→LF en memoria únicamente si se recuperan
+exactamente los dos hashes oficiales fijados. No se recortan espacios ni se aceptan
+BOM, comentarios o contenido alterado. No se modifican archivos ni hashes del
+manifiesto; el parser consume sólo los bytes canónicos ya verificados.
+
 **No ejecutar estos SQL ni migrate.sh.** Son evidencia estática, no propuestas de
 BuscAG. El instalador no las incluye; el validador sólo lee texto y hashes.
 No contienen credenciales reales: el script upstream usa variables, no valores.

@@ -9,8 +9,9 @@ import {createServer,connect,checkServerIdentity,TLSSocket,createSecureContext} 
 import {createServer as createTcpServer} from 'node:net';
 import {EventEmitter} from 'node:events';
 import {X509Certificate} from 'node:crypto';
-import {loadStagingCa,validateRootCa,stagingDiagnostic,publicError,formatStagingDiagnostic} from '../scripts/staging-tls.mjs';
+import {loadStagingCa,validateRootCa,stagingDiagnostic,publicError,formatStagingDiagnostic,formatStagingProgress,stagingStep} from '../scripts/staging-tls.mjs';
 import {withStagingSession,withStagingRollback} from '../scripts/staging-session.mjs';
+import {readUpgradeCatalog,readUpgradeEvidence} from '../scripts/staging-upgrade.mjs';
 import {connectionConfig} from '../scripts/prepare-staging.mjs';
 const directory=await mkdtemp(path.join(tmpdir(),'buscag-synthetic-tls-'));
 const file=name=>path.join(directory,name);
@@ -95,9 +96,55 @@ test('valid WHATWG URI may fail pg password decoding; malformed percent escapes 
    BUSCAG_STAGING_CA_FILE:file('root.crt'),BUSCAG_STAGING_CA_SHA256:expected,
    BUSCAG_STAGING_DATABASE_URL:'postgresql://postgres.yiarlhpbgkofhhipkfha:DO_NOT_PRINT%FF@aws-0-us-east-1.pooler.supabase.com:5432/postgres'},
  });
- assert.equal(run.status,1);assert.match(run.stdout,/diagnóstico 2/);assert.match(run.stderr,/BUSCAG_URI_ENCODING/);
+ assert.equal(run.status,1);assert.match(run.stdout,/diagnóstico 3/);assert.match(run.stderr,/BUSCAG_URI_ENCODING/);
  assert.ok(!run.stderr.includes('DO_NOT_PRINT'));assert.ok(!run.stdout.includes('DO_NOT_PRINT'));
  assert.ok(!run.stdout.includes('[TCP]'));
+});
+test('local planning failures retain the last completed SQL and exact step despite a subsequent rollback',async()=>{
+ for(const [failure,code] of [[new Error('DO_NOT_PRINT local content'),'BUSCAG_LOCAL_PROCESSING_FAILURE'],
+  [new TypeError('DO_NOT_PRINT function body'),'BUSCAG_JS_TYPE'],[new SyntaxError('DO_NOT_PRINT JSON'),'BUSCAG_JS_SYNTAX'],
+  [new ReferenceError('DO_NOT_PRINT symbol'),'BUSCAG_JS_REFERENCE'],[new WebAssembly.CompileError('DO_NOT_PRINT wasm'),'BUSCAG_WASM_RUNTIME'],
+  [new TypeError('DO_NOT_PRINT wrapper',{cause:Object.assign(new Error('DO_NOT_PRINT SQL'),{code:'42501'})}),'BUSCAG_JS_TYPE']]){
+  const progress=[];
+  await assert.rejects(withStagingSession(new FakeClient(),async db=>{
+   await db.query('DO_NOT_PRINT settings');await db.query('DO_NOT_PRINT identity');await db.query('DO_NOT_PRINT begin');
+   return withStagingRollback(db,()=>stagingStep(db,'official.sources',()=>{throw failure;}));
+  },{onProgress:event=>progress.push(formatStagingProgress(event))}),error=>{
+   const d=stagingDiagnostic(error);assert.equal(d.origin,'local');assert.equal(d.step,'official.sources');
+   assert.equal(d.last_completed,'consultas');assert.equal(d.last_query_number,3);assert.equal(d.query_number,null);
+   assert.equal(d.code,code);
+   if(code==='BUSCAG_JS_TYPE')assert.equal(d.error_kind,'javascript');
+   const output=formatStagingDiagnostic(error);assert.match(output,/última SQL completada #3/);assert.ok(!output.includes('DO_NOT_PRINT'));return true;
+  });
+  assert.ok(progress.some(s=>s.includes('SQL #4')&&s.includes('transaction.rollback')));
+  assert.ok(progress.some(s=>s.includes('official.sources')));assert.ok(!progress.join('\n').includes('DO_NOT_PRINT'));
+ }
+});
+test('server permission errors and local malformed metadata results have different origins and counters',async()=>{
+ const denied=new FakeClient({queryError:Object.assign(new Error('DO_NOT_PRINT SQL body'),{code:'42501'})});
+ await assert.rejects(withStagingSession(denied,db=>readUpgradeCatalog(db)),e=>{
+  const d=stagingDiagnostic(e);assert.equal(d.origin,'query');assert.equal(d.error_kind,'sqlstate');
+  assert.equal(d.step,'catalog.collect');assert.equal(d.query_number,1);assert.equal(d.last_query_number,0);return true;
+ });
+ for(const [reader,key,code] of [[readUpgradeCatalog,'catalog','BUSCAG_CATALOG_RESULT'],[readUpgradeEvidence,'evidence','BUSCAG_EVIDENCE_RESULT']]){
+  const malformed=new FakeClient();malformed.query=async()=>({rows:[{[key]:'DO_NOT_PRINT private data'}]});
+  await assert.rejects(withStagingSession(malformed,db=>reader(db)),e=>{
+   const d=stagingDiagnostic(e);assert.equal(d.code,code);assert.equal(d.origin,'local');assert.equal(d.error_kind,'validation');
+   assert.equal(d.query_number,null);assert.equal(d.last_query_number,1);assert.ok(!formatStagingDiagnostic(e).includes('DO_NOT_PRINT'));return true;
+  });
+ }
+});
+test('JavaScript/driver failures, local file permissions and unregistered step names never expose private messages',async()=>{
+ const badDriver=new FakeClient({queryError:new TypeError('DO_NOT_PRINT credentials')});
+ await assert.rejects(withStagingSession(badDriver,db=>stagingStep(db,'evidence.collect',()=>db.query('DO_NOT_PRINT'))),e=>{
+  const d=stagingDiagnostic(e);assert.equal(d.code,'BUSCAG_JS_TYPE');assert.equal(d.origin,'query');assert.equal(d.query_number,1);return true;
+ });
+ await assert.rejects(withStagingSession(new FakeClient(),db=>stagingStep(db,'artifacts.save',()=>{throw Object.assign(new Error('DO_NOT_PRINT path'),{code:'EACCES'});})),e=>{
+  const d=stagingDiagnostic(e);assert.equal(d.code,'BUSCAG_LOCAL_FILE');assert.equal(d.origin,'local');assert.equal(d.step,'artifacts.save');return true;
+ });
+ await assert.rejects(withStagingSession(new FakeClient(),db=>db.step('DO_NOT_PRINT arbitrary SQL',()=>{})),e=>{
+  assert.equal(stagingDiagnostic(e).code,'BUSCAG_DIAGNOSTIC_STEP');assert.ok(!formatStagingDiagnostic(e).includes('DO_NOT_PRINT'));return true;
+ });
 });
 test('uncoded pg errors and recursive/cyclic causes are classified without echoing messages, tokens or forged public messages',()=>{
  const signature=new Error('SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature does not match');
@@ -182,7 +229,7 @@ test('real pg SSLRequest and verified TLS distinguish authentication, query, SSL
   });
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const client=new Client({host:'127.0.0.1',port:server.address().port,user:'synthetic',database:'synthetic',password:'synthetic',
-   connectionTimeoutMillis:mode==='timeout'?60:3000,ssl:{ca:root,servername:'aws-0-region.pooler.supabase.com',rejectUnauthorized:true,checkServerIdentity,minVersion:'TLSv1.2'}});
+   connectionTimeoutMillis:mode==='timeout'?250:3000,ssl:{ca:root,servername:'aws-0-region.pooler.supabase.com',rejectUnauthorized:true,checkServerIdentity,minVersion:'TLSv1.2'}});
   try{
    await assert.rejects(withStagingSession(client,db=>db.query('DO_NOT_PRINT'),{onProgress:p=>progress.push(p)}),e=>{
     const d=stagingDiagnostic(e);

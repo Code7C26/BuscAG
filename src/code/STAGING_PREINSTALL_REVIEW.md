@@ -1,5 +1,7 @@
 # Preparación de instalación: secure_recovery + community_safety
 
+Continuación con TOC real PG17.11/Auth/Vault: [restauración aislada en Windows](SUPABASE_RESTORE_WINDOWS.md).
+
 Rama exclusiva Alexis; revisión sobre c516059. Proyecto autorizado para una futura
 instalación: **yiarlhpbgkofhhipkfha**. Producción excluida:
 **hczcqtodcnurdrroczle**. Esta entrega NO autoriza ni ejecuta instalación.

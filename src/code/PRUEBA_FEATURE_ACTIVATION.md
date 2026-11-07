@@ -1,5 +1,7 @@
 # Activación de funcionalidades — BuscAG Prueba
 
+Revisión posterior: [ACL reales de cron/net y reconocimiento estricto](STAGING_CRON_NET_ACL_REVIEW.md).
+
 Rama Alexis; base 06fdff3; candidata 1.0.0-rc.1. Destino exclusivo
 `yiarlhpbgkofhhipkfha`. **Preparación local, no activación remota ni autorización.**
 No se modificaron Supabase, Firebase, secretos o datos reales; no se repitió el respaldo.

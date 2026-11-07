@@ -5,7 +5,8 @@ import {spawnSync} from 'node:child_process';
 import {stagingReference} from '../scripts/staging-reference.mjs';
 import {files} from '../scripts/prepare-staging.mjs';
 import {planUpgrade,upgradeBundle,upgrades,readUpgradeEvidence,readUpgradeCatalog} from '../scripts/staging-upgrade.mjs';
-import {applicationSourceMatches,applicationSources,readApplicationContext} from '../scripts/staging-application-scope.mjs';
+import {applicationSourceMatches,applicationSources,readApplicationContext,applicationPreservation} from '../scripts/staging-application-scope.mjs';
+import {validateOfficialEvents} from '../scripts/staging-official-evidence.mjs';
 import {installObservedPlatform,observedPlatformDefinitions} from './platformFixture.mjs';
 const {PGlite}=await import(process.env.LOCAL_PG_SOCKET?'./postgresAdapter.mjs':'@electric-sql/pglite');
 const read=file=>readFile(new URL('../supabase/'+file,import.meta.url),'utf8');
@@ -30,6 +31,14 @@ for(const dateType of ['date','timestamptz'])test(`bounded application upgrade e
     insert into public.messages(item_id,sender_id,recipient_id,text) values('${item}','${a}','${b}','Preserved chat');
     insert into buscag_private.recovery_confirmations(item_id,owner_id,partner_id,state,resolved_at) values('${item}','${a}','${b}','confirmed',now());
     insert into public.push_subscriptions(user_id,endpoint,p256dh,auth) values('${a}','https://push.invalid/synthetic','synthetic','synthetic');`);
+  // Reproduce the exact official GRANT -> ALTER OWNER semantics in this
+  // disposable fixture. Never alter remote functions or fabricate remote ACLs.
+  await db.query(`do $$begin if not exists(select from pg_roles where rolname='dashboard_user') then create role dashboard_user nologin;end if;end$$;`);
+  for(const fn of ['grant_pg_cron_access','grant_pg_net_access'])await db.query(`
+   alter function extensions.${fn} owner to postgres;
+   grant execute on function extensions.${fn}() to postgres with grant option;
+   grant execute on function extensions.${fn}() to dashboard_user;
+   alter function extensions.${fn} owner to supabase_admin;`);
   const beforeUser=(await db.query('select to_jsonb(p) p from public.profiles p where id=$1',[a])).rows[0].p;
   const evidence=await readUpgradeEvidence(db);
   const catalog=await readUpgradeCatalog(db);
@@ -40,6 +49,17 @@ for(const dateType of ['date','timestamptz'])test(`bounded application upgrade e
   await db.query('rollback');
   const plan=await planUpgrade(db,{preservePlatform:true});
   assert.equal(plan.stage,'school',JSON.stringify({preservation:plan.platform_preservation,comparisons:plan.comparisons}));
+  for(const name of ['issue_pg_cron_access','issue_pg_net_access']){
+   const proof=plan.official_validation.checks.find(c=>c.name===name);
+   assert.equal(proof.application_acl_profile,'supabase_owner_transfer_dashboard_execute');
+   assert.ok(proof.failures.includes('acl'),'General validator must stay blocked');
+   assert.deepEqual([...evidence.event_triggers.find(c=>c.name===name).acl].sort((a,b)=>a.grantee.localeCompare(b.grantee)),[
+    {grantee:'PUBLIC',grantor:'supabase_admin',grantable:false,privilege:'EXECUTE'},
+    {grantee:'dashboard_user',grantor:'supabase_admin',grantable:false,privilege:'EXECUTE'},
+    {grantee:'supabase_admin',grantor:'supabase_admin',grantable:true,privilege:'EXECUTE'},
+   ].sort((a,b)=>a.grantee.localeCompare(b.grantee)));
+   assert.equal(proof.application_acl_sources.length,3);
+  }
   assert.equal(plan.official_validation.verified,false);assert.equal(plan.platform_preservation.platform_secure,false);
   assert.equal(plan.authorization_to_apply,false);assert.deepEqual(plan.candidates.map(f=>f.file),upgrades.slice(1));
   await assert.rejects(upgradeBundle({...plan,candidates:[plan.sources.find(f=>f.file===upgrades[0])]}),/two-file scope/);
@@ -177,4 +197,70 @@ test('native postgres operator needs no SUPERUSER and can preserve separately ow
    if(control)await control.end();await db.close();
   }
  }
+});
+
+test('cron and net ACL mismatches stay blocked and identify missing grants without echoing unknown values',async()=>{
+ const db=await fixture('date');try{
+  const catalog=await readUpgradeCatalog(db),evidence=await readUpgradeEvidence(db);
+  const context={version:1,operator:true,origin:true,events_enabled:true,no_temp_objects:true,safe_function_defaults:true};
+  for(const name of ['issue_pg_cron_access','issue_pg_net_access']){
+   for(const change of [
+    acl=>{acl.push({grantee:'private-sentinel-role',grantor:'supabase_admin',grantable:false,privilege:'EXECUTE'});return acl;},
+    acl=>{acl[0].grantor='postgres';return acl;},
+    acl=>{acl.find(a=>a.grantee==='PUBLIC').grantable=true;return acl;},
+    acl=>{acl.find(a=>a.grantee==='supabase_admin').grantable=true;return acl;},
+    acl=>acl.filter(a=>a.grantee!=='PUBLIC'),
+    acl=>{acl.find(a=>a.grantee==='postgres').grantable=false;return acl;},
+    ()=>null,
+    acl=>[null,...acl.slice(1)],
+   ]){
+    const observed=structuredClone(evidence);observed.event_triggers.find(e=>e.name===name).acl=change(structuredClone(evidence.event_triggers.find(e=>e.name===name).acl));
+    const checked=await validateOfficialEvents(catalog,observed);
+    const failure=checked.checks.find(c=>c.name===name);
+    assert.ok(failure.failures.includes('acl'));assert.equal(failure.acl_profile,null);
+    assert.equal(failure.acl_review.next_read_only_query,'supabase/audit/upgrade_managed_acl_review.sql');
+    assert.equal(JSON.stringify(failure.acl_review).includes('private-sentinel-role'),false);
+    const scope=await applicationPreservation(catalog,observed,checked,context);
+    assert.equal(scope.eligible,false);assert.deepEqual(scope.failures,[name]);
+    assert.ok(scope.failure_details.find(c=>c.name===name).validation_failures.includes('acl'));
+   }
+  }
+  const actualAcl=[
+   {grantee:'PUBLIC',grantor:'supabase_admin',grantable:false,privilege:'EXECUTE'},
+   {grantee:'supabase_admin',grantor:'supabase_admin',grantable:true,privilege:'EXECUTE'},
+   {grantee:'dashboard_user',grantor:'supabase_admin',grantable:false,privilege:'EXECUTE'},
+  ];
+  for(const name of ['issue_pg_cron_access','issue_pg_net_access']){
+   for(const mutate of [
+    a=>{a[2].grantable=true;return a;},a=>{a[2].grantor='postgres';return a;},
+    a=>{a[2].privilege='USAGE';return a;},a=>{a[2].grantee='authenticated';return a;},
+    a=>{a.push({...a[2],grantee:'anon'});return a;},a=>a.slice(1),a=>a.slice(0,2),
+    a=>{a.push({...a[2]});return a;},
+   ]){
+    const observed=structuredClone(evidence);observed.event_triggers.find(e=>e.name===name).acl=mutate(structuredClone(actualAcl));
+    const checked=await validateOfficialEvents(catalog,observed);
+    assert.equal(checked.checks.find(c=>c.name===name).application_acl_profile,null);
+    assert.equal((await applicationPreservation(catalog,observed,checked,context)).eligible,false);
+   }
+  }
+  // An owner-transfer-shaped ACL does not qualify on any of the other four.
+  for(const name of ['issue_graphql_placeholder','issue_pg_graphql_access','pgrst_ddl_watch','pgrst_drop_watch']){
+   const observed=structuredClone(evidence),event=observed.event_triggers.find(e=>e.name===name);
+   event.acl=structuredClone(actualAcl);
+   const checked=await validateOfficialEvents(catalog,observed);
+   assert.equal(checked.checks.find(c=>c.name===name).application_acl_profile,null);
+   assert.equal((await applicationPreservation(catalog,observed,checked,context)).eligible,false);
+  }
+  const query=await read('audit/upgrade_managed_acl_review.sql');
+  assert.doesNotMatch(query,/pg_get_functiondef|prosrc/);
+  await db.query('begin transaction read only');
+  const rows=(await db.query(query.slice(query.indexOf('select jsonb_build_object('),query.lastIndexOf('rollback;')))).rows;
+  assert.equal(rows.length,2);
+  for(const {managed_acl_evidence:r} of rows){
+   assert.ok(['issue_pg_cron_access','issue_pg_net_access'].includes(r.name));
+   assert.equal(r.function_owner,'supabase_admin');assert.equal(r.acl.length,3);
+   assert.equal(r.acl.find(a=>a.grantee==='postgres').grantable,true);
+  }
+  await db.query('rollback');assert.deepEqual(await readUpgradeEvidence(db),evidence);
+ }finally{await db.query('rollback');await db.close();}
 });

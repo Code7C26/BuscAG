@@ -1,0 +1,196 @@
+{
+  "branch": "Alexis",
+  "base_commit": "5325150",
+  "scope": "application_only",
+  "remote_plan_rerun": false,
+  "remote_migrations_executed": false,
+  "remote_wrappers_changed": false,
+  "firebase_deployed": false,
+  "production_contacted": false,
+  "authorization_to_apply": false,
+  "operator_literal_evidence": {
+    "events": [
+      "issue_pg_cron_access",
+      "issue_pg_net_access"
+    ],
+    "acl": [
+      {
+        "grantee": "PUBLIC",
+        "grantor": "supabase_admin",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      },
+      {
+        "grantee": "supabase_admin",
+        "grantor": "supabase_admin",
+        "grantable": true,
+        "privilege": "EXECUTE"
+      },
+      {
+        "grantee": "dashboard_user",
+        "grantor": "supabase_admin",
+        "grantable": false,
+        "privilege": "EXECUTE"
+      }
+    ]
+  },
+  "recognized_application_profile": "supabase_owner_transfer_dashboard_execute",
+  "general_platform_verification_remains_false": true,
+  "official_evidence": {
+    "repository": "supabase/postgres",
+    "commit": "c6226c631d3f9048586005f0bca8c9fc10a72940",
+    "files": [
+      {
+        "file": "00000000000003-post-setup.sql",
+        "path": "migrations/db/init-scripts/00000000000003-post-setup.sql",
+        "git_blob": "3bfa90b35ee1f954185d0bdf5c973c39ebf2f419",
+        "sha256": "f38552008ac577b3e65fbcab784a612b72d079f6695871c84b045a1a921f7096"
+      },
+      {
+        "file": "20231020085357_revoke_writes_on_cron_job_from_postgres.sql",
+        "path": "migrations/db/migrations/20231020085357_revoke_writes_on_cron_job_from_postgres.sql",
+        "git_blob": "4aea5d10c8a7d5ce36899f000886e38068ef7842",
+        "sha256": "6c37208218a84c3ab40e5e0369b86d31a6ddc56fbfe95c03800776b3fa9ce4b7"
+      },
+      {
+        "file": "20250402065937_alter_internal_event_triggers_owner_to_supabase_admin.sql",
+        "path": "migrations/db/migrations/20250402065937_alter_internal_event_triggers_owner_to_supabase_admin.sql",
+        "git_blob": "9308f07d4433ff674ac66f32679ca46e80f54aec",
+        "sha256": "1197d727fb7a8ddf8a61c992ff5698d81a5e908e677cc3a4d835b079aeacb8f1"
+      },
+      {
+        "file": "20230224042246_grant_extensions_perms_for_postgres.sql",
+        "path": "migrations/db/migrations/20230224042246_grant_extensions_perms_for_postgres.sql",
+        "git_blob": "f00fffee413da7e0c3c75a98bb9cc36a1c33b535",
+        "sha256": "9e1e777fb8317dcccdb88ead19201a5670c890fa69dfc51c8d7b369229c3ca8d"
+      }
+    ]
+  },
+  "final_acl_code_tests": {
+    "postgresql_17_10": {
+      "matrix_base_checks": [
+        61,
+        61,
+        64
+      ],
+      "school_recovery_community_groups_per_variant": [
+        17,
+        8,
+        15
+      ],
+      "activation_order": 1,
+      "planning_and_upgrade": 22,
+      "failed": 0
+    },
+    "postgresql_18_6": {
+      "application_upgrade": 10,
+      "failed": 0
+    },
+    "staging_tools": {
+      "passed": 24,
+      "skipped_native_only": 2,
+      "failed": 0
+    },
+    "both_migrations_applied_in_disposable_databases": true,
+    "literal_acl_preserved": true,
+    "unknown_or_broader_acl": "rejected"
+  },
+  "qa_local": {
+    "status": "passed",
+    "stages": 17,
+    "results": [
+      {
+        "step": "test",
+        "passed": true,
+        "elapsed_ms": 4932
+      },
+      {
+        "step": "lint",
+        "passed": true,
+        "elapsed_ms": 30669
+      },
+      {
+        "step": "test:v1",
+        "passed": true,
+        "elapsed_ms": 8371
+      },
+      {
+        "step": "test:staging-frontend",
+        "passed": true,
+        "elapsed_ms": 1413
+      },
+      {
+        "step": "test:staging-tls",
+        "passed": true,
+        "elapsed_ms": 953
+      },
+      {
+        "step": "test:release",
+        "passed": true,
+        "elapsed_ms": 1269
+      },
+      {
+        "step": "test:staging-live-tools",
+        "passed": true,
+        "elapsed_ms": 10350
+      },
+      {
+        "step": "test:visitors",
+        "passed": true,
+        "elapsed_ms": 278
+      },
+      {
+        "step": "test:staging-worker-tools",
+        "passed": true,
+        "elapsed_ms": 251
+      },
+      {
+        "step": "test:presentation",
+        "passed": true,
+        "elapsed_ms": 811
+      },
+      {
+        "step": "test:staging-tools",
+        "passed": true,
+        "elapsed_ms": 48917
+      },
+      {
+        "step": "test:backend",
+        "passed": true,
+        "elapsed_ms": 122804
+      },
+      {
+        "step": "build",
+        "passed": true,
+        "elapsed_ms": 9676
+      },
+      {
+        "step": "test:e2e",
+        "passed": true,
+        "elapsed_ms": 379215
+      },
+      {
+        "step": "test:pwa-browser",
+        "passed": true,
+        "elapsed_ms": 5729
+      },
+      {
+        "step": "test:presentation-browser",
+        "passed": true,
+        "elapsed_ms": 7302
+      },
+      {
+        "step": "client-security",
+        "passed": true
+      }
+    ],
+    "application_tests": 133,
+    "browser_tests": 90,
+    "typecheck": "passed",
+    "build": "passed",
+    "client_security_checks": 18,
+    "pwa_browser": "passed",
+    "presentation_browser": "passed"
+  },
+  "next_step": "Rerun --upgrade-plan --preserve-platform against Prueba; do not apply SQL automatically."
+}

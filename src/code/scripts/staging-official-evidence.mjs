@@ -8,6 +8,11 @@ const root=new URL('../supabase/reference/supabase-postgres/',import.meta.url);
 const hash=(s,algorithm='sha256')=>createHash(algorithm).update(s).digest('hex');
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const postgresGrantSource='20230224042246_grant_extensions_perms_for_postgres.sql';
+const dashboardGrantSource='00000000000003-post-setup.sql';
+const ownerTransferSources=Object.freeze({
+ issue_pg_cron_access:'20231020085357_revoke_writes_on_cron_job_from_postgres.sql',
+ issue_pg_net_access:'20250402065937_alter_internal_event_triggers_owner_to_supabase_admin.sql',
+});
 const inheritSource='20230529180330_alter_api_roles_for_inherit.sql';
 const cronHistory='cron-pre-cascade.sql',graphqlHistory='pr2410-intermediate.sql',pathPolicy='event_trigger_search_path.sql';
 const historicalCommits={
@@ -35,6 +40,13 @@ export async function officialRegistry(){
   const verified=verifyOfficialBytes(file,bytes);
   if(verified.normalizedCRLF)normalizedCRLFFiles++;
   texts[file.file]=verified.bytes.toString('utf8');
+ }
+ if(!texts[dashboardGrantSource]?.includes('GRANT ALL ON ALL ROUTINES IN SCHEMA extensions TO dashboard_user;'))
+  throw publicError('BUSCAG_OFFICIAL_INCOMPLETE','Falta el grant oficial fijado para dashboard_user. No se aceptan ACL adicionales.');
+ for(const [event,file] of Object.entries(ownerTransferSources)){
+  const fn=event==='issue_pg_cron_access'?'grant_pg_cron_access':'grant_pg_net_access';
+  if(!texts[file]?.includes(`alter function extensions.${fn} owner to supabase_admin;`))
+   throw publicError('BUSCAG_OFFICIAL_INCOMPLETE','Falta la transferencia oficial de propietario fijada para cron/net. No se acepta una ACL por su nombre.');
  }
  const functions=[];
  for(const file of ['20261016000001_search_path_for_supa_functions.sql','schema-17.sql']){
@@ -72,7 +84,19 @@ export async function officialRegistry(){
  return {provenance,functions,historical,normalizedCRLFFiles};
 }
 const aclEntry=(grantee,grantor)=>({grantee,grantor,privilege:'EXECUTE',grantable:false});
-const aclEqual=(a,b)=>Array.isArray(a)&&a.length===b.length&&b.every(v=>a.some(x=>Object.keys(v).length===Object.keys(x).length&&Object.entries(v).every(([k,z])=>x[k]===z)));
+const aclEqual=(a,b)=>Array.isArray(a)&&a.length===b.length&&b.every(v=>a.some(x=>x!==null&&typeof x==='object'&&Object.keys(v).length===Object.keys(x).length&&Object.entries(v).every(([k,z])=>x[k]===z)));
+// Diagnostics only: this does not recognize additional ACL variants. Unexpected
+// entries are referenced by array index, never echoed into public error messages.
+function reviewAcl(actual,profiles){
+ const entryEqual=(a,b)=>a&&typeof a==='object'&&Object.keys(a).length===Object.keys(b).length&&Object.entries(b).every(([k,v])=>a[k]===v);
+ return {status:Array.isArray(actual)?'unrecognized_profile':'missing_or_malformed_acl',
+  evidence_path:'evidence.event_triggers[].acl',
+  next_read_only_query:'supabase/audit/upgrade_managed_acl_review.sql',
+  profiles:profiles.map(({id,entries})=>({id,
+   missing:entries.filter(e=>!Array.isArray(actual)||!actual.some(a=>entryEqual(a,e))),
+   unexpected_entry_indexes:Array.isArray(actual)?actual.flatMap((a,i)=>entries.some(e=>entryEqual(a,e))?[]:[i]):[],
+  }))};
+}
 export async function validateOfficialEvents(catalog,evidence,traceDb){
  const registry=await stagingStep(traceDb,'official.sources',()=>officialRegistry());
  return stagingStep(traceDb,'official.validate',async()=>{
@@ -101,14 +125,24 @@ export async function validateOfficialEvents(catalog,evidence,traceDb){
   const defaults=[aclEntry('PUBLIC','supabase_admin'),aclEntry('supabase_admin','supabase_admin')];
   const aclProfile=e&&aclEqual(e.acl,defaults)?'postgresql_default':
    e&&aclEqual(e.acl,[...defaults,{...aclEntry('postgres','supabase_admin'),grantable:true}])?'supabase_postgres_grant_option':null;
+  // A pre-transfer postgres self-grant WITH GRANT OPTION becomes an owner
+  // self-grant on ALTER OWNER. Owner grant authority is already inherent.
+  // The dashboard grant is explicit in official post-setup. This EXACT ACL is scoped to these two functions only;
+  // general platform validation still rejects it, as well as the legacy paths.
+  const applicationAclProfile=Object.hasOwn(ownerTransferSources,name)&&e&&aclEqual(e.acl,
+   [aclEntry('PUBLIC','supabase_admin'),{...aclEntry('supabase_admin','supabase_admin'),grantable:true},aclEntry('dashboard_user','supabase_admin')])
+   ?'supabase_owner_transfer_dashboard_execute':null;
   if(!aclProfile)failures.push('acl');
+  const aclReview=aclProfile?null:reviewAcl(e?.acl,[{id:'postgresql_default',entries:defaults},
+   {id:'supabase_postgres_grant_option',entries:[...defaults,{...aclEntry('postgres','supabase_admin'),grantable:true}]}]);
   if(!e||e.extension_dependencies!==null)failures.push('extension_dependencies');
   checks.push({name,verified:failures.length===0,failures,source:source?.source??null,body_sha256:e?.body_sha256??null,
    body_sources:[...new Set(bodySources.map(f=>f.source))],
    body_provenance:bodySources.map(f=>({source:f.source,commit:f.commit??registry.provenance.commit,superseded:f.superseded??null})),
    config:e?.config??null,accepted_configs:variants.filter(f=>f.body_sha256===e?.body_sha256)
     .map(f=>f.config).filter((v,i,all)=>all.findIndex(other=>equal(other,v))===i),
-   acl_profile:aclProfile,acl_source:aclProfile==='supabase_postgres_grant_option'?postgresGrantSource:null});
+   application_acl_profile:applicationAclProfile,application_acl_sources:applicationAclProfile?[postgresGrantSource,ownerTransferSources[name],dashboardGrantSource]:[],
+   acl_profile:aclProfile,acl_review:aclReview,acl_source:aclProfile==='supabase_postgres_grant_option'?postgresGrantSource:null});
  }
  const context=evidence?.extensions_schema;
  const contextSafe=context?.owner==='postgres'&&context.anon_create===false&&context.auth_create===false&&

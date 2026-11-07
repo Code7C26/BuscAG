@@ -68,12 +68,18 @@ export async function applicationPreservation(catalog,evidence,official,context)
  for(const [name,hash] of Object.entries(preservedBodies)){
   const event=evidence?.event_triggers?.find(e=>e.name===name),check=official?.checks?.find(e=>e.name===name);
   const expected=['issue_graphql_placeholder','issue_pg_cron_access'].includes(name)?['search_path','superseded_body']:['search_path'];
+  if(['issue_pg_cron_access','issue_pg_net_access'].includes(name)&&check?.application_acl_profile==='supabase_owner_transfer_dashboard_execute')expected.push('acl');
+  expected.sort();
   if(!event||event.body_sha256!==hash||JSON.stringify(event.config)!==JSON.stringify(['search_path=""'])||
    !check?.body_sources?.length||JSON.stringify([...(check?.failures??[])].sort())!==JSON.stringify(expected))failures.push(name);
  }
  if(catalog?.public_schema?.anon_create!==false||catalog?.public_schema?.auth_create!==false)failures.push('public_schema');
  return {eligible:failures.length===0,profile:'prueba_observed_six_v1',failures,
   scope:'only_pinned_secure_recovery_and_community_safety',
+  failure_details:failures.filter(name=>Object.hasOwn(preservedBodies,name)).map(name=>{
+   const check=official?.checks?.find(c=>c.name===name);
+   return {name,validation_failures:check?.failures??['missing_event'],acl_review:check?.acl_review??null};
+  }),
   platform_secure:false,wrappers_modified:false,
   execution:'postgres_no_temp_objects_origin_events_enabled_known_defaults_no_extension_ddl',
   residual_risk:'Legacy platform search_path and superseded bodies remain uncorrected. This is not approval for general DDL, extensions, cron changes or other migrations.'};

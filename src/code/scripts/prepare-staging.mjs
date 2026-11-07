@@ -185,8 +185,9 @@ async function main(){
   const args=process.argv.slice(2),refIndex=args.indexOf('--project-ref'),ref=args[refIndex+1];
   const upgrade=args.includes('--upgrade-plan')||args.includes('--upgrade-verify');
   const preservePlatform=args.includes('--preserve-platform');
+  const disposableStaging=args.includes('--disposable-staging');
   const mode=args.includes('--apply')?'apply':args.includes('--verify')?'verify':args.includes('--smoke')?'smoke':'plan';
-  requireState(refIndex>=0&&args.length===(preservePlatform?4:3)&&(!preservePlatform||upgrade)&&['--plan','--apply','--verify','--smoke','--upgrade-plan','--upgrade-verify'].some(x=>args.includes(x)),'Uso: npm run prepare:staging -- --project-ref REF --plan|--apply|--verify|--smoke|--upgrade-plan|--upgrade-verify [--preserve-platform sólo con upgrade]');
+  requireState(refIndex>=0&&args.length===3+Number(preservePlatform)+Number(disposableStaging)&&(!preservePlatform||upgrade)&&(!disposableStaging||(upgrade&&preservePlatform))&&['--plan','--apply','--verify','--smoke','--upgrade-plan','--upgrade-verify'].some(x=>args.includes(x)),'Uso: npm run prepare:staging -- --project-ref REF --plan|--apply|--verify|--smoke|--upgrade-plan|--upgrade-verify [--preserve-platform sólo con upgrade] [--disposable-staging sólo con ambos]');
   if(upgrade)requireState(ref==='yiarlhpbgkofhhipkfha','La actualización está fijada exclusivamente a BuscAG Prueba.');
   console.log(`BuscAG prepare:staging · diagnóstico 3 · Node ${process.versions.node} · ${process.platform}/${process.arch}`);
   if(upgrade){const {invalidateUpgradeArtifacts}=await import('./staging-upgrade.mjs');await invalidateUpgradeArtifacts();}
@@ -209,7 +210,7 @@ async function main(){
       const {planUpgrade,saveUpgradeArtifacts}=await import('./staging-upgrade.mjs');
       // No remote mutation, not even a journal or rollback-only synthetic users.
       await stagingStep(db,'transaction.begin',()=>db.query("begin isolation level repeatable read read only;set local search_path=pg_catalog,public"));
-      const plan=await withStagingRollback(db,()=>planUpgrade(db,{preservePlatform}));
+      const plan=await withStagingRollback(db,()=>planUpgrade(db,{preservePlatform,disposableStaging}));
       const artifacts=await stagingStep(db,'artifacts.save',()=>saveUpgradeArtifacts(plan));
       const {catalog,evidence,_expectedFinal,_expectedFinalEvidence,sources,comparisons,review,...summary}=plan;
       if(review)summary.review_summary={reference_stage:review.reference_stage,constraints:review.constraint_counts,

@@ -1,5 +1,7 @@
 # Activación de funcionalidades — BuscAG Prueba
 
+Condición posterior del titular: [Prueba descartable sin restauración obligatoria](DISPOSABLE_STAGING_INSTALL.md). Sólo esa ruta explícita sustituye el requisito de respaldo para yiarlhpbgkofhhipkfha; producción no cambia.
+
 Revisión posterior: [ACL reales de cron/net y reconocimiento estricto](STAGING_CRON_NET_ACL_REVIEW.md).
 
 Rama Alexis; base 06fdff3; candidata 1.0.0-rc.1. Destino exclusivo

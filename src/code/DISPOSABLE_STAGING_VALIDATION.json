@@ -1,0 +1,60 @@
+{
+  "branch": "Alexis",
+  "firebase_read_only_tool_commit": "54c740e",
+  "operator_declared_prueba_data_disposable": true,
+  "project_ref": "yiarlhpbgkofhhipkfha",
+  "production_ref_excluded": "hczcqtodcnurdrroczle",
+  "data_policy": "disposable_staging",
+  "backup_restore_required_in_this_explicit_mode": false,
+  "backup_marked_verified": false,
+  "remote_migrations_executed": false,
+  "remote_data_deleted": false,
+  "database_reset": false,
+  "supabase_permissions_or_wrappers_modified_remotely": false,
+  "authorization_to_apply": false,
+  "original_two_sql_modified": false,
+  "runtime_authorization": "psql target/TLS gate then separate project:fingerprint session GUC",
+  "real_remote_plan_attempt": {
+    "result": "blocked_before_connection",
+    "stage": "configuration",
+    "code": "BUSCAG_PREFLIGHT",
+    "reason": "BUSCAG_STAGING_DATABASE_URL not interpretable in this Cloud environment",
+    "sql_sent": false
+  },
+  "local_tests": {
+    "application": {
+      "passed": 145,
+      "failed": 0
+    },
+    "typescript": "passed",
+    "build": "passed",
+    "client_security_passed": 18,
+    "staging_tools": {
+      "passed": 28,
+      "skipped_native_only": 2,
+      "failed": 0
+    },
+    "postgresql_17": {
+      "security_base_counts": [
+        61,
+        61,
+        64
+      ],
+      "school_recovery_community_groups_per_variant": [
+        17,
+        8,
+        15
+      ],
+      "upgrade_tests": 26,
+      "activation_order_tests": 1,
+      "failed": 0
+    },
+    "postgresql_18": {
+      "application_scope_tests": 14,
+      "failed": 0
+    },
+    "psql_gate_select_executed_in_native_databases": true,
+    "full_psql_metacommand_file_executed": false
+  },
+  "next_step": "Generate and review fresh disposable application-only plan in Windows, then await explicit installation approval before running psql authorization file."
+}

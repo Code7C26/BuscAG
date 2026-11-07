@@ -1,5 +1,7 @@
 # Preparación de instalación: secure_recovery + community_safety
 
+Condición posterior del titular: [Prueba descartable sin restauración obligatoria](DISPOSABLE_STAGING_INSTALL.md). Sólo esa ruta explícita sustituye el requisito de respaldo para yiarlhpbgkofhhipkfha; producción no cambia.
+
 Continuación con TOC real PG17.11/Auth/Vault: [restauración aislada en Windows](SUPABASE_RESTORE_WINDOWS.md).
 
 Rama exclusiva Alexis; revisión sobre c516059. Proyecto autorizado para una futura

@@ -76,7 +76,8 @@ async function references(dateType,traceDb){
  })());
  return referenceCache.get(dateType);
 }
-export async function planUpgrade(db,{preservePlatform=false}={}){
+export async function planUpgrade(db,{preservePlatform=false,disposableStaging=false}={}){
+ if(typeof disposableStaging!=='boolean'||(disposableStaging&&!preservePlatform))throw publicError('BUSCAG_DISPOSABLE_SCOPE','Staging descartable requiere alcance application_only explícito. No se preparó SQL.');
  if(typeof preservePlatform!=='boolean')throw publicError('BUSCAG_APPLICATION_SCOPE','La opción de alcance debe ser explícita y booleana. No se preparó SQL.');
  const applicationContext=preservePlatform?await readApplicationContext(db):null;
  const catalog=await readUpgradeCatalog(db);
@@ -104,7 +105,8 @@ export async function planUpgrade(db,{preservePlatform=false}={}){
   comparisons:match?[]:comparisons,
   review,
   evidence,official_validation:official,service_acl_validation:serviceValidation(evidence,catalog),equivalences:match?.equivalences??states.find(s=>s.stage===closest?.stage)?.equivalences??[],
-  backup:'not_checked',remote_behaviour:'not_tested',authorization_to_apply:false,
+  data_policy:disposableStaging?'disposable_staging':'preserve_with_verified_restore',restore_required:!disposableStaging,
+  backup:disposableStaging?'not_required_operator_declared_disposable_staging':'not_checked',remote_behaviour:'not_tested',authorization_to_apply:false,
   blockers:match?[]:['Catalog differs from every reviewed reference. Review differences; no install SQL generated.'],
   catalog,
   // Internal, not serialized by the CLI. Used only to build fail-closed SQL.
@@ -127,8 +129,12 @@ function assertCatalog(expected,message){
  raise exception '${message}';end if;end $upgrade_guard$;`;
 }
 export async function upgradeBundle(plan){
+ if(plan.project_ref!==PRUEBA_REF)throw Error('Upgrade target is not Prueba');
  if(!plan.compatible_catalog||!plan.candidates.length||!plan._expectedFinal)throw Error('No reviewed pending upgrade');
  const applicationOnly=plan.upgrade_scope==='application_only';
+ const disposable=plan.data_policy==='disposable_staging';
+ if(plan.data_policy!==undefined&&!['disposable_staging','preserve_with_verified_restore'].includes(plan.data_policy))throw Error('Unknown upgrade data policy');
+ if(disposable&&!applicationOnly)throw Error('Disposable staging is restricted to the two pinned application migrations');
  if(applicationOnly){
   await verifyApplicationSources();
   const expected=plan.stage==='school'?Object.keys(applicationSources):plan.stage==='secure_recovery'?Object.keys(applicationSources).slice(1):[];
@@ -165,9 +171,11 @@ do $buscag_application$ declare before_data jsonb; before_users bigint; after_da
  then raise exception 'Existing data changed: rolling back upgrade';end if;
 end $buscag_application$;`:null;
  return `-- REVIEW ONLY. NOT authorization to execute. Target: ${PRUEBA_REF}.
--- psql only. Backup must have been restored successfully in a separate disposable
+${disposable?`-- psql only. Operator declared Prueba data disposable; no backup restore required.
+-- No reset/delete; all catalog, source, row preservation and security guards remain.
+-- Separate explicit authorization must match this project AND plan fingerprint.`:`-- psql only. Backup must have been restored successfully in a separate disposable
 -- environment. Set buscag.upgrade.backup_verified to the plan fingerprint ONLY
--- after verifying that evidence and receiving explicit authorization to install.
+-- after verifying that evidence and receiving explicit authorization to install.`}
 \\set ON_ERROR_STOP on
 begin;
 set local lock_timeout='5s';set local statement_timeout='120s';
@@ -176,8 +184,9 @@ ${applicationOnly?applicationSessionGuard():''}
 select pg_advisory_xact_lock(214726,926);
 do $backup$ begin
  if current_user<>'postgres' then raise exception 'Trusted Prueba operator required';end if;
- if current_setting('buscag.upgrade.backup_verified',true) is distinct from ${literal(plan.catalog_fingerprint)}
- then raise exception 'Verified restore evidence and explicit approval required';end if;end $backup$;
+ ${disposable?`if current_setting('buscag.upgrade.disposable_staging_authorized',true) is distinct from ${literal(PRUEBA_REF+':'+plan.catalog_fingerprint)}
+ then raise exception 'Disposable Prueba project and plan approval required';end if;`:`if current_setting('buscag.upgrade.backup_verified',true) is distinct from ${literal(plan.catalog_fingerprint)}
+ then raise exception 'Verified restore evidence and explicit approval required';end if;`}end $backup$;
 -- Short maintenance window required: block concurrent writers, never delete rows.
 lock table auth.users,${tables.join(',')} in share row exclusive mode;
 ${before}
@@ -196,18 +205,51 @@ commit;
 -- Run --upgrade-verify in a NEW session, then authorized dedicated-account QA.
 `;
 }
+// psql connection variables are checked BEFORE any authorization or DDL. The
+// project ref in a GUC alone cannot prove the physical connection target.
+export const disposableTargetSql=`select (
+ ((:'HOST'='db.${PRUEBA_REF}.supabase.co' and :'USER'='postgres')
+ or (:'HOST' ~ '^[a-z0-9-]+[.]pooler[.]supabase[.]com$' and :'USER'='postgres.${PRUEBA_REF}'))
+ and :'PORT'='5432' and :'DBNAME'='postgres' and :'buscag_sslmode'='verify-full'
+ ) as buscag_expected_target`;
+export function disposableAuthorization(plan){
+ const expected=plan.stage==='school'?Object.keys(applicationSources):plan.stage==='secure_recovery'?Object.keys(applicationSources).slice(1):[];
+ if(JSON.stringify(plan.candidates?.map(s=>s.file))!==JSON.stringify(expected))return '-- No authorization: candidate scope mismatch.\n';
+ if(plan.project_ref!==PRUEBA_REF||plan.data_policy!=='disposable_staging'||plan.upgrade_scope!=='application_only'||
+  !plan.compatible_catalog||!plan.platform_preservation?.eligible||!plan.candidates?.length||
+  !['school','secure_recovery'].includes(plan.stage)||!/^[a-f0-9]{64}$/.test(plan.catalog_fingerprint??''))
+  return '-- No authorization: blocked, not disposable or nothing pending.\n';
+ return `-- REVIEW ONLY. Running this file explicitly authorizes ONLY this Prueba plan.
+\\set ON_ERROR_STOP on
+\\set buscag_sslmode ''
+\\getenv buscag_sslmode PGSSLMODE
+${disposableTargetSql}
+\\gset
+\\if :buscag_expected_target
+select set_config('buscag.upgrade.disposable_staging_authorized',${literal(PRUEBA_REF+':'+plan.catalog_fingerprint)},false) as buscag_plan_ack
+\\gset
+\\ir install.review.sql
+\\else
+\\echo 'BLOCKED: expected Prueba host/user, postgres database, session port 5432 and PGSSLMODE=verify-full.'
+\\quit 3
+\\endif
+`;
+}
 export async function saveUpgradeArtifacts(plan,dir=new URL('../test-results/staging-upgrade/',import.meta.url)){
  await mkdir(dir,{recursive:true});
  await writeFile(new URL('install.review.sql',dir),'-- No executable SQL: planning is incomplete.\n');
+ await writeFile(new URL('authorize-disposable.review.psql',dir),'-- No authorization: planning is incomplete.\n');
  const {_expectedFinal,_expectedFinalEvidence,...publicPlan}=plan;
  await writeFile(new URL('plan.json',dir),JSON.stringify(publicPlan,null,2)+'\n');
  // Always overwrite any stale artifact with an inert file if this plan is blocked.
  await writeFile(new URL('install.review.sql',dir),plan.compatible_catalog&&plan.candidates.length?await upgradeBundle(plan):'-- No executable SQL: blocked or already installed. Replan and review.\n');
- return {plan:'test-results/staging-upgrade/plan.json',sql:'test-results/staging-upgrade/install.review.sql'};
+ await writeFile(new URL('authorize-disposable.review.psql',dir),disposableAuthorization(plan));
+ return {plan:'test-results/staging-upgrade/plan.json',sql:'test-results/staging-upgrade/install.review.sql',authorization:'test-results/staging-upgrade/authorize-disposable.review.psql'};
 }
 export async function invalidateUpgradeArtifacts(){
  const dir=new URL('../test-results/staging-upgrade/',import.meta.url);
  await mkdir(dir,{recursive:true});
  await writeFile(new URL('install.review.sql',dir),'-- No executable SQL: planning/verification has not completed.\n');
+ await writeFile(new URL('authorize-disposable.review.psql',dir),'-- No authorization: planning/verification has not completed.\n');
  await writeFile(new URL('plan.json',dir),JSON.stringify({status:'not_planned',authorization_to_apply:false})+'\n');
 }

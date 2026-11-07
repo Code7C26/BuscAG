@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {spawnSync} from 'node:child_process';
 import {stagingReference} from '../scripts/staging-reference.mjs';
 import {files} from '../scripts/prepare-staging.mjs';
-import {planUpgrade,upgradeBundle,upgrades,readUpgradeEvidence,readUpgradeCatalog} from '../scripts/staging-upgrade.mjs';
+import {planUpgrade,upgradeBundle,upgrades,readUpgradeEvidence,readUpgradeCatalog,disposableAuthorization,disposableTargetSql,saveUpgradeArtifacts} from '../scripts/staging-upgrade.mjs';
 import {applicationSourceMatches,applicationSources,readApplicationContext,applicationPreservation} from '../scripts/staging-application-scope.mjs';
 import {validateOfficialEvents} from '../scripts/staging-official-evidence.mjs';
 import {installObservedPlatform,observedPlatformDefinitions} from './platformFixture.mjs';
@@ -263,4 +266,65 @@ test('cron and net ACL mismatches stay blocked and identify missing grants witho
   }
   await db.query('rollback');assert.deepEqual(await readUpgradeEvidence(db),evidence);
  }finally{await db.query('rollback');await db.close();}
+});
+
+for(const dateType of ['date','timestamptz'])test(`disposable Prueba needs a separate scoped authorization but keeps atomic preservation (${dateType})`,async()=>{
+ const db=await fixture(dateType),folder=await mkdtemp(join(tmpdir(),'buscag-disposable-'));
+ try{
+  const plan=await planUpgrade(db,{preservePlatform:true,disposableStaging:true});
+  assert.equal(plan.stage,'school');assert.equal(plan.restore_required,false);
+  assert.equal(plan.backup,'not_required_operator_declared_disposable_staging');assert.equal(plan.authorization_to_apply,false);
+  assert.deepEqual(plan.candidates.map(f=>f.file),upgrades.slice(1));
+  const sql=executable(await upgradeBundle(plan));
+  assert.doesNotMatch(sql,/backup_verified|drop database|drop schema|truncate /i);
+  await assert.rejects(db.query(sql),/Disposable Prueba project and plan approval/);await db.query('rollback');
+  for(const ack of ['hczcqtodcnurdrroczle:'+plan.catalog_fingerprint,'yiarlhpbgkofhhipkfha:'+('0'.repeat(64))]){
+   await db.query("select set_config('buscag.upgrade.disposable_staging_authorized',$1,false)",[ack]);
+   await assert.rejects(db.query(sql),/Disposable Prueba project and plan approval/);await db.query('rollback');
+  }
+  await assert.rejects(upgradeBundle({...plan,project_ref:'hczcqtodcnurdrroczle'}),/not Prueba/);
+  assert.doesNotMatch(disposableAuthorization({...plan,project_ref:'hczcqtodcnurdrroczle'}),/set_config/);
+  const dir=new URL(pathToFileURL(folder).href+'/');await saveUpgradeArtifacts(plan,dir);
+  const auth=await readFile(new URL('authorize-disposable.review.psql',dir),'utf8');
+  assert.ok(auth.startsWith('-- REVIEW ONLY.'));assert.ok(auth.includes('\\getenv buscag_sslmode PGSSLMODE'));
+  assert.ok(auth.includes('\\ir install.review.sql'));assert.ok(auth.indexOf('\\if :buscag_expected_target')<auth.indexOf('set_config'));
+  assert.ok(auth.includes('yiarlhpbgkofhhipkfha:'+plan.catalog_fingerprint));
+  assert.doesNotMatch(disposableAuthorization({...plan,candidates:[plan.sources[0]]}),/set_config/);
+  await saveUpgradeArtifacts({...plan,compatible_catalog:false,candidates:[]},dir);
+  assert.doesNotMatch(await readFile(new URL('authorize-disposable.review.psql',dir),'utf8'),/set_config/);
+  await db.query("select set_config('buscag.upgrade.disposable_staging_authorized',$1,false)",['yiarlhpbgkofhhipkfha:'+plan.catalog_fingerprint]);
+  const before=await readUpgradeEvidence(db);
+  await db.query(sql);
+  const final=await planUpgrade(db,{preservePlatform:true,disposableStaging:true});
+  assert.equal(final.stage,'community');assert.equal(final.candidates.length,0);
+  assert.deepEqual((await readUpgradeEvidence(db)).event_triggers,before.event_triggers);
+  assert.doesNotMatch(disposableAuthorization(final),/set_config/);
+ }finally{await db.query('rollback');await db.close();await rm(folder,{recursive:true,force:true});}
+});
+test('psql authorization target query rejects production, wrong pooler tenant, database, TLS and transaction pooler',async()=>{
+ const db=new PGlite();try{
+  const valid={HOST:'aws-0-us-east-1.pooler.supabase.com',USER:'postgres.yiarlhpbgkofhhipkfha',PORT:'5432',DBNAME:'postgres',buscag_sslmode:'verify-full'};
+  const check=async values=>{
+   const sql=disposableTargetSql.replace(/:'(HOST|USER|PORT|DBNAME|buscag_sslmode)'/g,(_s,k)=>"'"+values[k].replaceAll("'","''")+"'");
+   return (await db.query(sql)).rows[0].buscag_expected_target;
+  };
+  assert.equal(await check(valid),true);
+  assert.equal(await check({...valid,HOST:'db.yiarlhpbgkofhhipkfha.supabase.co',USER:'postgres'}),true);
+  for(const change of [{HOST:'db.hczcqtodcnurdrroczle.supabase.co',USER:'postgres'},{USER:'postgres.hczcqtodcnurdrroczle'},
+   {HOST:'fake.pooler.supabase.com.attacker.invalid'},{PORT:'6543'},{DBNAME:'another'},{buscag_sslmode:'require'},{buscag_sslmode:'disable'},
+   {USER:"postgres.yiarlhpbgkofhhipkfha';select true;--"}])assert.equal(await check({...valid,...change}),false);
+ }finally{await db.close();}
+});
+test('disposable mode is never accepted for baseline, implicit scope, production or generic apply',async()=>{
+ let reads=0;
+ for(const options of [{disposableStaging:true},{preservePlatform:true,disposableStaging:'true'}])await assert.rejects(planUpgrade({query:async()=>{reads++;} },options));
+ assert.equal(reads,0);
+ for(const args of [
+  ['--project-ref','hczcqtodcnurdrroczle','--upgrade-plan','--preserve-platform','--disposable-staging'],
+  ['--project-ref','yiarlhpbgkofhhipkfha','--upgrade-plan','--disposable-staging'],
+  ['--project-ref','yiarlhpbgkofhhipkfha','--apply','--preserve-platform','--disposable-staging'],
+ ]){
+  const r=spawnSync(process.execPath,['scripts/prepare-staging.mjs',...args],{cwd:new URL('..',import.meta.url),encoding:'utf8',env:{...process.env,BUSCAG_STAGING_DATABASE_URL:'private-sentinel'}});
+  assert.equal(r.status,1);assert.match(r.stderr,/BUSCAG_PREFLIGHT/);assert.equal((r.stdout+r.stderr).includes('private-sentinel'),false);
+ }
 });

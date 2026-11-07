@@ -1,0 +1,123 @@
+{
+  "branch": "Alexis",
+  "authorization_to_install": false,
+  "official_sources": {
+    "repository": "supabase/postgres",
+    "commit": "c6226c631d3f9048586005f0bca8c9fc10a72940",
+    "verified_git_blobs": 11
+  },
+  "remote_read_attempt": "rejected_by_URI_preflight_before_connect",
+  "remote_data_read": false,
+  "remote_migrations_executed": false,
+  "firebase_deployed": false,
+  "qa": {
+    "services": "simulated_or_disposable",
+    "remote_staging": "not_tested",
+    "production": "not_contacted",
+    "results": [
+      {
+        "step": "test",
+        "passed": true,
+        "elapsed_ms": 5858
+      },
+      {
+        "step": "lint",
+        "passed": true,
+        "elapsed_ms": 17139
+      },
+      {
+        "step": "test:staging-frontend",
+        "passed": true,
+        "elapsed_ms": 1315
+      },
+      {
+        "step": "test:release",
+        "passed": true,
+        "elapsed_ms": 1068
+      },
+      {
+        "step": "test:staging-live-tools",
+        "passed": true,
+        "elapsed_ms": 10317
+      },
+      {
+        "step": "test:visitors",
+        "passed": true,
+        "elapsed_ms": 287
+      },
+      {
+        "step": "test:staging-worker-tools",
+        "passed": true,
+        "elapsed_ms": 245
+      },
+      {
+        "step": "test:presentation",
+        "passed": true,
+        "elapsed_ms": 813
+      },
+      {
+        "step": "test:staging-tools",
+        "passed": true,
+        "elapsed_ms": 24878
+      },
+      {
+        "step": "test:backend",
+        "passed": true,
+        "elapsed_ms": 32101
+      },
+      {
+        "step": "build",
+        "passed": true,
+        "elapsed_ms": 3513
+      },
+      {
+        "step": "test:e2e",
+        "passed": true,
+        "elapsed_ms": 235127
+      },
+      {
+        "step": "test:pwa-browser",
+        "passed": true,
+        "elapsed_ms": 6119
+      },
+      {
+        "step": "test:presentation-browser",
+        "passed": true,
+        "elapsed_ms": 7599
+      },
+      {
+        "step": "client-security",
+        "passed": true
+      }
+    ]
+  },
+  "latest_staging_tool_tests": 13,
+  "latest_native_upgrade_tests": 9,
+  "tls_tests": 3,
+  "dangerous_mutations_rejected": 21,
+  "native_matrix": {
+    "passed": true,
+    "variants": [
+      "repository/date",
+      "repository/timestamptz",
+      "observed/date"
+    ],
+    "base_checks": [
+      61,
+      61,
+      64
+    ],
+    "school_groups_each": 17,
+    "recovery_groups_each": 8,
+    "community_groups_each": 15
+  },
+  "prueba_metadata_verified": false,
+  "pending": [
+    "fresh_read_only_evidence_from_Prueba",
+    "verified_backup_restore",
+    "future_installation_approval",
+    "remote_functional_QA",
+    "separate_Firebase_Prueba_approval",
+    "real_iPhone_validation"
+  ]
+}

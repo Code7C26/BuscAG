@@ -4,9 +4,12 @@ import {readFile,mkdtemp,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {pathToFileURL} from 'node:url';
 import {spawnSync} from 'node:child_process';
+import {createHash} from 'node:crypto';
 import {stagingReference} from '../scripts/staging-reference.mjs';
 import {files,installStaging} from '../scripts/prepare-staging.mjs';
-import {planUpgrade,upgradeBundle,upgrades,readUpgradeCatalog,fingerprint,saveUpgradeArtifacts} from '../scripts/staging-upgrade.mjs';
+import {planUpgrade,upgradeBundle,upgrades,readUpgradeCatalog,readUpgradeEvidence,fingerprint,saveUpgradeArtifacts} from '../scripts/staging-upgrade.mjs';
+import {officialRegistry,verifyOfficialBytes} from '../scripts/staging-official-evidence.mjs';
+import {managedWiring} from '../scripts/staging-catalog-review.mjs';
 const {PGlite}=await import(process.env.LOCAL_PG_SOCKET?'./postgresAdapter.mjs':'@electric-sql/pglite');
 const read=file=>readFile(new URL('../supabase/'+file,import.meta.url),'utf8');
 const actor='d0000000-0000-4000-8000-000000000001';
@@ -54,6 +57,8 @@ for(const dateType of ['date','timestamptz'])test(`existing unjournaled school $
   await assert.rejects(db.query(sql),/Verified restore/);await db.query('rollback');
   assert.equal(fingerprint(await readUpgradeCatalog(db)),plan.catalog_fingerprint);
   await db.query("select set_config('buscag.upgrade.backup_verified',$1,false)",[plan.catalog_fingerprint]);
+  const staleProof={...plan,evidence:{...plan.evidence,server_version_num:plan.evidence.server_version_num+1}};
+  await assert.rejects(db.query(executable(await upgradeBundle(staleProof))),/Evidence changed/);await db.query('rollback');
   // Fault inside the combined transaction must restore the original school state.
   await assert.rejects(db.query(sql.replace('commit;\n-- Run','select 1/0;\ncommit;\n-- Run')),/division by zero/);
   await db.query('rollback');
@@ -84,6 +89,97 @@ for(const dateType of ['date','timestamptz'])test(`existing unjournaled school $
   await db.query("select set_config('request.jwt.claim.sub',$1,true)",[actor]);
   await db.query(`insert into public.profiles(id,full_name) values('${actor}','Owner updated') on conflict(id) do update set id=excluded.id,full_name=excluded.full_name`);
   await db.query('rollback');
+ }finally{await db.close();}
+});
+test('official evidence permits only proved PG17, service ACL and Supabase variants; tampered metadata and dangerous catalog changes fail closed',async()=>{
+ const db=await fixture('timestamptz');try{
+  // Exercise the SQL collector against a harmless local event function. Upstream
+  // Supabase SQL is NEVER executed: only source text and metadata are compared.
+  const body='\r\nBEGIN\r\n RETURN;\r\nEND;\r\n';
+  await db.query(`create schema extensions;
+   create function extensions.evidence_probe() returns event_trigger language plpgsql as $$${body}$$;
+   create event trigger evidence_probe on ddl_command_end when tag in ('CREATE VIEW') execute function extensions.evidence_probe();`);
+  await db.query('begin read only');const collected=await readUpgradeEvidence(db);await db.query('rollback');
+  assert.equal(collected.event_triggers[0].body_sha256,createHash('sha256').update(body.replaceAll('\r\n','\n')).digest('hex'));
+  assert.equal(JSON.stringify(collected).includes('BEGIN'),false);
+  // Default PUBLIC EXECUTE on an INVOKER event_trigger does not expose a callable
+  // RPC: verify PostgreSQL's context restriction, rather than infer it from a dump.
+  await db.query('grant usage on schema extensions to authenticated;begin;set local role authenticated');
+  await assert.rejects(db.query('select extensions.evidence_probe()'),e=>/^(event )?trigger functions can only be called as (event )?triggers$/.test(e.message));
+  await db.query('rollback');
+  await db.query('drop event trigger evidence_probe;drop function extensions.evidence_probe();drop schema extensions');
+  const registry=await officialRegistry();
+  assert.equal(registry.provenance.files.length,11);
+  const original=registry.provenance.files[0];
+  const bytes=await readFile(new URL('../supabase/reference/supabase-postgres/'+original.file,import.meta.url));
+  assert.doesNotThrow(()=>verifyOfficialBytes(original,bytes));
+  assert.throws(()=>verifyOfficialBytes(original,Buffer.concat([bytes,Buffer.from('-- changed')])) ,/integrity/);
+  assert.throws(()=>verifyOfficialBytes({...original,git_blob:'0'.repeat(40)},bytes),/integrity/);
+  const delta=JSON.parse(await readFile(new URL('./fixtures/prueba-school-drift.json',import.meta.url),'utf8'));
+  const catalog=await readUpgradeCatalog(db);
+  for(const fn of delta.functions)catalog.functions[catalog.functions.findIndex(f=>f.schema===fn.schema&&f.name===fn.name&&f.arguments===fn.arguments)]=fn;
+  catalog.constraints=delta.constraints;catalog.event_triggers=delta.event_triggers;
+  const acl=(grantee,grantor)=>({grantee,grantor,privilege:'EXECUTE',grantable:false});
+  // Synthetic proof of the exact official policy, NOT evidence from Prueba.
+  const evidence={version:1,server_version_num:170007,
+   service_role:{name:'service_role',super:false,bypass:true,inherit:false,login:false},
+   clients_can_become_service:{anon:false,authenticated:false},
+   clients_can_become_admin:{anon:false,authenticated:false},
+   extensions_schema:{owner:'postgres',anon_create:false,auth_create:false},
+   service_function_acls:[
+    {name:'can_send_item_message',acl:[acl('postgres','postgres'),acl('service_role','postgres'),acl('authenticated','postgres')]},
+    {name:'canonicalize_message_display',acl:[acl('postgres','postgres'),acl('service_role','postgres')]},
+   ],
+   event_triggers:Object.entries(managedWiring).map(([name,w])=>{
+    const fn=w[1].split('.')[1].slice(0,-2),source=registry.functions.find(f=>f.name===fn);
+    return {name,event:w[0],enabled:'O',tags:w[2],event_owner:'supabase_admin',schema:'extensions',function:fn,
+     arguments:'',result:'event_trigger',function_owner:'supabase_admin',language:'plpgsql',config:source.config,
+     body_sha256:source.body_sha256,security_definer:false,strict:false,leakproof:false,parallel:'u',volatility:'v',
+     acl:[acl('PUBLIC','supabase_admin'),acl('supabase_admin','supabase_admin')],extension_dependencies:null};
+   }),
+  };
+  const analyze=(c,e)=>planUpgrade({query:async sql=>({rows:[sql.includes('as evidence;')?{evidence:e}:{catalog:c}]})});
+  const plan=await analyze(catalog,evidence);
+  assert.equal(plan.stage,'school',JSON.stringify(plan.comparisons));assert.equal(plan.compatible_catalog,true);
+  assert.equal(plan.authorization_to_apply,false);assert.equal(plan.official_validation.verified,true);
+  assert.deepEqual(plan.candidates.map(c=>c.file),upgrades.slice(1));
+  assert.ok(plan.equivalences.some(e=>e.variant==='pre_pg18_not_null_catalog'&&e.count===79));
+  assert.ok(plan.equivalences.some(e=>e.variant==='official_supabase_events'));
+  assert.equal(plan._expectedFinal.functions.find(f=>f.name==='can_send_item_message').service_execute,false);
+  assert.equal(plan._expectedFinal.functions.find(f=>f.name==='canonicalize_message_display').service_execute,true);
+  assert.ok(!plan._expectedFinalEvidence.service_function_acls.find(f=>f.name==='can_send_item_message').acl.some(a=>a.grantee==='service_role'));
+  const sql=await upgradeBundle(plan);
+  assert.ok(sql.includes('Evidence changed'));assert.ok(sql.includes('Final evidence mismatch'));
+  assert.ok(sql.includes(registry.functions[0].body_sha256));
+  // No complete proof means no waiver of the previously observed drift.
+  assert.equal((await analyze(catalog,null)).compatible_catalog,false);
+  for(const mutate of [
+   (c,e)=>{e.event_triggers[0].body_sha256='0'.repeat(64);},
+   (c,e)=>{e.event_triggers[0].event_owner='postgres';},
+   (c,e)=>{e.event_triggers[0].function_owner='authenticated';},
+   (c,e)=>{e.event_triggers[0].config=null;},
+   (c,e)=>{e.event_triggers[0].security_definer=true;},
+   (c,e)=>{e.event_triggers[0].acl[0].grantable=true;},
+   (c,e)=>{e.event_triggers[0].acl.push(acl('unknown','supabase_admin'));},
+   (c,e)=>{e.event_triggers[0].extension_dependencies=[{extension:'unknown',type:'e'}];},
+   (c,e)=>{e.clients_can_become_admin.authenticated=true;},
+   (c,e)=>{e.extensions_schema.auth_create=true;},
+   (c,e)=>{e.service_role.inherit=true;},
+   (c,e)=>{e.clients_can_become_service.anon=true;},
+   (c,e)=>{e.service_function_acls[0].acl.find(a=>a.grantee==='service_role').grantable=true;},
+   (c,e)=>{e.server_version_num=180001;},
+   (c,e)=>{c.constraints=c.constraints.filter(k=>k.name!=='messages_sender_id_fkey');},
+   (c,e)=>{c.constraints.find(k=>k.name==='messages_text_check').definition_hash='changed';},
+   (c,e)=>{c.columns.find(k=>k.schema==='public'&&k.table==='messages'&&k.name==='text').not_null=false;},
+   (c,e)=>{c.functions.find(f=>f.name==='can_send_item_message').body_hash='changed';},
+   (c,e)=>{c.functions.find(f=>f.name==='canonicalize_message_display').auth_execute=true;},
+   (c,e)=>{c.event_triggers.push({...c.event_triggers[0],name:'unknown_event'});},
+   (c,e)=>{e.event_triggers.push({...e.event_triggers[0],name:'unknown_event'});},
+  ]){
+   const c=structuredClone(catalog),e=structuredClone(evidence);mutate(c,e);
+   const blocked=await analyze(c,e);assert.equal(blocked.compatible_catalog,false);
+   assert.deepEqual(blocked.candidates,[]);await assert.rejects(upgradeBundle(blocked),/No reviewed/);
+  }
  }finally{await db.close();}
 });
 test('catalog planning blocks partial installs, changed functions, view ACLs, policies, triggers and column grants',async()=>{

@@ -1,5 +1,9 @@
 # Análisis del plan de BuscAG Prueba — 2026-11-07
 
+Actualización del procedimiento: [validación automática de evidencia oficial](STAGING_OFFICIAL_EVIDENCE.md).
+Este informe conserva el análisis del archivo v1 sin metadatos complementarios;
+el comando actualizado recoge ahora esos metadatos sin otro paso manual.
+
 Destino declarado por el plan: `yiarlhpbgkofhhipkfha`. Rama exclusiva: `Alexis`.
 Fingerprint del catálogo adjunto:
 `536f8f2268a44689f693a56e94e52f6f0861df99411d85c96564ff3958924708`.

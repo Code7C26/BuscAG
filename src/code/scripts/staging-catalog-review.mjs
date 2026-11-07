@@ -15,7 +15,7 @@ function differences(expected=[],actual=[],identity=key){
   changed:[...before].filter(([k,v])=>after.has(k)&&!equal(v,after.get(k))).map(([object,expected])=>({object,fields:Object.keys({...expected,...after.get(object)}).filter(k=>!equal(expected[k],after.get(object)[k])).map(field=>({field,expected:expected[field],actual:after.get(object)[field]}))})),
  };
 }
-const managedWiring={
+export const managedWiring={
  issue_graphql_placeholder:['sql_drop','extensions.set_graphql_placeholder()',['DROP EXTENSION']],
  issue_pg_cron_access:['ddl_command_end','extensions.grant_pg_cron_access()',['CREATE EXTENSION']],
  issue_pg_graphql_access:['ddl_command_end','extensions.grant_pg_graphql_access()',['CREATE EXTENSION']],
@@ -23,7 +23,7 @@ const managedWiring={
  pgrst_ddl_watch:['ddl_command_end','extensions.pgrst_ddl_watch()',null],
  pgrst_drop_watch:['sql_drop','extensions.pgrst_drop_watch()',null],
 };
-export function reviewCatalog(expected,actual,stage){
+export function reviewCatalog(expected,actual,stage,evidence=null,official=null){
  const constraints=differences(expected.constraints,actual.constraints);
  for(const d of constraints.missing){
   const column=expected.columns.find(c=>c.schema===d.expected.schema&&c.table===d.expected.table&&c.not_null&&d.expected.validated&&md5('NOT NULL '+c.name)===d.expected.definition_hash);
@@ -43,12 +43,15 @@ export function reviewCatalog(expected,actual,stage){
  const events=(actual.event_triggers??[]).map(trigger=>{
   const wiring=managedWiring[trigger.name];
   const candidate=wiring&&trigger.enabled==='O'&&same([trigger.event,trigger.function,trigger.tags],wiring);
-  return {trigger,classification:candidate?'supabase_wiring_candidate_unverified':'unknown_or_changed_event_trigger',
-   missing_evidence:['event_owner','function_owner','function_definition','security_configuration','function_acl','extension_dependency'],automatic_acceptance:false};
+  const proof=evidence?.event_triggers?.find(e=>e.name===trigger.name);
+  const verified=official?.verified===true&&official.checks.some(c=>c.name===trigger.name&&c.verified);
+  return {trigger,classification:verified?'official_supabase_event_verified':candidate?'supabase_wiring_candidate_unverified':'unknown_or_changed_event_trigger',
+   missing_evidence:proof?[]:['event_owner','function_owner','function_definition','security_configuration','function_acl','extension_dependency'],
+   verification_failures:official?.checks?.find(c=>c.name===trigger.name)?.failures??[],automatic_acceptance:false};
  });
  return {reference_stage:stage,informational_only:true,automatic_acceptance:false,
   constraints,functions,event_triggers:events,
   constraint_counts:{expected:expected.constraints?.length??0,actual:actual.constraints?.length??0,
    missing:constraints.missing.length,added:constraints.added.length,changed:constraints.changed.length},
-  message:'Object names and reviewed explanations do not authorize an upgrade. Exact catalog recognition remains required; managed event trigger definitions/owners are not present in catalog v1.'};
+  message:'Object names do not authorize an upgrade. Catalog v1 needs the separately collected evidence; official_validation records verification results. Unknown differences still block the entire plan.'};
 }

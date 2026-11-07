@@ -6,6 +6,8 @@ import {createHash} from 'node:crypto';
 import {stagingReference} from './staging-reference.mjs';
 import {files} from './prepare-staging.mjs';
 import {reviewCatalog} from './staging-catalog-review.mjs';
+import {validateOfficialEvents} from './staging-official-evidence.mjs';
+import {portableReference,finalEvidence} from './staging-equivalence.mjs';
 
 export const PRUEBA_REF='yiarlhpbgkofhhipkfha';
 export const upgrades=[
@@ -20,6 +22,9 @@ const literal=s=>"'"+s.replaceAll("'","''")+"'";
 export const fingerprint=catalog=>sha(stable(catalog));
 export async function readUpgradeCatalog(db){
  return (await db.query(await read('audit/upgrade_catalog.sql'))).rows[0].catalog;
+}
+export async function readUpgradeEvidence(db){
+ return (await db.query(await read('audit/upgrade_evidence.sql'))).rows[0].evidence??null;
 }
 export function catalogDifferences(expected,actual,path=''){
  if(stable(expected)===stable(actual))return [];
@@ -49,13 +54,16 @@ async function references(dateType){
 }
 export async function planUpgrade(db){
  const catalog=await readUpgradeCatalog(db);
+ const evidence=await readUpgradeEvidence(db);
+ const official=await validateOfficialEvents(catalog,evidence);
  const type=catalog.columns?.find(c=>c.schema==='public'&&c.table==='items'&&c.name==='date')?.type;
  const dateType=type==='date'?'date':type==='timestamp with time zone'?'timestamptz':null;
- const states=dateType?await references(dateType):[];
+ const rawStates=dateType?await references(dateType):[];
+ const states=rawStates.map(s=>{const p=portableReference(s.catalog,s.stage,catalog,evidence,official);return {...s,catalog:p.catalog,equivalences:p.accepted};});
  const match=states.find(s=>fingerprint(s.catalog)===fingerprint(catalog));
  const comparisons=states.map(s=>({stage:s.stage,differences:catalogDifferences(s.catalog,catalog)}));
  const closest=match?null:comparisons.reduce((best,s)=>!best||s.differences.length<best.differences.length?s:best,null);
- const review=closest?reviewCatalog(states.find(s=>s.stage===closest.stage).catalog,catalog,closest.stage):null;
+ const review=closest?reviewCatalog(states.find(s=>s.stage===closest.stage).catalog,catalog,closest.stage,evidence,official):null;
  const stageIndex=states.indexOf(match);
  const candidates=match?upgrades.slice(stageIndex):[];
  const sources=await Promise.all([...files,...upgrades].map(async file=>({file,sha256:sha(await read(file))})));
@@ -66,11 +74,13 @@ export async function planUpgrade(db){
   candidates:candidates.map(file=>sources.find(s=>s.file===file)),sources,
   comparisons:match?[]:comparisons,
   review,
+  evidence,official_validation:official,equivalences:match?.equivalences??states.find(s=>s.stage===closest?.stage)?.equivalences??[],
   backup:'not_checked',remote_behaviour:'not_tested',authorization_to_apply:false,
   blockers:match?[]:['Catalog differs from every reviewed reference. Review differences; no install SQL generated.'],
   catalog,
   // Internal, not serialized by the CLI. Used only to build fail-closed SQL.
   _expectedFinal:states.at(-1)?.catalog,
+  _expectedFinalEvidence:finalEvidence(evidence),
  };
 }
 const stripTransaction=sql=>{
@@ -91,6 +101,8 @@ export async function upgradeBundle(plan){
  const catalogSql=(await read('audit/upgrade_catalog.sql')).replace(/;\s*$/,'');
  const before=assertCatalog(plan.catalog,'Catalog changed: replan before installation').replace('UPGRADE_CATALOG_QUERY',catalogSql);
  const after=assertCatalog(plan._expectedFinal,'Final catalog mismatch: transaction must roll back').replace('UPGRADE_CATALOG_QUERY',catalogSql);
+ const evidenceSql=(await read('audit/upgrade_evidence.sql')).replace(/;\s*$/,'');
+ const bindEvidence=(value,message)=>value?assertCatalog(value,message).replace('UPGRADE_CATALOG_QUERY',`select evidence as catalog from (${evidenceSql}) proof`):'';
  const tables=plan.catalog.relations.filter(r=>r.kind==='r').map(r=>`${r.schema}.${r.name}`);
  const content=(r)=>{
   const name=`${r.schema}.${r.name}`;
@@ -120,10 +132,12 @@ do $backup$ begin
 -- Short maintenance window required: block concurrent writers, never delete rows.
 lock table auth.users,${tables.join(',')} in share row exclusive mode;
 ${before}
+${bindEvidence(plan.evidence,'Evidence changed: replan before installation')}
 create temporary table buscag_upgrade_preservation on commit drop as ${preservation};
 create temporary table buscag_upgrade_user_count on commit drop as select count(*) n from auth.users;
 ${sqls.join('\n')}
 ${after}
+${bindEvidence(plan._expectedFinalEvidence,'Final evidence mismatch: transaction must roll back')}
 do $preserve$ begin
  if exists((select * from buscag_upgrade_preservation except (${preservation}))
  union all ((${preservation}) except select * from buscag_upgrade_preservation))
@@ -136,7 +150,7 @@ commit;
 export async function saveUpgradeArtifacts(plan,dir=new URL('../test-results/staging-upgrade/',import.meta.url)){
  await mkdir(dir,{recursive:true});
  await writeFile(new URL('install.review.sql',dir),'-- No executable SQL: planning is incomplete.\n');
- const {_expectedFinal,...publicPlan}=plan;
+ const {_expectedFinal,_expectedFinalEvidence,...publicPlan}=plan;
  await writeFile(new URL('plan.json',dir),JSON.stringify(publicPlan,null,2)+'\n');
  // Always overwrite any stale artifact with an inert file if this plan is blocked.
  await writeFile(new URL('install.review.sql',dir),plan.compatible_catalog&&plan.candidates.length?await upgradeBundle(plan):'-- No executable SQL: blocked or already installed. Replan and review.\n');

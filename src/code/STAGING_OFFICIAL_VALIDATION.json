@@ -119,5 +119,9 @@
     "remote_functional_QA",
     "separate_Firebase_Prueba_approval",
     "real_iPhone_validation"
-  ]
+  ],
+  "whitespace": {
+    "application_code": "passed",
+    "official_references": "upstream_whitespace_preserved_for_exact_Git_blob_integrity"
+  }
 }

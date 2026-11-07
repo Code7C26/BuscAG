@@ -118,7 +118,9 @@ Validación local aprobada:
   authenticated y **21** mutaciones peligrosas que deben bloquear el plan.
 - También se comprueban metadatos perdidos entre diagnóstico/aplicación, guardas
   finales, preservación de datos, replay, privacidad, recuperación e idempotencia.
-- `git diff --check`: correcto. Resumen: [STAGING_OFFICIAL_VALIDATION.json](STAGING_OFFICIAL_VALIDATION.json).
+- Comprobación de whitespace del código propio: correcta. Las copias oficiales
+  conservan espacios finales y líneas vacías del upstream para mantener identidad
+  exacta de blobs/SHA; no se reformatearon para silenciar advertencias. Resumen: [STAGING_OFFICIAL_VALIDATION.json](STAGING_OFFICIAL_VALIDATION.json).
 
 Los navegadores simulan Supabase; Chromium móvil no certifica iPhone real. La matriz
 WASM utiliza 58/58/61 controles base, 16 grupos escolares, 7 de recuperación y 13 de

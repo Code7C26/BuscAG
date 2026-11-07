@@ -1,5 +1,8 @@
 # Evidencia oficial y actualización segura de BuscAG Prueba
 
+Estado más reciente y comparación con los hashes recibidos de Windows:
+[Variantes reales y bloqueos pendientes](STAGING_CATALOG_VARIANTS.md).
+
 Rama exclusiva `Alexis`, destino `yiarlhpbgkofhhipkfha`. **No se ejecutan ni autorizan
 instalaciones.** No se modificaron Supabase remoto, Firebase, datos ni secretos.
 Las fuentes oficiales se leen como texto, nunca se ejecutan. Los tests trabajan con
@@ -8,35 +11,34 @@ bases descartables locales.
 ## Evidencia oficial comprobada
 
 Se consultó **supabase/postgres** mediante GitHub, fijando el commit inmutable
-`c6226c631d3f9048586005f0bca8c9fc10a72940`. Once archivos se verificaron contra sus
+`c6226c631d3f9048586005f0bca8c9fc10a72940`. Diecisiete archivos se verificaron contra sus
 Git blobs originales y sus SHA-256 quedaron en
 `supabase/reference/supabase-postgres/provenance.json`. Se conserva la licencia.
+Dos referencias históricas fijan commits propios en ese manifiesto; se usan
+únicamente para identificar variantes superadas, no para aceptarlas.
 
 La migración oficial `20261016000001_search_path_for_supa_functions.sql` y el dump
 `migrations/schema-17.sql` corroboran los mismos seis cuerpos y configuración
 `search_path=pg_catalog, pg_temp`. La prueba oficial `nix/tests/expected/evtrigs.out`
 registra **supabase_admin** como owner tanto del evento como de su función.
 
-Un dump por sí solo **no acredita las ACL históricas**. Para ellas se aplica una
-política local explícita: sólo ACL default PostgreSQL (owner/PUBLIC EXECUTE, sin
-grant option), junto con tipo y propiedades verificados. Son funciones PL/pgSQL,
-SECURITY INVOKER, RETURNS event_trigger sin argumentos, VOLATILE, PARALLEL UNSAFE,
-no STRICT/leakproof. El tipo event_trigger restringe su contexto de invocación;
-EXECUTE PUBLIC no las convierte en RPC ordinarias, ni concede privilegios de su
-owner: se prueba que una llamada de authenticated falla por contexto de evento.
-Esta equivalencia no se extiende a funciones SECURITY DEFINER ni RPC de BuscAG.
-No se atribuye al dump prueba de la política final de ACL del proveedor.
+Un dump por sí solo **no acredita las ACL históricas**. La migración oficial
+`20230224042246_grant_extensions_perms_for_postgres.sql` acredita el perfil
+owner/PUBLIC EXECUTE más postgres EXECUTE WITH GRANT OPTION, grantor supabase_admin.
+Se admite ese perfil exacto y el default PostgreSQL, sin otros grants. Son funciones
+PL/pgSQL, SECURITY INVOKER, RETURNS event_trigger sin argumentos, VOLATILE,
+PARALLEL UNSAFE, no STRICT/leakproof. El tipo event_trigger impide invocarlas como
+RPC ordinarias, pero no reemplaza la verificación de cuerpos/configuración/contexto.
 
 Las fuentes de inicialización, scripts de ejecución y migraciones de owners
 documentan el contexto. Una coincidencia demuestra igualdad con código oficial
 revisado; no acredita la historia de instalación ni toda la versión de la plataforma.
 
-**Todavía falta evidencia remota fresca.** Se intentó el diagnóstico de sólo lectura
-con la configuración disponible aquí; la guarda rechazó BUSCAG_STAGING_DATABASE_URL
-antes de conectar porque no pudo interpretarla como URI PostgreSQL. No se imprimió
-su valor ni se debilitó TLS. Una vinculación disponible no garantiza que pueda
-utilizarse como cadena de conexión desde este ejecutor. No se cambió la configuración.
-La revisión visual del usuario sigue siendo preliminar; no se inventaron metadatos.
+**La evidencia fresca de Windows ya fue recibida.** Confirma conexión y consultas,
+referencia school, NOT NULL y los grants documentados. Sigue bloqueada por
+search_path vacío en seis wrappers y dos cuerpos históricos superados.
+Los valores proporcionados no se reemplazan por supuestos; el informe nuevo detalla
+qué se probó y qué falta. Esta revisión no contactó Supabase remoto.
 
 ## Un comando recoge y valida todo
 
@@ -51,7 +53,7 @@ contexto protegido del schema y membresías hacia service_role/supabase_admin.
 Calcula SHA-256 **en PostgreSQL**, normalizando sólo CRLF a LF; no elimina comentarios
 ni reescribe SQL. No exporta cuerpos reales ni filas personales.
 
-`plan.json` incorpora `evidence`, `official_validation` y `equivalences`. Los hashes
+`plan.json` incorpora `evidence`, `official_validation`, `service_acl_validation` y `equivalences`. Los hashes
 y propiedades se comparan con referencias locales verificadas, sin descargar código
 elegido por el operador. Incluso si pasa, `authorization_to_apply=false`.
 
@@ -65,7 +67,8 @@ elegido por el operador. Incluso si pasa, `authorization_to_apply=false`.
   La referencia final conserva la representación de la versión de destino.
 - **service_role:** sólo se admite el grant extra en las firmas conocidas de
   can_send_item_message/canonicalize_message_display, con todo lo demás idéntico.
-  Se exige service_role NOLOGIN, NOINHERIT, NOSUPERUSER, BYPASSRLS, sin membresía de
+  Se exige service_role NOLOGIN, NOSUPERUSER, BYPASSRLS, con INHERIT o NOINHERIT
+  documentados por las migraciones oficiales y sin membresía de
   clientes, ACL exacta, grantor postgres y sin grant options ni grantees desconocidos.
   Los default privileges oficiales respaldan la variante de servidor. No se agregan
   derechos a anon/authenticated ni se cambian permisos reales para forzar igualdad.
@@ -99,7 +102,7 @@ refleja la revocación de can_send_item_message. Se conservan transacción únic
 bloqueos, comprobación de datos existentes y rollback. No se agrega DDL administrado,
 tráfico HTTP ni cambios de secretos al SQL de instalación.
 
-## Pruebas y archivos
+## Registro anterior de pruebas y archivos
 
 Validación local aprobada:
 
@@ -140,9 +143,11 @@ evento inocua en una base local; los cuerpos oficiales nunca se ejecutan.
 
 ## Evidencia concreta faltante y paso más corto
 
-Falta el resultado fresco del recolector: versión, seis hashes y owners/ACL/configuración/
-dependencias, contexto de extensions y rol/ACL de servidor. No hacen falta contraseñas
-ni cuerpos en el chat.
+La evidencia de Windows ya llegó. Los permisos documentados se reconocen; se requiere conciliar
+con el proveedor los cuerpos superados de set_graphql_placeholder/grant_pg_cron_access
+y el search_path vacío de los seis wrappers, rechazado por su prueba oficial. El [informe vigente](STAGING_CATALOG_VARIANTS.md)
+identifica las fuentes contrastadas, las regresiones y la evidencia concreta pendiente.
+No hacen falta contraseñas ni datos de usuarios.
 
 En la máquina donde ya funcionaban la URI privada y la CA, actualizar `Alexis` y,
 desde `src/code` con esa configuración privada existente, ejecutar una sola vez:
@@ -151,7 +156,9 @@ desde `src/code` con esa configuración privada existente, ejecutar una sola vez
 npm run prepare:staging -- --project-ref yiarlhpbgkofhhipkfha --upgrade-plan
 ```
 
-Ese comando recopila y valida sin instalar. Si pasa, debería reconocer school y
+Ese comando recopila y valida sin instalar. Con los metadatos actualmente recibidos
+seguirá bloqueado por cuerpo/configuración; no se pretende forzar compatibilidad.
+Una vez acreditadas las diferencias, si pasa, debería reconocer school y
 proponer sólo las dos etapas pendientes; todavía no autoriza ejecutarlas. Si falla,
 `official_validation.checks[].failures`, `comparisons` y `evidence` indican qué falta
 o difiere. No modificar objetos para conseguir verde; conservar el plan generado

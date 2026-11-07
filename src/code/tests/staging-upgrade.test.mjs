@@ -109,13 +109,13 @@ test('official evidence permits only proved PG17, service ACL and Supabase varia
   await db.query('rollback');
   await db.query('drop event trigger evidence_probe;drop function extensions.evidence_probe();drop schema extensions');
   const registry=await officialRegistry();
-  assert.equal(registry.provenance.files.length,11);
+  assert.equal(registry.provenance.files.length,17);
   const original=registry.provenance.files[0];
   const bytes=await readFile(new URL('../supabase/reference/supabase-postgres/'+original.file,import.meta.url));
   assert.doesNotThrow(()=>verifyOfficialBytes(original,bytes));
   assert.throws(()=>verifyOfficialBytes(original,Buffer.concat([bytes,Buffer.from('-- changed')])) ,e=>e.code==='BUSCAG_OFFICIAL_INTEGRITY');
   assert.throws(()=>verifyOfficialBytes({...original,git_blob:'0'.repeat(40)},bytes),e=>e.code==='BUSCAG_OFFICIAL_INTEGRITY');
-  // Reproduce Git autocrlf checkout for all eleven immutable upstream sources.
+  // Reproduce Git autocrlf checkout for all seventeen immutable upstream sources.
   for(const entry of registry.provenance.files){
    const raw=await readFile(new URL('../supabase/reference/supabase-postgres/'+entry.file,import.meta.url));
    const canonical=verifyOfficialBytes(entry,raw).bytes;
@@ -161,6 +161,79 @@ test('official evidence permits only proved PG17, service ACL and Supabase varia
   const sql=await upgradeBundle(plan);
   assert.ok(sql.includes('Evidence changed'));assert.ok(sql.includes('Final evidence mismatch'));
   assert.ok(sql.includes(registry.functions[0].body_sha256));
+  // The official 2023 platform migrations explain postgres' grant option and
+  // service_role INHERIT. They are independent of body/search_path acceptance.
+  const platform=structuredClone(evidence);platform.service_role.inherit=true;
+  for(const event of platform.event_triggers)event.acl.push({...acl('postgres','supabase_admin'),grantable:true});
+  const platformPlan=await analyze(catalog,platform);
+  assert.equal(platformPlan.stage,'school');assert.equal(platformPlan.authorization_to_apply,false);
+  assert.equal(platformPlan.official_validation.verified,true);
+  assert.ok(platformPlan.official_validation.checks.every(c=>c.acl_profile==='supabase_postgres_grant_option'));
+  assert.ok(platformPlan.service_acl_validation.checks.every(c=>c.required&&c.verified));
+  assert.deepEqual(platformPlan.candidates.map(c=>c.file),upgrades.slice(1));
+  const platformBundle=await upgradeBundle(platformPlan);
+  assert.ok(platformBundle.includes('Evidence changed'));assert.ok(platformBundle.includes('Final evidence mismatch'));
+  for(const mutate of [
+   e=>{e.event_triggers[0].acl.at(-1).grantable=false;},
+   e=>{e.event_triggers[0].acl.at(-1).grantor='postgres';},
+   e=>{e.event_triggers[0].acl.at(-1).grantee='authenticated';},
+   e=>{e.event_triggers[0].acl.push(acl('service_role','supabase_admin'));},
+   e=>{e.service_function_acls[0].acl.push(acl('anon','postgres'));},
+   e=>{e.service_function_acls[1].acl.push(acl('PUBLIC','postgres'));},
+   e=>{e.service_role.login=true;},e=>{e.service_role.super=true;},
+   e=>{e.clients_can_become_service.authenticated=true;},
+  ]){
+   const altered=structuredClone(platform);mutate(altered);
+   const denied=await analyze(catalog,altered);assert.equal(denied.compatible_catalog,false);
+   assert.deepEqual(denied.candidates,[]);await assert.rejects(upgradeBundle(denied),/No reviewed/);
+  }
+  // Operator-reported hashes are evidence to investigate, NEVER a new allowlist.
+  // The ACL of placeholder and role attributes were supplied literally; other
+  // event ACLs below remain synthetic stand-ins, not remote evidence.
+  const reportedHashes={
+   issue_graphql_placeholder:'80e0c97f0a475697c1b517e0d27887bfa0c2baf138229735a58a345d2168505b',
+   issue_pg_cron_access:'00db212b76cecd4b0794b2f20c414ab4988d675959747cd12d3eb4c6d6736f38',
+   issue_pg_graphql_access:'03de03bb70da1d448f7a674215d1b63a924dc7115db657dae34b1aa8977e030e',
+   issue_pg_net_access:'754e58111dbe32030af4d91591dfd78cb3cf8e8f4f56a5fcc199bb0cf7f4ac2b',
+   pgrst_ddl_watch:'de987df746eb39647098459e7993bd8595e592969b0cd647828a3d13d37cffe0',
+   pgrst_drop_watch:'791b41f0632fc86e0fc86a303ec0fd710c4e2ecf947a23422dae2b7a2c122f1d',
+  };
+  const reported=structuredClone(platform);
+  for(const event of reported.event_triggers){event.body_sha256=reportedHashes[event.name];event.config=['search_path=""'];}
+  const reportedPlan=await analyze(catalog,reported);
+  assert.equal(reportedPlan.compatible_catalog,false);assert.equal(reportedPlan.official_validation.verified,false);
+  assert.deepEqual(reportedPlan.candidates,[]);await assert.rejects(upgradeBundle(reportedPlan),/No reviewed/);
+  assert.ok(reportedPlan.service_acl_validation.checks.every(c=>c.verified));
+  for(const check of reportedPlan.official_validation.checks){
+   assert.equal(check.failures.includes('acl'),false);
+   assert.equal(check.failures.includes('search_path'),true);
+   const superseded=['issue_graphql_placeholder','issue_pg_cron_access'].includes(check.name);
+   assert.equal(check.failures.includes('official_body'),false);
+   assert.equal(check.failures.includes('superseded_body'),superseded);
+   assert.ok(check.body_sources.length>0);
+   assert.equal(check.body_provenance.some(p=>p.superseded!==null),superseded);
+   assert.equal(check.accepted_configs.length>0,['issue_pg_graphql_access','issue_pg_net_access'].includes(check.name));
+  }
+  // Even an official historical body is only recognized as provenance. Neither
+  // an absent GUC nor an arbitrary search_path becomes a security equivalence.
+  for(const config of [null,[],['search_path=public'],['search_path=pg_temp, pg_catalog'],['search_path=pg_catalog, pg_temp','role=postgres']]){
+   const altered=structuredClone(platform);altered.event_triggers[0].config=config;
+   assert.equal((await analyze(catalog,altered)).compatible_catalog,false);
+  }
+  const oldPair=structuredClone(platform);
+  const oldEvent=oldPair.event_triggers.find(e=>e.name==='pgrst_ddl_watch');
+  oldEvent.body_sha256=reportedHashes.pgrst_ddl_watch;
+  const oldCheck=(await analyze(catalog,oldPair)).official_validation.checks.find(c=>c.name==='pgrst_ddl_watch');
+  assert.deepEqual(oldCheck.failures,['official_body_configuration_pair']);
+  const unknownBody=structuredClone(platform);unknownBody.event_triggers[0].body_sha256='0'.repeat(64);
+  assert.deepEqual((await analyze(catalog,unknownBody)).official_validation.checks[0].failures,['official_body']);
+  for(const name of ['issue_graphql_placeholder','issue_pg_cron_access']){
+   const superseded=structuredClone(platform);superseded.event_triggers.find(e=>e.name===name).body_sha256=reportedHashes[name];
+   const denied=await analyze(catalog,superseded);
+   assert.equal(denied.compatible_catalog,false);assert.deepEqual(denied.candidates,[]);
+   assert.ok(denied.official_validation.checks.find(c=>c.name===name).failures.includes('superseded_body'));
+   await assert.rejects(upgradeBundle(denied),/No reviewed/);
+  }
   // No complete proof means no waiver of the previously observed drift.
   assert.equal((await analyze(catalog,null)).compatible_catalog,false);
   for(const mutate of [
@@ -174,7 +247,7 @@ test('official evidence permits only proved PG17, service ACL and Supabase varia
    (c,e)=>{e.event_triggers[0].extension_dependencies=[{extension:'unknown',type:'e'}];},
    (c,e)=>{e.clients_can_become_admin.authenticated=true;},
    (c,e)=>{e.extensions_schema.auth_create=true;},
-   (c,e)=>{e.service_role.inherit=true;},
+   (c,e)=>{e.service_role.inherit="true";},
    (c,e)=>{e.clients_can_become_service.anon=true;},
    (c,e)=>{e.service_function_acls[0].acl.find(a=>a.grantee==='service_role').grantable=true;},
    (c,e)=>{e.server_version_num=180001;},
@@ -190,6 +263,26 @@ test('official evidence permits only proved PG17, service ACL and Supabase varia
    const blocked=await analyze(c,e);assert.equal(blocked.compatible_catalog,false);
    assert.deepEqual(blocked.candidates,[]);await assert.rejects(upgradeBundle(blocked),/No reviewed/);
   }
+ }finally{await db.close();}
+});
+test('native metadata semantics: platform grant option roundtrips and empty search_path is not the hardened path',async()=>{
+ const db=await fixture();try{
+  // Harmless synthetic wrapper: upstream SQL is evidence text, never executed.
+  await db.query(`do $$begin if not exists(select from pg_roles where rolname='supabase_admin') then create role supabase_admin superuser;end if;end$$;
+   create schema extensions;
+   set role supabase_admin;
+   create function extensions.acl_probe() returns event_trigger language plpgsql set search_path to pg_catalog,pg_temp as $$begin return;end$$;
+   grant execute on function extensions.acl_probe() to postgres with grant option;
+   create event trigger acl_probe on ddl_command_end when tag in ('CREATE VIEW') execute function extensions.acl_probe();
+   reset role;`);
+  const proof=await readUpgradeEvidence(db);
+  const probe=proof.event_triggers.find(e=>e.name==='acl_probe');
+  assert.equal(probe.function_owner,'supabase_admin');assert.equal(probe.event_owner,'supabase_admin');
+  assert.deepEqual(probe.acl.find(a=>a.grantee==='postgres'),{grantee:'postgres',grantor:'supabase_admin',privilege:'EXECUTE',grantable:true});
+  await db.query(`create temp table pg_extension(marker text);set search_path='';`);
+  assert.equal((await db.query("select to_regclass('pg_extension')='pg_temp.pg_extension'::regclass shadowed")).rows[0].shadowed,true);
+  await db.query('set search_path=pg_catalog,pg_temp');
+  assert.equal((await db.query("select to_regclass('pg_extension')='pg_catalog.pg_extension'::regclass protected")).rows[0].protected,true);
  }finally{await db.close();}
 });
 test('catalog planning blocks partial installs, changed functions, view ACLs, policies, triggers and column grants',async()=>{
@@ -215,11 +308,11 @@ test('catalog planning blocks partial installs, changed functions, view ACLs, po
   await assert.rejects(db.query(sql),/Catalog changed/);await db.query('rollback');
  }finally{await db.close();}
 });
-test('secure recovery already present is retained and only community is proposed',async()=>{
+for(const inheritance of ['inherit','noinherit'])test(`secure recovery already present is retained and only community is proposed (${inheritance})`,async()=>{
  const db=await fixture();
  const wasInherit=(await db.query("select rolinherit from pg_roles where rolname='service_role'")).rows[0].rolinherit;
  try{
-  await db.query(`alter role service_role noinherit;
+  await db.query(`alter role service_role ${inheritance};
    grant execute on function public.can_send_item_message(uuid,uuid),public.canonicalize_message_display() to service_role;`);
   await db.query(await read(upgrades[1]));
   const plan=await planUpgrade(db);assert.equal(plan.stage,'secure_recovery');
@@ -343,7 +436,7 @@ test('a full CRLF checkout builds the same safe school plan and review bundle wi
   await db.query('begin read only');let plan;
   try{plan=await windows.planUpgrade(db);}finally{await db.query('rollback');}
   assert.equal(plan.stage,'school',JSON.stringify(plan.comparisons));assert.equal(plan.authorization_to_apply,false);
-  assert.equal(plan.official_validation.reference_crlf_files,11);
+  assert.equal(plan.official_validation.reference_crlf_files,17);
   assert.deepEqual(plan.candidates.map(c=>c.file),upgrades.slice(1));
   const bundle=await windows.upgradeBundle(plan);
   assert.match(bundle,/begin;/);assert.match(bundle,/Final evidence mismatch/);

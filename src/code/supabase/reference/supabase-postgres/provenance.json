@@ -67,6 +67,45 @@
       "path": "migrations/db/migrate.sh",
       "git_blob": "e7092c4d70e57ba7ff0183ca5d1803844f5f7862",
       "sha256": "eb6a57848a73dfbc3b8e40edbadcc7a933f1099ac62cef8c138a18115655b745"
+    },
+    {
+      "file": "20220321174452_fix-postgrest-alter-type-event-trigger.sql",
+      "path": "migrations/db/migrations/20220321174452_fix-postgrest-alter-type-event-trigger.sql",
+      "git_blob": "339def9bd8bbf2381cff6d6040bad585ec5dcc68",
+      "sha256": "674bfe11a9cb828c55ca7c9e00d4f4edcbcb0003d956d8866c9563810e7f0f0e"
+    },
+    {
+      "file": "20230224042246_grant_extensions_perms_for_postgres.sql",
+      "path": "migrations/db/migrations/20230224042246_grant_extensions_perms_for_postgres.sql",
+      "git_blob": "f00fffee413da7e0c3c75a98bb9cc36a1c33b535",
+      "sha256": "9e1e777fb8317dcccdb88ead19201a5670c890fa69dfc51c8d7b369229c3ca8d"
+    },
+    {
+      "file": "20230529180330_alter_api_roles_for_inherit.sql",
+      "path": "migrations/db/migrations/20230529180330_alter_api_roles_for_inherit.sql",
+      "git_blob": "d8291bbaaf672cb1c33965febc08d499fdc2967d",
+      "sha256": "e78a67f8e6ae847765a80898824d404ab370daa3d6f6dbf61ea6d9e0a69144f3"
+    },
+    {
+      "file": "cron-pre-cascade.sql",
+      "path": "migrations/db/migrations/20260730000000_revoke_trigger_on_cron_tables_from_postgres.sql",
+      "commit": "78299525c30f99047184dc30a3b36d029d70076b",
+      "git_blob": "97dcb4143b9b395210be06c2eff409c1a1992c54",
+      "sha256": "72c01b3b55d1c3a3708d921e80fe68d8a814694f4501aa2d0e37c79cb82ff5c1"
+    },
+    {
+      "file": "pr2410-intermediate.sql",
+      "path": "migrations/db/migrations/20260820000001_rescope_pg_graphql_access_trigger.sql",
+      "commit": "a458f16fb7bb7742067507559c591d9c54c52878",
+      "git_blob": "9b8c7ea54003a7ef4703fb04dbeb5e8305333f5a",
+      "sha256": "bc16367be93b01def1a8d774a7d242e1665925fc0a83bade020e592f24a2c2fd"
+    },
+    {
+      "file": "event_trigger_search_path.sql",
+      "path": "nix/tests/sql/event_trigger_search_path.sql",
+      "commit": "c6226c631d3f9048586005f0bca8c9fc10a72940",
+      "git_blob": "2de883d66f7a50ae58374657e5b68bbd07cd2fa2",
+      "sha256": "e65a04cbcde744358765234a17ec849ca6bdbb5baf04c99009d98fb0d318cf04"
     }
   ]
 }

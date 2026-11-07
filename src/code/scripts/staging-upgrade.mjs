@@ -6,7 +6,7 @@ import {createHash} from 'node:crypto';
 import {stagingReference} from './staging-reference.mjs';
 import {files} from './prepare-staging.mjs';
 import {reviewCatalog} from './staging-catalog-review.mjs';
-import {validateOfficialEvents} from './staging-official-evidence.mjs';
+import {validateOfficialEvents,serviceValidation} from './staging-official-evidence.mjs';
 import {portableReference,finalEvidence} from './staging-equivalence.mjs';
 import {stagingStep,publicError,addSecondaryFailure} from './staging-tls.mjs';
 
@@ -98,7 +98,7 @@ export async function planUpgrade(db){
   candidates:candidates.map(file=>sources.find(s=>s.file===file)),sources,
   comparisons:match?[]:comparisons,
   review,
-  evidence,official_validation:official,equivalences:match?.equivalences??states.find(s=>s.stage===closest?.stage)?.equivalences??[],
+  evidence,official_validation:official,service_acl_validation:serviceValidation(evidence,catalog),equivalences:match?.equivalences??states.find(s=>s.stage===closest?.stage)?.equivalences??[],
   backup:'not_checked',remote_behaviour:'not_tested',authorization_to_apply:false,
   blockers:match?[]:['Catalog differs from every reviewed reference. Review differences; no install SQL generated.'],
   catalog,

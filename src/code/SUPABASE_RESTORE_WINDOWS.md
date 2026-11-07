@@ -1,5 +1,7 @@
 # Restauración local compatible — Windows
 
+Para Windows sin Docker Desktop: [restauración en Linux temporal privado](SUPABASE_RESTORE_CLOUD.md).
+
 Alexis; destino exclusivamente descartable. No se usa 127.0.0.1:55432 ni se toca
 BuscAG_restore, Supabase remoto, producción o Firebase. No se ejecutan las migraciones
 pendientes de la aplicación. No se genera otro respaldo.

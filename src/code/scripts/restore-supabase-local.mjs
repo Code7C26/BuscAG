@@ -34,8 +34,8 @@ export function assertContainer(info,archive){
  // directly by our run command and cannot be replaced by an existing container.
  if(!archive)throw Error('BUSCAG_RESTORE_MOUNTS');
 }
-export async function restoreLocalArchive(file,{pgRestore='pg_restore'}={}){
- const archive=resolve(file),meta=await inspectRestoreArchive(archive,{pgRestore});assertArchiveProfile(meta);
+export async function restoreLocalArchive(file,{pgRestore='pg_restore',archiveReader}={}){
+ const archive=resolve(file),meta=await inspectRestoreArchive(archive,{pgRestore,run:archiveReader});assertArchiveProfile(meta);
  const name='buscag-restore-'+randomUUID().replaceAll('-',''),database='restore_'+randomUUID().replaceAll('-','');
  const dir=await mkdtemp(join(tmpdir(),'buscag-restore-private-'));
  const env={...process.env};for(const k of ['DOCKER_HOST','DOCKER_CONTEXT','DOCKER_TLS','DOCKER_TLS_VERIFY','DOCKER_CERT_PATH'])delete env[k];
@@ -45,7 +45,7 @@ export async function restoreLocalArchive(file,{pgRestore='pg_restore'}={}){
   if((r.error||r.status!==0)&&!allowFailure){const error=Error('BUSCAG_LOCAL_RESTORE_FAILED');error.privateDetail=r.stderr??'';throw error;}
   return r;
  };
- const sql=(db,text,options)=>call(['exec',name,'psql','-X','--no-password','--host=/var/run/postgresql','--username=supabase_admin','--dbname='+db,'--set=ON_ERROR_STOP=1','-At','-c',text],options);
+ const sql=(db,text,options)=>call(['exec',name,'psql','-X','--no-password','--host=/var/run/postgresql','--username=supabase_admin','--dbname='+db,'--set=ON_ERROR_STOP=1','-qAt','-c',text],options);
  const summary={container:name,database,archive_sha256:meta.archive_sha256,image:restoreImage,
   source_server_version:meta.source_server_version,dump_client_version:meta.dump_client_version,toc_entries:meta.toc_entries,
   restore_completed:false,backup_verified:false,
@@ -82,6 +82,13 @@ export async function restoreLocalArchive(file,{pgRestore='pg_restore'}={}){
    'app_rls_off',(select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind='r' and
     (n.nspname='buscag_private' or (n.nspname='public' and c.relname in('items','profiles','messages','notifications','push_subscriptions'))) and not c.relrowsecurity),
    'extensions',(select json_agg(extname) from pg_extension))`).stdout);
+  summary.auth_behaviour=JSON.parse(sql(database,`begin read only;
+   set local role authenticated;
+   set local request.jwt.claim.sub='00000000-0000-4000-8000-000000000001';
+   set local request.jwt.claims='{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}';
+   select json_build_object('uid_from_real_function',auth.uid()='00000000-0000-4000-8000-000000000001'::uuid,
+    'foreign_profiles_hidden',not exists(select id from public.profiles where id<>auth.uid()));rollback;`).stdout);
+  if(summary.auth_behaviour.uid_from_real_function!==true||summary.auth_behaviour.foreign_profiles_hidden!==true)throw Error('BUSCAG_RESTORE_AUTH_RLS');
   if(!summary.checks.auth_uid||summary.checks.app_rls_off!==0||meta.extensions.some(e=>!summary.checks.extensions.includes(e)))throw Error('BUSCAG_RESTORE_CHECKS');
   const digest=createHash('sha256');for await(const chunk of createReadStream(archive))digest.update(chunk);
   if(digest.digest('hex')!==meta.archive_sha256)throw Error('BUSCAG_RESTORE_ARCHIVE_CHANGED');
@@ -93,7 +100,7 @@ export async function restoreLocalArchive(file,{pgRestore='pg_restore'}={}){
   await writeFile(join(dir,'result.json'),JSON.stringify(summary,null,2)+'\n',{mode:0o600});
   await writeFile(join(dir,'failure.private.log'),error.privateDetail??'',{mode:0o600});
   if(started){const logs=call(['logs',name],{allowFailure:true});await writeFile(join(dir,'bootstrap.private.log'),(logs.stdout??'')+(logs.stderr??''),{mode:0o600});}
-  const failure=Error('Restauración local detenida en '+stage+'. Informe privado: '+join(dir,'result.json'));throw failure;
+  const failure=Error('Restauración local detenida en '+stage+'. Informe privado: '+join(dir,'result.json'));failure.restoreSummary=summary;throw failure;
  }
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){

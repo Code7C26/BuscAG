@@ -11,7 +11,7 @@ test('restore rehearsal accepts the explicit tmpfs test cluster and rejects pers
 });
 
 import {parseRestoreMetadata,inspectRestoreArchive} from '../scripts/inspect-restore-archive.mjs';
-import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {mkdtemp,writeFile,rm,symlink} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 const toc=`; Dumped from database version: 17.6
@@ -76,4 +76,39 @@ test('restore target is a fresh local-only networkless container, immutable offi
  for(const mutate of [i=>{i.HostConfig.NetworkMode='bridge';},i=>{i.Mounts[0].RW=true;},i=>{i.HostConfig.PortBindings={'5432/tcp':[]};},i=>{i.HostConfig.Tmpfs={};},i=>{i.Mounts.push({Type:'bind',Destination:'/var/run/docker.sock',RW:false});}]){
   const changed=structuredClone(info);mutate(changed);assert.throws(()=>assertContainer(changed,archive));
  }
+});
+
+import {resourceBlockers,within,dockerArchiveReader,minimumDiskBytes,minimumMemoryBytes,runCloud} from '../scripts/restore-supabase-cloud.mjs';
+test('cloud preflight refuses unavailable daemon storage instead of substituting host free space',()=>{
+ const ready={dockerReady:true,freeDiskBytes:minimumDiskBytes,memoryBytes:minimumMemoryBytes,archiveAvailable:true,archivePrivate:true,platform:'linux'};
+ assert.deepEqual(resourceBlockers(ready),[]);
+ for(const [key,value,expected] of [['dockerReady',false,'local_docker_unavailable'],['freeDiskBytes',null,'docker_disk_unknown'],['freeDiskBytes',1,'insufficient_docker_disk'],['memoryBytes',1,'insufficient_memory'],['archiveAvailable',false,'private_archive_unavailable'],['archivePrivate',false,'archive_inside_repository'],['platform','win32','linux_required']])assert.ok(resourceBlockers({...ready,[key]:value}).includes(expected));
+});
+test('cloud archive reader never connects or bootstraps and requires the exact read-only archive arguments',()=>{
+ const archive='/private/backup with spaces.dump',calls=[];
+ const read=dockerArchiveReader(archive,(binary,args,options)=>{calls.push({binary,args,options});return {status:0,stdout:'metadata'};});
+ assert.equal(read('ignored',['--list','--',archive],{}).status,0);
+ read('ignored',['--schema-only','--file=-','--',archive],{});
+ for(const c of calls){
+  assert.equal(c.binary,'docker');assert.ok(c.args.includes('--network=none'));assert.ok(c.args.includes('--read-only'));
+  assert.ok(c.args.includes('--entrypoint=pg_restore'));assert.ok(c.args.includes(restoreImage));
+  assert.ok(c.args.includes('type=bind,src='+archive+',dst=/review/backup.dump,readonly'));
+  assert.equal(c.options.shell,false);assert.equal(c.args.some(a=>a.startsWith('--dbname')),false);
+ }
+ assert.throws(()=>read('ignored',['--dbname=remote','--',archive],{}));
+ assert.throws(()=>read('ignored',['--list','--','/another/archive'],{}));
+});
+test('cloud refuses backup/result paths within the repository and distinguishes sibling directories',()=>{
+ assert.equal(within('/repo/private.dump','/repo'),true);
+ assert.equal(within('/repo','/repo'),true);
+ assert.equal(within('/repo-other/private.dump','/repo'),false);
+ assert.equal(within('/private/backup.dump','/repo'),false);
+});
+
+test('cloud rejects output symlinks before querying Docker or overwriting existing files',{skip:process.platform!=='linux'},async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'buscag-cloud-paths-'));
+ try{
+  const original=join(dir,'original.json'),link=join(dir,'result.json');await writeFile(original,'unchanged');await symlink(original,link);
+  await assert.rejects(runCloud({result:link}),/BUSCAG_RESULT_SYMLINK/);
+ }finally{await rm(dir,{recursive:true,force:true});}
 });

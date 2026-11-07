@@ -17,7 +17,7 @@ de actualización SQL, que no se necesita para esta candidata.
 | --- | --- | --- |
 | Registro, confirmación, login, recuperación de contraseña y logout | Implementados; compatibles con Auth | Pruebas automáticas; GET real de Auth confirma email/registro habilitados y confirmación obligatoria. La recepción de correo y los redirects reales requieren ensayo. |
 | Publicar y editar con foto | Compatibles con school | RPC y edición owner-bound probados en PostgreSQL WASM, reintentos con ID estable; upload real a Storage pendiente de ensayo. |
-| Listado general, propias, búsqueda, filtros, mapa y geolocalización | Implementados | Pruebas de filtros/contrato/matching y compilación. No se inventan fechas/coordenadas de publicaciones históricas. Marcador rojo local empaquetado con Vite. Navegador de esta revisión pendiente. |
+| Listado general, propias, búsqueda, filtros, mapa y geolocalización | Implementados y probados en navegador | No se inventan fechas/coordenadas de publicaciones históricas. Marcador rojo local empaquetado con Vite. Las APIs del navegador se simulan en QA. |
 | Coincidencias disponibles | Implementadas en el cliente | Índice orientativo sobre publicaciones visibles; no confirma identidad del objeto. No requiere las dos migraciones pendientes. |
 | Chat, bandeja, reintentos y recibos | Compatibles con school | SQL aislado verifica envío idempotente, lectura y exclusión de un tercero; reconexión/Realtime real requiere dos sesiones. |
 | Notificaciones internas | Compatibles con school | Un envío genera un aviso al destinatario sin duplicarlo. No equivale a entrega push. |
@@ -57,13 +57,19 @@ aplicar secure_recovery, la garantía bilateral tampoco existe en la API antigua
   denegado sin fallback, perfil completo conservado y ausencia de mutaciones falsas.
 - 8 pruebas de entorno release/presentación: correctas. No cambian el destino ni la
   configuración de producción.
-- Se agregaron tres escenarios Playwright (escritorio/móvil) para school.
-  **No ejecutados en esta revisión:** la revisión automática del entorno no pudo
-  aprobar el comando por límite de uso. No fue un rechazo por inseguridad. No se
-  eludió ese control; tampoco se heredan los 84 E2E de commits anteriores.
+- QA integral: **17 etapas correctas**, incluidos 90 E2E en escritorio/móvil,
+  PWA en modo compilado y presentación compilada en ambos tamaños. Incluye los
+  seis casos nuevos de school. El bloqueo transitorio de aprobación del entorno
+  se levantó y el reintento autorizado pasó; el navegador ya no queda pendiente.
+- Matriz de seguridad WASM: DATE/timestamptz y esquema histórico observado, además
+  de instalación, activación, recuperación y comunidad en bases descartables.
+  Las mejoras pendientes se instalan únicamente dentro de esos fixtures de prueba.
 
-Pendientes obligatorios de aceptación: QA de navegador para este commit y ensayo
-real de correo, upload, chat/Realtime y notificaciones entre dos cuentas dedicadas.
+Resumen verificable: [V1_RC_VALIDATION.json](V1_RC_VALIDATION.json). El código probado
+es cc12f86; el commit de cierre posterior sólo actualiza este informe y su resumen.
+
+Pendiente obligatorio de aceptación: ensayo real de correo, upload, chat/Realtime
+y notificaciones entre dos cuentas dedicadas, sin borrar publicaciones existentes.
 No se puede certificar 1.0 estable ni publicación sólo con tests simulados.
 
 ## Artefacto y publicación exacta

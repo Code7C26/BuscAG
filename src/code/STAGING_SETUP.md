@@ -1,5 +1,10 @@
 # BuscAG-Staging: instalación automática desde la computadora del operador
 
+**Conexión bloqueada o error UNKNOWN:** consultar
+[diagnóstico seguro por etapa](STAGING_CONNECTION_DIAGNOSTICS.md). En Windows usar
+`npm.cmd run prepare:staging -- --project-ref yiarlhpbgkofhhipkfha --upgrade-plan`;
+debe mostrar el banner **diagnóstico 2** y nunca requiere desactivar TLS.
+
 ## Actualización de una instalación existente
 
 **Para BuscAG Prueba `yiarlhpbgkofhhipkfha`, que ya tiene las funciones escolares,

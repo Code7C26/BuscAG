@@ -4,10 +4,13 @@ import assert from 'node:assert/strict';
 import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import {execFileSync} from 'node:child_process';
-import {createServer,connect,checkServerIdentity} from 'node:tls';
+import {execFileSync,spawnSync} from 'node:child_process';
+import {createServer,connect,checkServerIdentity,TLSSocket,createSecureContext} from 'node:tls';
+import {createServer as createTcpServer} from 'node:net';
+import {EventEmitter} from 'node:events';
 import {X509Certificate} from 'node:crypto';
-import {loadStagingCa,validateRootCa,stagingDiagnostic,publicError} from '../scripts/staging-tls.mjs';
+import {loadStagingCa,validateRootCa,stagingDiagnostic,publicError,formatStagingDiagnostic} from '../scripts/staging-tls.mjs';
+import {withStagingSession,withStagingRollback} from '../scripts/staging-session.mjs';
 import {connectionConfig} from '../scripts/prepare-staging.mjs';
 const directory=await mkdtemp(path.join(tmpdir(),'buscag-synthetic-tls-'));
 const file=name=>path.join(directory,name);
@@ -71,4 +74,123 @@ test('diagnostics distinguish TLS, authentication, network and schema without ec
   assert.equal(stagingDiagnostic(new AggregateError([{code:'ENETUNREACH'}],secret)).category,'conexión');
   assert.ok(!JSON.stringify(stagingDiagnostic(new Error(secret))).includes('DO_NOT_PRINT'));
   assert.equal(stagingDiagnostic(publicError('BUSCAG_PREFLIGHT','Tabla esperada ausente.')).message,'Tabla esperada ausente.');
+});
+test('valid WHATWG URI may fail pg password decoding; malformed percent escapes fail safely before client construction',async()=>{
+ const {Client}=await import('pg');
+ const origin='@aws-0-region.pooler.supabase.com:5432/postgres';
+ const prefix='postgresql://postgres.abcdefghijklmnopqrst:';
+ for(const password of ['synthetic%password','synthetic%FF']){
+  const uri=prefix+password+origin;
+  assert.doesNotThrow(()=>new URL(uri));
+  assert.throws(()=>connectionConfig(uri,'abcdefghijklmnopqrst'),e=>e.code==='BUSCAG_URI_ENCODING');
+ }
+ assert.throws(()=>new Client({connectionString:prefix+'synthetic%FF'+origin}),URIError);
+ const raw='synthetic%2F @:/?# ñ';
+ const client=new Client(connectionConfig(prefix+encodeURIComponent(raw)+origin,'abcdefghijklmnopqrst'));
+ assert.equal(client.password,raw);
+ assert.equal(stagingDiagnostic(new URIError('URI malformed')).code,'BUSCAG_URI_ENCODING');
+ // Shared read-only preflight, without invalidating an operator's upgrade files.
+ const run=spawnSync(process.execPath,['scripts/prepare-staging.mjs','--project-ref','yiarlhpbgkofhhipkfha','--plan'],{
+  cwd:new URL('..',import.meta.url),encoding:'utf8',env:{...process.env,NODE_TLS_REJECT_UNAUTHORIZED:'1',
+   BUSCAG_STAGING_CA_FILE:file('root.crt'),BUSCAG_STAGING_CA_SHA256:expected,
+   BUSCAG_STAGING_DATABASE_URL:'postgresql://postgres.yiarlhpbgkofhhipkfha:DO_NOT_PRINT%FF@aws-0-us-east-1.pooler.supabase.com:5432/postgres'},
+ });
+ assert.equal(run.status,1);assert.match(run.stdout,/diagnóstico 2/);assert.match(run.stderr,/BUSCAG_URI_ENCODING/);
+ assert.ok(!run.stderr.includes('DO_NOT_PRINT'));assert.ok(!run.stdout.includes('DO_NOT_PRINT'));
+ assert.ok(!run.stdout.includes('[TCP]'));
+});
+test('uncoded pg errors and recursive/cyclic causes are classified without echoing messages, tokens or forged public messages',()=>{
+ const signature=new Error('SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature does not match');
+ const nested=new AggregateError([{cause:new AggregateError([{cause:signature}],'private')}],'private');
+ assert.equal(stagingDiagnostic(nested).code,'BUSCAG_SCRAM_SIGNATURE');
+ const cycle={message:'DO_NOT_PRINT'};cycle.cause=cycle;cycle.errors=[cycle];
+ assert.equal(stagingDiagnostic(cycle).code,'BUSCAG_SETUP_FAILURE');
+ for(const message of ['timeout expired','Connection terminated unexpectedly','Query read timeout','The server does not support SSL connections','There was an error establishing an SSL connection','Tenant or user not found','Max client connections reached','MaxClientsInSessionMode: max clients reached - in Session mode max clients are limited to pool_size','Client network socket disconnected before secure TLS connection was established']){
+  assert.notEqual(stagingDiagnostic(new Error(message)).code,'UNKNOWN');
+ }
+ for(const error of [{code:'BUSCAG_FAKE',publicMessage:'DO_NOT_PRINT',message:'DO_NOT_PRINT'},
+  {code:'ERR_TLS_DO_NOT_PRINT',message:'DO_NOT_PRINT',detail:'DO_NOT_PRINT'},new Error('postgresql://user:DO_NOT_PRINT@host/postgres')]){
+  assert.ok(!formatStagingDiagnostic(error).includes('DO_NOT_PRINT'));
+ }
+});
+class FakeClient extends EventEmitter{
+ constructor({connectError,queryError,endError,idleError,endEmitsError,hangEnd=false}={}){super();Object.assign(this,{connectError,queryError,endError,idleError,endEmitsError,hangEnd});this.connection=new EventEmitter();this.connection.stream=new EventEmitter();this.connection.stream.authorized=true;this.connection.stream.destroy=()=>{this.destroyed=true;};}
+ async connect(){this.connection.emit('connect');this.connection.emit('sslconnect');this.connection.stream.emit('secureConnect');if(this.connectError)throw this.connectError;}
+ async query(){if(this.idleError)this.emit('error',this.idleError);if(this.queryError)throw this.queryError;return {rows:[]};}
+ async end(){if(this.endEmitsError)this.emit('error',this.endEmitsError);if(this.endError)throw this.endError;if(this.hangEnd)return new Promise(()=>{});}
+}
+test('query and idle errors keep their phase, and closing/rollback errors never replace the primary failure',async()=>{
+ const secret='postgresql://user:DO_NOT_PRINT@private/postgres';
+ const auth=Object.assign(new Error('SASL: SCRAM-SERVER-FINAL-MESSAGE: server signature does not match'),{detail:secret,stack:secret});
+ await assert.rejects(withStagingSession(new FakeClient({connectError:auth,endError:new Error(secret)}),async()=>{}),error=>{
+  const d=stagingDiagnostic(error);assert.equal(d.code,'BUSCAG_SCRAM_SIGNATURE');assert.equal(d.stage,'autenticación');assert.equal(d.last_completed,'TLS');
+  assert.equal(d.secondary[0].stage,'cierre');assert.ok(!formatStagingDiagnostic(error).includes('DO_NOT_PRINT'));return true;
+ });
+ const primary=Object.assign(new Error(secret),{code:'42P01',detail:secret,stack:secret});
+ const client=new FakeClient({queryError:primary,endError:new Error(secret)});
+ const progress=[];
+ await assert.rejects(withStagingSession(client,db=>db.query(secret),{onProgress:p=>progress.push(p)}),error=>{
+  const d=stagingDiagnostic(error);assert.equal(d.code,'42P01');assert.equal(d.stage,'consultas');assert.equal(d.query_number,1);
+  assert.equal(d.secondary[0].stage,'cierre');assert.equal(d.secondary[0].code,'BUSCAG_CLOSE_FAILURE');
+  assert.ok(!formatStagingDiagnostic(error).includes('DO_NOT_PRINT'));return true;
+ });
+ assert.deepEqual(progress.slice(0,5),[{stage:'tcp',status:'start'},{stage:'tcp',status:'ok'},{stage:'tls',status:'start'},{stage:'tls',status:'ok'},{stage:'authentication',status:'start'}]);
+ await assert.rejects(withStagingRollback({query:async()=>{throw new Error(secret);}},()=>{throw primary;}),error=>stagingDiagnostic(error).code==='42P01');
+ const idle=new FakeClient({idleError:Object.assign(new Error(secret),{code:'ECONNRESET'})});
+ await assert.rejects(withStagingSession(idle,db=>db.query(secret)),e=>stagingDiagnostic(e).stage==='consultas'&&stagingDiagnostic(e).code==='ECONNRESET');
+});
+test('close-only failures and bounded close timeout are explicit after successful queries',async()=>{
+ await assert.rejects(withStagingSession(new FakeClient({endError:new Error('DO_NOT_PRINT')}),db=>db.query('private')),
+ e=>stagingDiagnostic(e).code==='BUSCAG_CLOSE_FAILURE'&&stagingDiagnostic(e).last_completed==='consultas');
+ const hung=new FakeClient({hangEnd:true});
+ await assert.rejects(withStagingSession(hung,async()=>{}, {closeTimeoutMs:15}),e=>stagingDiagnostic(e).code==='BUSCAG_CLOSE_TIMEOUT');
+ assert.equal(hung.destroyed,true);
+ const progress=[];
+ await assert.rejects(withStagingSession(new FakeClient({endEmitsError:new Error('DO_NOT_PRINT')}),async()=>{}, {onProgress:p=>progress.push(p)}),e=>stagingDiagnostic(e).stage==='cierre');
+ assert.ok(!progress.some(p=>p.stage==='closing'&&p.status==='ok'));
+});
+test('sslconnect alone never reports successful TLS or authentication',async()=>{
+ const client=new FakeClient();const progress=[];
+ client.connect=async()=>{client.connection.emit('connect');client.connection.emit('sslconnect');throw new Error('timeout expired');};
+ await assert.rejects(withStagingSession(client,async()=>{}, {onProgress:p=>progress.push(p)}),e=>{
+  const d=stagingDiagnostic(e);assert.equal(d.stage,'TLS');assert.equal(d.last_completed,'TCP');assert.equal(d.code,'BUSCAG_CONNECT_TIMEOUT');return true;
+ });
+ assert.ok(!progress.some(p=>p.stage==='tls'&&p.status==='ok'));
+});
+test('real pg SSLRequest and verified TLS distinguish authentication, query, SSL refusal and handshake timeout on loopback',async()=>{
+ const {Client}=await import('pg');
+ const context=createSecureContext({cert:leaf,key:await readFile(file('leaf.key'))});
+ const packet=(type,payload)=>{const size=Buffer.alloc(4);size.writeInt32BE(payload.length+4);return Buffer.concat([Buffer.from(type),size,payload]);};
+ const ready=packet('Z',Buffer.from('I'));
+ const authOk=packet('R',Buffer.alloc(4));
+ const pgError=code=>packet('E',Buffer.from(`SERROR\0C${code}\0MDO_NOT_PRINT\0\0`));
+ for(const mode of ['authentication','queries','refused','timeout']){
+  const sockets=new Set();const progress=[];
+  const server=createTcpServer(socket=>{
+   sockets.add(socket);socket.on('close',()=>sockets.delete(socket));socket.on('error',()=>{});
+   socket.once('data',()=>{
+    if(mode==='timeout')return;
+    if(mode==='refused'){socket.end('N');return;}
+    socket.write('S');
+    const tls=new TLSSocket(socket,{isServer:true,secureContext:context});tls.on('error',()=>{});
+    tls.once('data',()=>{
+     if(mode==='authentication'){tls.end(pgError('28P01'));return;}
+     tls.write(Buffer.concat([authOk,ready]));
+     tls.on('data',data=>{if(data[0]===81)tls.write(Buffer.concat([pgError('42P01'),ready]));else if(data[0]===88)tls.end();});
+    });
+   });
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const client=new Client({host:'127.0.0.1',port:server.address().port,user:'synthetic',database:'synthetic',password:'synthetic',
+   connectionTimeoutMillis:mode==='timeout'?60:3000,ssl:{ca:root,servername:'aws-0-region.pooler.supabase.com',rejectUnauthorized:true,checkServerIdentity,minVersion:'TLSv1.2'}});
+  try{
+   await assert.rejects(withStagingSession(client,db=>db.query('DO_NOT_PRINT'),{onProgress:p=>progress.push(p)}),e=>{
+    const d=stagingDiagnostic(e);
+    assert.equal(d.code,{authentication:'28P01',queries:'42P01',refused:'BUSCAG_PG_SSL_REFUSED',timeout:'BUSCAG_CONNECT_TIMEOUT'}[mode]);
+    assert.equal(d.stage,{authentication:'autenticación',queries:'consultas',refused:'TLS',timeout:'TLS'}[mode]);
+    assert.ok(!formatStagingDiagnostic(e).includes('DO_NOT_PRINT'));return true;
+   });
+   assert.equal(progress.some(p=>p.stage==='tls'&&p.status==='ok'),!['refused','timeout'].includes(mode));
+  }finally{for(const socket of sockets)socket.destroy();await new Promise(resolve=>server.close(resolve));}
+ }
 });

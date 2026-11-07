@@ -3,7 +3,9 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import {checkServerIdentity} from 'node:tls';
-import {loadStagingCa,publicError,stagingDiagnostic} from './staging-tls.mjs';
+import {loadStagingCa,publicError,stageFailure,formatStagingDiagnostic} from './staging-tls.mjs';
+import {withStagingSession,withStagingRollback} from './staging-session.mjs';
+import {createRequire} from 'node:module';
 export const PRODUCTION_REF='hczcqtodcnurdrroczle';
 export const files=[
   'migrations/20261016000000_notification_permissions.sql',
@@ -24,7 +26,9 @@ export function connectionConfig(value,ref,ca){
   let url;try{url=new URL(value);}catch{throw publicError('BUSCAG_PREFLIGHT','Configura BUSCAG_STAGING_DATABASE_URL fuera de Git.');}
   const direct=url.hostname===`db.${ref}.supabase.co`;
   const pooler=/^[a-z0-9-]+\.pooler\.supabase\.com$/.test(url.hostname);
-  const user=decodeURIComponent(url.username);
+  let user;
+  try{user=decodeURIComponent(url.username);decodeURIComponent(url.password);}
+  catch{throw publicError('BUSCAG_URI_ENCODING','La URI contiene escapes % inválidos o bytes no UTF-8 en las credenciales. Codifica la contraseña original una sola vez con encodeURIComponent; un % literal debe ser %25. No imprimas la URI.');}
   requireState(url.protocol==='postgresql:'||url.protocol==='postgres:','Sólo PostgreSQL.');
   requireState((direct&&user==='postgres')||(pooler&&user===`postgres.${ref}`),'Host/usuario no identifica el proyecto staging esperado.');
   requireState(url.pathname==='/postgres'&&url.password&&!url.hash,'Base o autenticación inválida.');
@@ -134,7 +138,7 @@ export async function installStaging(db,{apply=false,onStep=()=>{}}={}){
       }
       requireState(/commit;\s*$/i.test(sql),'Archivo sin transacción final reconocida.');
       const journal=`insert into buscag_staging_admin.applied_sql(position,filename,sha256) values(${step.position},'${step.file}','${step.sha256}');\ncommit;`;
-      try{await db.query(sql.replace(/commit;\s*$/i,journal));}catch(error){await db.query('rollback');throw error;}
+      await withStagingRollbackOnError(db,()=>db.query(sql.replace(/commit;\s*$/i,journal)));
       requireState(JSON.stringify(await counts(db))===JSON.stringify(before),'Conteos cambiaron inesperadamente; detener y revisar.');
       onStep(step.file,'confirmado');
     }
@@ -183,19 +187,24 @@ async function main(){
   const mode=args.includes('--apply')?'apply':args.includes('--verify')?'verify':args.includes('--smoke')?'smoke':'plan';
   requireState(refIndex>=0&&args.length===3&&['--plan','--apply','--verify','--smoke','--upgrade-plan','--upgrade-verify'].some(x=>args.includes(x)),'Uso: npm run prepare:staging -- --project-ref REF --plan|--apply|--verify|--smoke|--upgrade-plan|--upgrade-verify');
   if(upgrade)requireState(ref==='yiarlhpbgkofhhipkfha','La actualización está fijada exclusivamente a BuscAG Prueba.');
+  console.log(`BuscAG prepare:staging · diagnóstico 2 · Node ${process.versions.node}`);
   if(upgrade){const {invalidateUpgradeArtifacts}=await import('./staging-upgrade.mjs');await invalidateUpgradeArtifacts();}
   const trust=await loadStagingCa();
   const config=connectionConfig(process.env.BUSCAG_STAGING_DATABASE_URL,ref,trust.ca);
   if(trust.fingerprint256)console.log('CA configurada SHA-256: '+trust.fingerprint256);
-  const {Client}=await import('pg');const db=new Client(config);
-  try{
-    await db.connect();await db.query("set statement_timeout='120s';set lock_timeout='10s'");
+  const {Client}=await import('pg');
+  const pgVersion=createRequire(import.meta.url)('pg/package.json').version;
+  if(/^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?$/.test(pgVersion))console.log(`Driver pg ${pgVersion}`);
+  let client;try{client=new Client(config);}catch(error){throw stageFailure(error,{stage:'configuration',lastCompleted:'configuration'});}
+  const labels={tcp:'TCP',tls:'TLS',authentication:'autenticación',queries:'consultas',closing:'cierre'};
+  await withStagingSession(client,async db=>{
+    await db.query("set statement_timeout='120s';set lock_timeout='10s'");
     requireState((await db.query('select current_user')).rows[0].current_user==='postgres','Se requiere el operador postgres de staging.');
     if(upgrade){
       const {planUpgrade,saveUpgradeArtifacts}=await import('./staging-upgrade.mjs');
       // No remote mutation, not even a journal or rollback-only synthetic users.
       await db.query("begin isolation level repeatable read read only;set local search_path=pg_catalog,public");
-      let plan;try{plan=await planUpgrade(db);}finally{await db.query('rollback');}
+      const plan=await withStagingRollback(db,()=>planUpgrade(db));
       const artifacts=await saveUpgradeArtifacts(plan);
       const {catalog,evidence,_expectedFinal,_expectedFinalEvidence,sources,comparisons,review,...summary}=plan;
       if(review)summary.review_summary={reference_stage:review.reference_stage,constraints:review.constraint_counts,
@@ -208,10 +217,12 @@ async function main(){
     else if(mode==='smoke'){await verifyBootstrap(db);const {smokeStaging}=await import('./staging-smoke.mjs');console.log(JSON.stringify(await smokeStaging(db),null,2));}
     else if(mode==='verify')console.log(JSON.stringify(await verifyInstalled(db),null,2));
     else {const plan=await installStaging(db,{apply:mode==='apply',onStep:(file,state)=>console.log(`${state}: ${file}`)});console.log(JSON.stringify(plan.map(({file,sha256,applied})=>({file,sha256,applied})),null,2));}
-  }finally{await db.end();}
+  },{onProgress:({stage,status})=>console.log(`[${labels[stage]}] ${status==='ok'?'OK':'iniciando'}`)});
+}
+async function withStagingRollbackOnError(db,work){
+  try{return await work();}catch(error){return withStagingRollback(db,()=>{throw error;});}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{
-  const diagnostic=stagingDiagnostic(error);
-  console.error(`Preparación detenida [${diagnostic.category}] ${diagnostic.code}. ${diagnostic.message}`);
+  console.error(formatStagingDiagnostic(error));
   process.exitCode=1;
 });

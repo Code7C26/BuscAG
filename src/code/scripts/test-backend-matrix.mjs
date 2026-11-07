@@ -17,5 +17,5 @@ const integrationEnv={...process.env};
 if(mode==='pglite'){delete integrationEnv.LOCAL_PG_SOCKET;delete integrationEnv.PG_TEST_MODULE;}
 const integration=spawnSync(process.execPath,['tests/activation-order.mjs'],{cwd:new URL('..',import.meta.url),env:integrationEnv,stdio:'inherit'});
 if(integration.error||integration.status!==0)process.exit(integration.status||1);
-const upgrade=spawnSync(process.execPath,['--test','tests/staging-upgrade.test.mjs'],{cwd:new URL('..',import.meta.url),env:integrationEnv,stdio:'inherit'});
+const upgrade=spawnSync(process.execPath,['--test','--test-concurrency=1','tests/staging-upgrade.test.mjs','tests/application-upgrade.test.mjs'],{cwd:new URL('..',import.meta.url),env:integrationEnv,stdio:'inherit'});
 if(upgrade.error||upgrade.status!==0)process.exit(upgrade.status||1);

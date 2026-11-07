@@ -9,6 +9,7 @@ import {reviewCatalog} from './staging-catalog-review.mjs';
 import {validateOfficialEvents,serviceValidation} from './staging-official-evidence.mjs';
 import {portableReference,finalEvidence} from './staging-equivalence.mjs';
 import {stagingStep,publicError,addSecondaryFailure} from './staging-tls.mjs';
+import {applicationPreservation,readApplicationContext,applicationSessionGuard,applicationSources,verifyApplicationSources} from './staging-application-scope.mjs';
 
 export const PRUEBA_REF='yiarlhpbgkofhhipkfha';
 export const upgrades=[
@@ -75,16 +76,19 @@ async function references(dateType,traceDb){
  })());
  return referenceCache.get(dateType);
 }
-export async function planUpgrade(db){
+export async function planUpgrade(db,{preservePlatform=false}={}){
+ if(typeof preservePlatform!=='boolean')throw publicError('BUSCAG_APPLICATION_SCOPE','La opción de alcance debe ser explícita y booleana. No se preparó SQL.');
+ const applicationContext=preservePlatform?await readApplicationContext(db):null;
  const catalog=await readUpgradeCatalog(db);
  const evidence=await readUpgradeEvidence(db);
  const official=await validateOfficialEvents(catalog,evidence,db);
+ const preservation=preservePlatform?await stagingStep(db,'application.scope',()=>applicationPreservation(catalog,evidence,official,applicationContext)):null;
  const type=catalog.columns?.find(c=>c.schema==='public'&&c.table==='items'&&c.name==='date')?.type;
  const dateType=type==='date'?'date':type==='timestamp with time zone'?'timestamptz':null;
  const rawStates=dateType?await references(dateType,db):[];
  return stagingStep(db,'catalog.compare',async()=>{
- const states=rawStates.map(s=>{const p=portableReference(s.catalog,s.stage,catalog,evidence,official);return {...s,catalog:p.catalog,equivalences:p.accepted};});
- const match=states.find(s=>fingerprint(s.catalog)===fingerprint(catalog));
+ const states=rawStates.map(s=>{const p=portableReference(s.catalog,s.stage,catalog,evidence,official,preservation);return {...s,catalog:p.catalog,equivalences:p.accepted};});
+ const match=states.find(s=>(!preservePlatform||(preservation.eligible&&s.stage!=='baseline'))&&fingerprint(s.catalog)===fingerprint(catalog));
  const comparisons=states.map(s=>({stage:s.stage,differences:catalogDifferences(s.catalog,catalog)}));
  const closest=match?null:comparisons.reduce((best,s)=>!best||s.differences.length<best.differences.length?s:best,null);
  const review=closest?reviewCatalog(states.find(s=>s.stage===closest.stage).catalog,catalog,closest.stage,evidence,official):null;
@@ -95,6 +99,7 @@ export async function planUpgrade(db){
   version:1,project_ref:PRUEBA_REF,mode:'read_only_plan',
   stage:match?.stage??'unknown_or_drifted',catalog_fingerprint:fingerprint(catalog),date_type:dateType,
   compatible_catalog:Boolean(match),installed_final_catalog:match?.stage==='community',
+  upgrade_scope:preservePlatform?'application_only':'full_reviewed_reference',platform_preservation:preservation,
   candidates:candidates.map(file=>sources.find(s=>s.file===file)),sources,
   comparisons:match?[]:comparisons,
   review,
@@ -123,6 +128,12 @@ function assertCatalog(expected,message){
 }
 export async function upgradeBundle(plan){
  if(!plan.compatible_catalog||!plan.candidates.length||!plan._expectedFinal)throw Error('No reviewed pending upgrade');
+ const applicationOnly=plan.upgrade_scope==='application_only';
+ if(applicationOnly){
+  await verifyApplicationSources();
+  const expected=plan.stage==='school'?Object.keys(applicationSources):plan.stage==='secure_recovery'?Object.keys(applicationSources).slice(1):[];
+  if(!plan.platform_preservation?.eligible||!expected.length||JSON.stringify(plan.candidates.map(s=>s.file))!==JSON.stringify(expected))throw Error('Application upgrade is outside the reviewed two-file scope');
+ }
  const catalogSql=(await read('audit/upgrade_catalog.sql')).replace(/;\s*$/,'');
  const before=assertCatalog(plan.catalog,'Catalog changed: replan before installation').replace('UPGRADE_CATALOG_QUERY',catalogSql);
  const after=assertCatalog(plan._expectedFinal,'Final catalog mismatch: transaction must roll back').replace('UPGRADE_CATALOG_QUERY',catalogSql);
@@ -141,6 +152,18 @@ export async function upgradeBundle(plan){
  const sqls=await Promise.all(plan.candidates.map(async s=>{
   const sql=await read(s.file);if(sha(sql)!==s.sha256)throw Error('Source changed: replan');return `-- ${s.file} SHA256 ${s.sha256}\n${stripTransaction(sql)}`;
  }));
+ const applicationBody=applicationOnly?`-- No temporary objects: PL/pgSQL variables hold preservation evidence.
+do $buscag_application$ declare before_data jsonb; before_users bigint; after_data jsonb; begin
+ select jsonb_agg(to_jsonb(s) order by s.relation) into before_data from (${preservation}) s;
+ select count(*) into before_users from auth.users;
+ ${sqls.join('\n')}
+ ${applicationSessionGuard()}
+ ${after}
+ ${bindEvidence(plan._expectedFinalEvidence,'Final evidence mismatch: transaction must roll back')}
+ select jsonb_agg(to_jsonb(s) order by s.relation) into after_data from (${preservation}) s;
+ if before_data is distinct from after_data or before_users<>(select count(*) from auth.users)
+ then raise exception 'Existing data changed: rolling back upgrade';end if;
+end $buscag_application$;`:null;
  return `-- REVIEW ONLY. NOT authorization to execute. Target: ${PRUEBA_REF}.
 -- psql only. Backup must have been restored successfully in a separate disposable
 -- environment. Set buscag.upgrade.backup_verified to the plan fingerprint ONLY
@@ -148,7 +171,8 @@ export async function upgradeBundle(plan){
 \\set ON_ERROR_STOP on
 begin;
 set local lock_timeout='5s';set local statement_timeout='120s';
-set local search_path=pg_catalog,public;
+set local search_path=pg_catalog,pg_temp,public;
+${applicationOnly?applicationSessionGuard():''}
 select pg_advisory_xact_lock(214726,926);
 do $backup$ begin
  if current_user<>'postgres' then raise exception 'Trusted Prueba operator required';end if;
@@ -158,7 +182,7 @@ do $backup$ begin
 lock table auth.users,${tables.join(',')} in share row exclusive mode;
 ${before}
 ${bindEvidence(plan.evidence,'Evidence changed: replan before installation')}
-create temporary table buscag_upgrade_preservation on commit drop as ${preservation};
+${applicationBody??`create temporary table buscag_upgrade_preservation on commit drop as ${preservation};
 create temporary table buscag_upgrade_user_count on commit drop as select count(*) n from auth.users;
 ${sqls.join('\n')}
 ${after}
@@ -167,7 +191,7 @@ do $preserve$ begin
  if exists((select * from buscag_upgrade_preservation except (${preservation}))
  union all ((${preservation}) except select * from buscag_upgrade_preservation))
  or (select n from buscag_upgrade_user_count)<>(select count(*) from auth.users)
- then raise exception 'Existing data changed: rolling back upgrade';end if;end $preserve$;
+ then raise exception 'Existing data changed: rolling back upgrade';end if;end $preserve$;`}
 commit;
 -- Run --upgrade-verify in a NEW session, then authorized dedicated-account QA.
 `;

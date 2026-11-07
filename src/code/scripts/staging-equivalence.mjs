@@ -2,7 +2,7 @@
 import {createHash} from 'node:crypto';
 import {serviceVariantAllowed} from './staging-official-evidence.mjs';
 const md5=s=>createHash('md5').update(s).digest('hex');
-export function portableReference(reference,stage,catalog,evidence,official){
+export function portableReference(reference,stage,catalog,evidence,official,preservation){
  const result=structuredClone(reference),accepted=[];
  if(evidence?.version!==1)return {catalog:result,accepted};
  const version=evidence.server_version_num;
@@ -27,6 +27,10 @@ export function portableReference(reference,stage,catalog,evidence,official){
  if(official?.verified){
   result.event_triggers=structuredClone(catalog.event_triggers);
   accepted.push({variant:'official_supabase_events',commit:official.official_commit,count:6});
+ }
+ else if(preservation?.eligible&&['school','secure_recovery','community'].includes(stage)){
+  result.event_triggers=structuredClone(catalog.event_triggers);
+  accepted.push({variant:'platform_preserved_for_application_only',profile:preservation.profile,count:6});
  }
  return {catalog:result,accepted};
 }

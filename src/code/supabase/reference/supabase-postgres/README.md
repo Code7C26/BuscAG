@@ -48,3 +48,12 @@ Fuente: https://github.com/supabase/postgres/tree/c6226c631d3f9048586005f0bca8c9
 La igualdad demuestra igualdad de código/configuración revisados, no quién instaló
 históricamente el objeto ni la versión completa de la plataforma. No se admiten
 otras versiones por parecido; ampliar el registro exige fuente fijada y pruebas.
+
+## Ensayo acotado de aplicación
+
+La validación general anterior sigue vigente. tests/platformFixture.mjs extrae sólo
+los seis cuerpos exactos, tras verificar los bytes oficiales, y los instala en bases
+locales descartables para ensayar los dos SQL propios de BuscAG. No ejecuta las
+migraciones upstream completas. La opción --preserve-platform no certifica estos
+wrappers ni los incluye en un bundle; conserva sus bytes y metadatos. Consultar
+[el procedimiento acotado](../../../PRUEBA_FEATURE_ACTIVATION.md).

@@ -1,5 +1,10 @@
 # Variantes reales del catálogo de BuscAG Prueba
 
+Actualización de activación: [ruta acotada de aplicación](PRUEBA_FEATURE_ACTIVATION.md).
+El bloqueo general descrito abajo se conserva. Existe ahora una opción explícita,
+probada sólo para los dos SQL propios fijados por hash, que preserva los seis wrappers
+sin declararlos seguros ni equivalentes. No autoriza ni ejecuta cambios remotos.
+
 Trabajo directo en `Alexis`. No se contactó ni modificó Supabase remoto, Firebase,
 datos, secretos o seguridad del proyecto. No se ejecutaron migraciones remotas.
 Los tests usan exclusivamente bases locales descartables y metadatos sintéticos.

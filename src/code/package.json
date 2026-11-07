@@ -24,7 +24,7 @@
     "backup:storage": "node scripts/backup-storage.mjs",
     "test:restore:postgres": "node scripts/test-backup-restore.mjs",
     "prepare:staging": "node scripts/prepare-staging.mjs",
-    "test:staging-tools": "node --test tests/staging-prepare.test.mjs tests/staging-upgrade.test.mjs",
+    "test:staging-tools": "node --test --test-concurrency=1 tests/staging-prepare.test.mjs tests/staging-upgrade.test.mjs tests/application-upgrade.test.mjs",
     "test:staging-tls": "node --test tests/staging-tls.test.mjs",
     "build:release": "node scripts/prepare-release.mjs",
     "test:release": "tsx --test tests/release.test.ts",
@@ -38,7 +38,8 @@
     "test:visitors": "node --test tests/visitor-auth.test.mjs",
     "build:rc": "node scripts/build-presentation.mjs --rc",
     "verify:rc": "node scripts/verify-candidate.mjs",
-    "test:v1": "node --import tsx --test tests/v1-compatibility.test.tsx tests/v1-school-backend.test.mjs tests/candidate-artifact.test.mjs"
+    "test:v1": "node --import tsx --test tests/v1-compatibility.test.tsx tests/v1-school-backend.test.mjs tests/candidate-artifact.test.mjs",
+    "test:application-upgrade": "node --test --test-concurrency=1 tests/application-upgrade.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

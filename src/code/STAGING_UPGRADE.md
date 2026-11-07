@@ -1,5 +1,10 @@
 # Instalación revisable del backend de BuscAG Prueba
 
+Actualización de activación: [ruta acotada de aplicación](PRUEBA_FEATURE_ACTIVATION.md).
+El bloqueo general descrito abajo se conserva. Existe ahora una opción explícita,
+probada sólo para los dos SQL propios fijados por hash, que preserva los seis wrappers
+sin declararlos seguros ni equivalentes. No autoriza ni ejecuta cambios remotos.
+
 Fecha: 2026-11-06. Rama: **Alexis**. Destino único:
 **`yiarlhpbgkofhhipkfha`**, frontend **`https://buscag-prueba.web.app/`**.
 

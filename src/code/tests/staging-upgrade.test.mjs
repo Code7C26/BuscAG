@@ -419,7 +419,7 @@ test('a full CRLF checkout builds the same safe school plan and review bundle wi
  const target=pathToFileURL(folder+'/');const db=await fixture('timestamptz');
  try{
   await mkdir(new URL('scripts/',target),{recursive:true});
-  for(const name of ['prepare-staging','staging-tls','staging-session','staging-upgrade','staging-reference','staging-catalog-review','staging-official-evidence','staging-equivalence']){
+  for(const name of ['prepare-staging','staging-tls','staging-session','staging-upgrade','staging-reference','staging-catalog-review','staging-official-evidence','staging-equivalence','staging-application-scope']){
    const text=await readFile(new URL('../scripts/'+name+'.mjs',import.meta.url),'utf8');
    await writeFile(new URL('scripts/'+name+'.mjs',target),text.replace(/\r?\n/g,'\r\n'));
   }

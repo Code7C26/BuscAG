@@ -1,0 +1,180 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {spawnSync} from 'node:child_process';
+import {stagingReference} from '../scripts/staging-reference.mjs';
+import {files} from '../scripts/prepare-staging.mjs';
+import {planUpgrade,upgradeBundle,upgrades,readUpgradeEvidence,readUpgradeCatalog} from '../scripts/staging-upgrade.mjs';
+import {applicationSourceMatches,applicationSources,readApplicationContext} from '../scripts/staging-application-scope.mjs';
+import {installObservedPlatform,observedPlatformDefinitions} from './platformFixture.mjs';
+const {PGlite}=await import(process.env.LOCAL_PG_SOCKET?'./postgresAdapter.mjs':'@electric-sql/pglite');
+const read=file=>readFile(new URL('../supabase/'+file,import.meta.url),'utf8');
+const executable=sql=>sql.replace(/^\\set ON_ERROR_STOP on\n/m,'');
+async function fixture(dateType,stage='school'){
+ const db=await stagingReference(PGlite,{dateType});
+ for(const file of [...files,...(stage==='school'?[upgrades[0]]:[])])await db.query(await read(file));
+ // Reproduce Supabase defaults for FUTURE public functions. The two migrations
+ // must explicitly close these grants, rather than rely on a clean local cluster.
+ await db.query('alter default privileges for role postgres in schema public grant execute on functions to anon,authenticated,service_role');
+ await db.query('set search_path=pg_catalog,public');
+ await installObservedPlatform(db);
+ return db;
+}
+for(const dateType of ['date','timestamptz'])test(`bounded application upgrade executes with all SIX actual legacy wrapper bodies unchanged (${dateType})`,async()=>{
+ const db=await fixture(dateType);
+ try{
+  const a='a0000000-0000-4000-8000-000000000001',b='a0000000-0000-4000-8000-000000000002',item='b0000000-0000-4000-8000-000000000001';
+  await db.query('insert into auth.users(id,raw_user_meta_data) values($1,$3),($2,$3)',[a,b,{full_name:'Preserved user'}]);
+  await db.query(`insert into public.items(id,owner_id,title,description,category,status,location_name,lat,lng,image_url)
+    values('${item}','${a}','Historical','Preserved description','Otros','recuperado','Synthetic',1,2,'https://example.invalid/a.jpg');
+    insert into public.messages(item_id,sender_id,recipient_id,text) values('${item}','${a}','${b}','Preserved chat');
+    insert into buscag_private.recovery_confirmations(item_id,owner_id,partner_id,state,resolved_at) values('${item}','${a}','${b}','confirmed',now());
+    insert into public.push_subscriptions(user_id,endpoint,p256dh,auth) values('${a}','https://push.invalid/synthetic','synthetic','synthetic');`);
+  const beforeUser=(await db.query('select to_jsonb(p) p from public.profiles p where id=$1',[a])).rows[0].p;
+  const evidence=await readUpgradeEvidence(db);
+  const catalog=await readUpgradeCatalog(db);
+  assert.equal((await planUpgrade(db)).compatible_catalog,false);
+  // Unknown defaults must not silently grant any NEW definer API to a third role.
+  await db.query('begin;create role buscag_unknown_default;alter default privileges for role postgres in schema public grant execute on functions to buscag_unknown_default');
+  await assert.rejects(planUpgrade(db,{preservePlatform:true}),e=>e.code==='BUSCAG_APPLICATION_SESSION'&&e.message.includes('safe_function_defaults'));
+  await db.query('rollback');
+  const plan=await planUpgrade(db,{preservePlatform:true});
+  assert.equal(plan.stage,'school',JSON.stringify({preservation:plan.platform_preservation,comparisons:plan.comparisons}));
+  assert.equal(plan.official_validation.verified,false);assert.equal(plan.platform_preservation.platform_secure,false);
+  assert.equal(plan.authorization_to_apply,false);assert.deepEqual(plan.candidates.map(f=>f.file),upgrades.slice(1));
+  await assert.rejects(upgradeBundle({...plan,candidates:[plan.sources.find(f=>f.file===upgrades[0])]}),/two-file scope/);
+  const built=executable(await upgradeBundle(plan));
+  const sql=dateType==='date'?built.replaceAll('\n','\r\n'):built;
+  assert.doesNotMatch(sql,/create temporary table/i);
+  assert.equal(/^\s*(?:alter event trigger|drop event trigger|set\s+(?:local\s+)?session_replication_role\s*=|create extension|drop extension)/im.test(sql),false,'No platform DDL or event bypass');
+  await assert.rejects(db.query(sql),/Verified restore evidence/);await db.query('rollback');
+  await db.query("select set_config('buscag.upgrade.backup_verified',$1,false)",[plan.catalog_fingerprint]);
+  const net=(await observedPlatformDefinitions()).find(f=>f.name==='issue_pg_net_access');
+  await db.query("create or replace function extensions.grant_pg_net_access() returns event_trigger language plpgsql set search_path to '' as $$begin return;end$$");
+  await assert.rejects(db.query(sql),/Evidence changed/);await db.query('rollback');
+  await db.query(`create or replace function extensions.grant_pg_net_access() returns event_trigger language plpgsql set search_path to '' as $fixture_body$${net.body}$fixture_body$`);
+  // A failed migration must undo BOTH application stages and preserve old rows.
+  await assert.rejects(db.query(sql.replace('end $buscag_application$;','raise exception \'synthetic failure\';end $buscag_application$;')),/synthetic failure/);
+  await db.query('rollback');assert.equal((await planUpgrade(db,{preservePlatform:true})).stage,'school');
+  const snapshotSql='select jsonb_agg(to_jsonb(s) order by s.relation) into after_data';
+  await assert.rejects(db.query(sql.replace(snapshotSql,"update public.profiles set full_name='tampered';\n"+snapshotSql)),/Existing data changed/);
+  await db.query('rollback');assert.equal((await planUpgrade(db,{preservePlatform:true})).stage,'school');
+  // No difference in the application or platform catalog may be hidden by scope.
+  const context={version:1,operator:true,origin:true,events_enabled:true,no_temp_objects:true,safe_function_defaults:true};
+  const analyze=(c,e)=>planUpgrade({query:async q=>({rows:[q.includes('as application_context')?{application_context:context}:q.includes('as evidence;')?{evidence:e}:{catalog:c}]})},{preservePlatform:true});
+  for(const mutate of [
+   (c,e)=>{e.event_triggers[0].body_sha256='0'.repeat(64);},
+   (c,e)=>{e.event_triggers[0].security_definer=true;},
+   (c,e)=>{e.event_triggers[0].config=['search_path=public'];},
+   (c,e)=>{e.event_triggers[0].acl.push({grantee:'authenticated',grantor:'supabase_admin',privilege:'EXECUTE',grantable:false});},
+   (c,e)=>{e.event_triggers[0].event_owner='postgres';},
+   (c,e)=>{e.event_triggers[0].extension_dependencies=[{extension:'unknown',type:'e'}];},
+   (c,e)=>{e.event_triggers.push({...e.event_triggers[0],name:'unknown'});},
+   (c,e)=>{e.clients_can_become_admin.authenticated=true;},
+   (c,e)=>{e.clients_can_become_service.anon=true;},
+   (c,e)=>{e.service_role.login=true;},
+   (c,e)=>{e.server_version_num=160001;},
+   (c,e)=>{c.functions.find(f=>f.name==='can_send_item_message').body_hash='unreviewed';},
+   (c,e)=>{c.constraints.pop();},
+   (c,e)=>{c.policies.push({...c.policies[0],name:'rogue'});},
+   (c,e)=>{c.public_schema.auth_create=true;},
+  ]){
+   const c=structuredClone(catalog),e=structuredClone(evidence);mutate(c,e);
+   const denied=await analyze(c,e);assert.equal(denied.compatible_catalog,false);assert.deepEqual(denied.candidates,[]);
+   await assert.rejects(upgradeBundle(denied),/No reviewed/);
+  }
+  await db.query('create temp table pg_extension(marker text)');
+  await assert.rejects(db.query(sql),/NO temporary objects/);await db.query('rollback');
+  await assert.rejects(planUpgrade(db,{preservePlatform:true}),e=>e.code==='BUSCAG_APPLICATION_SESSION');
+  await db.query('drop table pg_temp.pg_extension');
+  await db.query(sql);
+  const after=await planUpgrade(db,{preservePlatform:true});assert.equal(after.stage,'community');assert.equal(after.installed_final_catalog,true);
+  assert.deepEqual((await readUpgradeEvidence(db)).event_triggers,evidence.event_triggers);
+  assert.equal((await db.query('select pg_my_temp_schema()=0 or not exists(select from pg_class where relnamespace=pg_my_temp_schema()) clean')).rows[0].clean,true);
+  const profile=(await db.query('select to_jsonb(p)-\'phone_shared\'-\'rating_count\' p from public.profiles p where id=$1',[a])).rows[0].p;
+  assert.deepEqual(profile,beforeUser);
+  assert.equal((await db.query('select count(*)::int n from public.messages')).rows[0].n,1);
+  assert.equal((await db.query('select count(*)::int n from public.push_subscriptions')).rows[0].n,1);
+  assert.equal((await db.query('select state from buscag_private.recovery_confirmations where item_id=$1',[item])).rows[0].state,'confirmed');
+ }finally{await db.query('rollback');await db.close();}
+});
+test('only exact reviewed application bytes are allowed; CRLF is supported but extension/platform DDL additions are not',async()=>{
+ for(const file of Object.keys(applicationSources)){
+  const sql=await read(file);assert.equal(applicationSourceMatches(file,sql),true);
+  assert.equal(applicationSourceMatches(file,sql.replaceAll('\n','\r\n')),true);
+  for(const suffix of ['\nCREATE EXTENSION pg_cron;','\nALTER EVENT TRIGGER pgrst_ddl_watch DISABLE;','\n-- unknown change'])assert.equal(applicationSourceMatches(file,sql+suffix),false);
+ }
+ assert.equal(applicationSourceMatches(upgrades[0],await read(upgrades[0])),false);
+});
+test('unsafe session states stop planning before any application catalog query',async()=>{
+ for(const key of ['operator','origin','events_enabled','no_temp_objects','safe_function_defaults']){
+  let calls=0;const context={version:1,operator:true,origin:true,events_enabled:true,no_temp_objects:true,safe_function_defaults:true,[key]:false};
+  await assert.rejects(readApplicationContext({query:async()=>{calls++;return {rows:[{application_context:context}]};}}),e=>e.code==='BUSCAG_APPLICATION_SESSION');assert.equal(calls,1);
+ }
+});
+test('preservation cannot install school/baseline or target production and never becomes an apply flag',async()=>{
+ const db=await fixture('date','baseline');try{
+  const plan=await planUpgrade(db,{preservePlatform:true});assert.equal(plan.compatible_catalog,false);assert.deepEqual(plan.candidates,[]);
+ }finally{await db.close();}
+ for(const args of [
+  ['--project-ref','hczcqtodcnurdrroczle','--upgrade-plan','--preserve-platform'],
+  ['--project-ref','yiarlhpbgkofhhipkfha','--apply','--preserve-platform'],
+  ['--project-ref','yiarlhpbgkofhhipkfha','--smoke','--preserve-platform'],
+ ]){
+  const result=spawnSync(process.execPath,['scripts/prepare-staging.mjs',...args],{cwd:new URL('..',import.meta.url),encoding:'utf8',env:{...process.env,BUSCAG_STAGING_DATABASE_URL:'synthetic-never-connect'}});
+  assert.equal(result.status,1);assert.equal((result.stdout+result.stderr).includes('synthetic-never-connect'),false);
+  assert.match(result.stderr,/BUSCAG_PREFLIGHT/);
+ }
+});
+test('real native event firing: PostgREST watchers execute and the four extension wrappers never do for application DDL',{skip:!process.env.LOCAL_PG_SOCKET},async()=>{
+ const db=await fixture('date');try{
+  await db.query("begin;set local track_functions='all';create table public.application_ddl_probe(id int);drop table public.application_ddl_probe");
+  const calls=(await db.query(`select p.proname,coalesce(s.calls,0)::int calls from pg_catalog.pg_proc p
+   left join pg_catalog.pg_stat_xact_user_functions s on s.funcid=p.oid where p.pronamespace='extensions'::regnamespace`)).rows;
+  for(const r of calls)assert.ok(r.proname.startsWith('pgrst_')?r.calls>0:r.calls===0,JSON.stringify(r));
+  await db.query('rollback');
+ }finally{await db.query('rollback');await db.close();}
+});
+for(const dateType of ['date','timestamptz'])test(`authorized historical matching uses the existing queue without touching items or resetting cursors (${dateType})`,async()=>{
+ const db=await fixture(dateType);try{
+  const actor='a0000000-0000-4000-8000-000000000009';
+  await db.query('insert into auth.users(id,raw_user_meta_data) values($1,$2)',[actor,{full_name:'Synthetic owner'}]);
+  await db.query(`insert into public.items(owner_id,title,description,category,status,location_name,lat,lng,image_url)
+   values('${actor}','Queue one','Synthetic','Otros','perdido','Synthetic',1,2,'https://example.invalid/1'),
+   ('${actor}','Queue two','Synthetic','Otros','encontrado','Synthetic',1,2,'https://example.invalid/2')`);
+  const before=(await db.query('select to_jsonb(i) row from public.items i order by id')).rows;
+  const sql=await read('activation/queue_existing_matches_PRUEBA_ONLY.sql');
+  await assert.rejects(db.query(sql),/Enabled worker/);await db.query('rollback');
+  await db.query('update buscag_private.match_control set enabled=true,worker_last_seen=clock_timestamp() where singleton');
+  await db.query(sql);
+  assert.equal((await db.query('select count(*)::int n from buscag_private.match_jobs')).rows[0].n,2);
+  await db.query('update buscag_private.match_jobs set attempts=2,after_id=item_id');
+  await db.query(sql);
+  assert.equal((await db.query('select count(*)::int n from buscag_private.match_jobs where attempts=2 and after_id=item_id')).rows[0].n,2);
+  assert.deepEqual((await db.query('select to_jsonb(i) row from public.items i order by id')).rows,before);
+  await db.query('begin;set local role authenticated');
+  await assert.rejects(db.query(sql),/operator required/);await db.query('rollback');
+ }finally{await db.query('rollback');await db.close();}
+});
+test('native postgres operator needs no SUPERUSER and can preserve separately owned Auth tables',{skip:!process.env.LOCAL_PG_SOCKET},async()=>{
+ const db=await fixture('date');let control,demoted=false;
+ try{
+  await db.query(`do $$begin if not exists(select from pg_roles where rolname='supabase_auth_admin') then create role supabase_auth_admin nologin;end if;end$$;
+   alter table auth.users owner to supabase_auth_admin;grant all on auth.users to postgres;`);
+  const plan=await planUpgrade(db,{preservePlatform:true});assert.equal(plan.stage,'school');
+  const sql=executable(await upgradeBundle(plan));
+  await db.query("select set_config('buscag.upgrade.backup_verified',$1,false)",[plan.catalog_fingerprint]);
+  const database=(await db.query('select current_database() db')).rows[0].db;
+  const {Client}=await import('pg');control=new Client({host:process.env.LOCAL_PG_SOCKET,database,user:'postgres',port:5432,ssl:false,password:''});
+  await control.connect();await control.query('set role supabase_admin');
+  await control.query('alter role postgres nosuperuser');demoted=true;
+  assert.equal((await db.query('select rolsuper from pg_roles where rolname=current_user')).rows[0].rolsuper,false);
+  await db.query(sql);
+  assert.equal((await planUpgrade(db,{preservePlatform:true})).stage,'community');
+ }finally{
+  try{await db.query('rollback');}finally{
+   if(demoted)await control.query('alter role postgres superuser');
+   if(control)await control.end();await db.close();
+  }
+ }
+});

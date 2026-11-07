@@ -4,7 +4,7 @@ import {X509Certificate} from 'node:crypto';
 const publicErrors=new WeakSet(),contexts=new WeakMap(),secondaryErrors=new WeakMap();
 const stages={configuration:'configuración',tcp:'TCP',tls:'TLS',authentication:'autenticación',queries:'consultas',closing:'cierre'};
 export const stagingSteps=Object.freeze(Object.fromEntries([
- 'session.settings','session.identity','transaction.begin','transaction.rollback','catalog.collect','evidence.collect',
+ 'session.settings','session.identity','transaction.begin','transaction.rollback','catalog.collect','evidence.collect','application.context','application.scope',
  'official.sources','official.validate','reference.import','reference.bootstrap','reference.snapshot','reference.close','reference.school','reference.secure','reference.community',
  'catalog.compare','sources.hash','artifacts.save','plan.output','plan.acceptance',...Array.from({length:9},(_,i)=>`reference.baseline.${i+1}`),
 ].map(id=>[id,id])));

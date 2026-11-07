@@ -112,6 +112,10 @@ Validación local aprobada:
   matriz nativa completa aprobada en DATE/timestamptz de repositorio y DATE observado;
   **61/61/64** controles base, **17** grupos escolares, **8** de recuperación y **15**
   de comunidad por variante, activación y **9** casos de actualización.
+- La matriz completa también pasó en **PostgreSQL 17.10 real**, además de 18.6.
+  La prueba de actualización verifica físicamente que service_role conserva EXECUTE
+  en canonicalize y lo pierde en can_send al instalar community, en ambos majors.
+  Sólo se modifican roles de clusters descartables; el flag de herencia se restaura.
 - Las regresiones finales se repitieron en ambos motores: **13** casos de herramientas
   WASM y **9** de actualización nativa. Comprueban integridad Git/SHA, cálculo SHA
   preservando whitespace y normalizando CRLF, rechazo de llamada directa de

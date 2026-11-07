@@ -206,16 +206,26 @@ test('catalog planning blocks partial installs, changed functions, view ACLs, po
  }finally{await db.close();}
 });
 test('secure recovery already present is retained and only community is proposed',async()=>{
- const db=await fixture();try{
+ const db=await fixture();
+ const wasInherit=(await db.query("select rolinherit from pg_roles where rolname='service_role'")).rows[0].rolinherit;
+ try{
+  await db.query(`alter role service_role noinherit;
+   grant execute on function public.can_send_item_message(uuid,uuid),public.canonicalize_message_display() to service_role;`);
   await db.query(await read(upgrades[1]));
   const plan=await planUpgrade(db);assert.equal(plan.stage,'secure_recovery');
+  assert.equal(plan.equivalences.filter(e=>e.variant==='trusted_server_execute').length,2);
   assert.deepEqual(plan.candidates.map(s=>s.file),[upgrades[2]]);
   const sql=executable(await upgradeBundle(plan));
   // mode already exists: preservation must include it, not exclude it as new.
   assert.ok(!sql.includes("-array['mode'"));
   await db.query("select set_config('buscag.upgrade.backup_verified',$1,false)",[plan.catalog_fingerprint]);
   await db.query(sql);assert.equal((await planUpgrade(db)).stage,'community');
- }finally{await db.close();}
+  const final=(await db.query("select has_function_privilege('service_role','public.can_send_item_message(uuid,uuid)','EXECUTE') can_send,has_function_privilege('service_role','public.canonicalize_message_display()','EXECUTE') canonicalize")).rows[0];
+  assert.deepEqual(final,{can_send:false,canonicalize:true});
+ }finally{
+  await db.query('rollback');await db.query('alter role service_role '+(wasInherit?'inherit':'noinherit'));
+  await db.close();
+ }
 });
 test('verified nine-file baseline proposes all three feature stages atomically',async()=>{
  const db=await stagingReference(PGlite,{dateType:'date'});try{

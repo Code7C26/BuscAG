@@ -70,7 +70,9 @@ export function PublicProfileModal({
         <p className="public-profile-privacy">
           <LockKeyhole size={17} />
           Este perfil muestra sólo información pública. Para contactar, abrí una
-          publicación y usá el chat.
+          publicación y usá el chat. Si la persona autorizó compartir su teléfono y
+          ambos intercambiaron mensajes en la misma publicación, la opción de llamada
+          aparece en el chat, no en este perfil.
         </p>
         <section
           className="public-profile-items"

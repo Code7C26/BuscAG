@@ -1487,3 +1487,29 @@ a:focus-visible,
   .community-tools input:not([type=checkbox]), .community-tools textarea, .community-tools select { font-size: 16px; }
   .community-tools button, .community-tools summary, .recovery-tools button { min-height: 44px; }
 }
+
+/* Recovery and community controls keep labels and actions apart, including on iPhone. */
+.recovery-tools { display: flex; flex-direction: column; gap: 1rem; min-width: 0; overflow-wrap: anywhere; }
+.recovery-tools details > :not(summary) { margin-block-start: .875rem; }
+.recovery-history-entry { display: flex; flex-direction: column; align-items: stretch; gap: .875rem; padding: 1rem; }
+.recovery-tools label { display: flex; flex-direction: column; gap: .5rem; }
+.recovery-tools select, .recovery-tools textarea { width: 100%; min-width: 0; max-width: 100%; border: 1px solid #a9c3c7; border-radius: .6rem; padding: .65rem; background: #fff; color: #163c48; }
+.recovery-tools button, .chat-pending-actions button { min-height: 44px; padding: .65rem .875rem; border: 1px solid #467e86; border-radius: .65rem; background: #f0f8f7; color: #245b63; font-weight: 650; line-height: 1.5; white-space: normal; }
+.recovery-tools button { align-self: flex-start; }
+.recovery-tools button:disabled { opacity: .55; cursor: default; }
+.recovery-tools summary { min-height: 44px; padding-block: .65rem; cursor: pointer; }
+.recovery-tools button:focus-visible, .recovery-tools summary:focus-visible, .chat-pending-actions button:focus-visible { outline: 3px solid #316b78; outline-offset: 3px; }
+.community-tools label:has(input[type=checkbox]) { align-items: flex-start; line-height: 1.5; }
+.community-tools input[type=checkbox] { flex-shrink: 0; margin-top: .25rem; }
+.community-tools details > :not(summary) { margin-block-start: .75rem; }
+.community-tools details > p, .community-tools details article { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; }
+.community-tools details article > p { width: 100%; }
+.community-tools details > div { display: flex; flex-direction: column; gap: .75rem; }
+.community-tools details > div > * { margin-block: 0; }
+.chat-pending-card { display: flex; flex-direction: column; align-items: stretch; gap: .75rem; overflow-wrap: anywhere; }
+.chat-pending-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+@media (max-width: 640px) {
+  .recovery-tools select, .recovery-tools textarea { font-size: 16px; }
+  .recovery-tools button, .chat-pending-actions button { width: 100%; }
+  .chat-pending-actions { flex-direction: column; }
+}

@@ -113,7 +113,7 @@ export function RecoveryPanel({
     <section
       aria-label="Recuperación segura"
       aria-busy={busy||loading}
-      className="recovery-tools rounded-2xl border p-4 space-y-3"
+      className="recovery-tools rounded-2xl border p-4"
     >
       <h3 className="font-bold">Recuperación segura</h3>
       <p className="text-sm" role="status">
@@ -324,7 +324,7 @@ export function RecoveryPanel({
         <details>
           <summary>Historial, valoración y problemas</summary>
           {context?.requests.map((r) => (
-            <article key={r.id} className="border rounded p-2 my-2 text-sm">
+            <article key={r.id} className="recovery-history-entry border rounded text-sm">
               <p>
                 {r.owner_name || "Propietario"} →{" "}
                 {r.partner_name ||
@@ -358,8 +358,8 @@ export function RecoveryPanel({
                   <p>Tu valoración: {r.my_rating}/5</p>
                 ) : (
                   <>
-                    <label>
-                      Calificación
+                    <label className="recovery-rating-field">
+                      <span>Calificación</span>
                       <select
                         aria-label="Calificación de la devolución"
                         value={stars}
@@ -384,7 +384,7 @@ export function RecoveryPanel({
                         })
                       }
                     >
-                      Valorar devolución
+                      Confirmar valoración
                     </button>
                   </>
                 ))}

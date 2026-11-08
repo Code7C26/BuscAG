@@ -240,7 +240,18 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               );
             })
           )}
-          {outbox.filter(row=>row.itemId===item.id&&row.recipientId===participantId).map(row=><div key={row.key} className="border border-amber-300 rounded-xl p-3 text-sm"><p>{row.text}</p><p role="status">{row.status==='pending'?'Pendiente de confirmación del servidor':row.retryable?'Fallido. Se reintentará al recuperar conexión.':'Fallido. Revisá la disponibilidad o las restricciones del servicio antes de reintentar.'}</p>{row.status==='failed'&&<><button onClick={()=>onRetryMessage?.(row)} className="underline">Reintentar mensaje</button> <button className="underline" onClick={()=>onDiscardMessage?.(row)}>Descartar pendiente</button></>}</div>)}
+          {outbox.filter(row=>row.itemId===item.id&&row.recipientId===participantId).map(row => (
+            <div key={row.key} className="chat-pending-card border border-amber-300 rounded-xl p-3 text-sm">
+              <p>{row.text}</p>
+              <p role="status">{row.status==='pending'?'Pendiente de confirmación del servidor':row.retryable?'Fallido. Se reintentará al recuperar conexión.':'Fallido. Revisá la disponibilidad o las restricciones del servicio antes de reintentar.'}</p>
+              {row.status==='failed' && (
+                <div className="chat-pending-actions">
+                  <button onClick={()=>onRetryMessage?.(row)}>Reintentar mensaje</button>
+                  <button onClick={()=>onDiscardMessage?.(row)}>Descartar pendiente</button>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
 
         <p className="px-4 text-xs text-slate-500">Borradores privados en esta pestaña: caducan tras 24 h sin cambios. Cerrar sesión borra borradores y pendientes.</p>

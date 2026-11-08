@@ -204,8 +204,9 @@ export function ProfileSettings({
             Compartir mi teléfono con personas con las que intercambié mensajes
           </label>
           <p className="text-xs">
-            Privado por defecto. El chat es el contacto principal; un bloqueo
-            también oculta el teléfono.
+            Privado por defecto. Si autorizás compartirlo, la opción de llamada aparece
+            en el chat después de que ambos hayan enviado mensajes en una misma
+            publicación. No se muestra en el perfil público. Un bloqueo también lo oculta.
           </p></>}
           <label className="block">
             Zona del perfil (privada)

@@ -186,9 +186,19 @@ test("confirmed participant can rate once and report a dispute through the recov
   await panel
     .getByText("Historial, valoración y problemas", { exact: true })
     .click();
-  await panel.getByLabel("Calificación de la devolución").selectOption("4");
+  const ratingField = panel.getByLabel("Calificación de la devolución");
+  const labelBox = await panel.getByText("Calificación", { exact: true }).boundingBox();
+  const fieldBox = await ratingField.boundingBox();
+  expect(fieldBox!.y - (labelBox!.y + labelBox!.height)).toBeGreaterThanOrEqual(7);
+  const confirmBox = await panel.getByRole("button", { name: "Confirmar valoración", exact: true }).boundingBox();
+  const problemBox = await panel.getByRole("button", { name: "Informar un problema", exact: true }).boundingBox();
+  expect(confirmBox!.y - (fieldBox!.y + fieldBox!.height)).toBeGreaterThanOrEqual(12);
+  expect(problemBox!.y - (confirmBox!.y + confirmBox!.height)).toBeGreaterThanOrEqual(12);
+  expect(confirmBox!.height).toBeGreaterThanOrEqual(44);
+  expect(problemBox!.height).toBeGreaterThanOrEqual(44);
+  await ratingField.selectOption("4");
   await panel
-    .getByRole("button", { name: "Valorar devolución", exact: true })
+    .getByRole("button", { name: "Confirmar valoración", exact: true })
     .click();
   await expect(panel.getByText("Tu valoración: 4/5")).toBeVisible();
   page.once("dialog", (d) => d.accept("Problema sintético"));
@@ -360,7 +370,7 @@ test("a linked owner can declare independent recovery only after the pending han
     panel.getByText(/Declaración del propietario: Encontré mi mochila/),
   ).toBeVisible();
   await expect(
-    panel.getByRole("button", { name: "Valorar devolución", exact: true }),
+    panel.getByRole("button", { name: "Confirmar valoración", exact: true }),
   ).toHaveCount(0);
   expect(requests.find((r) => r.mode === "bilateral").state).toBe("cancelled");
 });

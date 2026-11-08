@@ -36,6 +36,17 @@ test("draft survives closing and reloading; an offline send retries automaticall
   await expect(
     chat.getByRole("button", { name: "Reintentar mensaje", exact: true }),
   ).toBeVisible();
+  const pending = chat.locator(".chat-pending-card");
+  const statusBox = await pending.getByRole("status").boundingBox();
+  const retryBox = await pending.getByRole("button", { name: "Reintentar mensaje", exact: true }).boundingBox();
+  const discardBox = await pending.getByRole("button", { name: "Descartar pendiente", exact: true }).boundingBox();
+  expect(retryBox!.y - (statusBox!.y + statusBox!.height)).toBeGreaterThanOrEqual(11);
+  expect(retryBox!.height).toBeGreaterThanOrEqual(44);
+  expect(discardBox!.height).toBeGreaterThanOrEqual(44);
+  if (page.viewportSize()!.width <= 640)
+    expect(discardBox!.y - (retryBox!.y + retryBox!.height)).toBeGreaterThanOrEqual(11);
+  else
+    expect(discardBox!.x - (retryBox!.x + retryBox!.width)).toBeGreaterThanOrEqual(11);
   await expect(page.getByText(/Sin conexión. Lo que ves/)).toBeVisible();
   await context.setOffline(false);
   await expect(

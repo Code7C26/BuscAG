@@ -34,7 +34,7 @@ export function MessagesView({
         <section aria-label="Envíos pendientes" className="space-y-2">
           <h2 className="font-bold">Envíos pendientes</h2>
           {outbox.map((row) => (
-            <article className="community-tools" key={row.key}>
+            <article className="community-tools chat-pending-card" key={row.key}>
               <button
                 className="block text-left"
                 onClick={() => onOpen(row.itemId, row.recipientId)}

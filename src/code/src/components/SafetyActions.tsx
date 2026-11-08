@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { communityCall, REPORT_REASONS, ServiceUnavailableError } from "../../lib/community";
 export function SafetyActions({
   userId,
@@ -9,6 +9,7 @@ export function SafetyActions({
   targetUserId: string;
   itemId?: string;
 }) {
+  const pending=useRef(false);
   const [blocked, setBlocked] = useState(false),
     [following, setFollowing] = useState(false),
     [notify, setNotify] = useState(true);
@@ -44,7 +45,8 @@ export function SafetyActions({
   if (!targetUserId || targetUserId === userId) return null;
   if(!ready)return <section aria-label="Seguridad y seguimiento" className="community-tools"><p role="status">{notice||'Consultando opciones de seguridad…'}</p>{notice&&<button onClick={()=>setRevision(v=>v+1)}>Comprobar disponibilidad</button>}</section>;
   const run = async (action: () => Promise<void>) => {
-    if (busy) return;
+    if (pending.current) return;
+    pending.current=true;
     setBusy(true);
     setNotice("");
     try {
@@ -54,12 +56,14 @@ export function SafetyActions({
         "No se pudo confirmar la operación. Intentá actualizar o reintentar.",
       );
     } finally {
+      pending.current=false;
       setBusy(false);
     }
   };
   return (
     <section
       aria-label="Seguridad y seguimiento"
+      aria-busy={busy}
       className="community-tools space-y-3"
     >
       <div className="flex gap-3 flex-wrap">
@@ -97,14 +101,12 @@ export function SafetyActions({
             )
               return;
             void run(async () => {
-              await communityCall("set_user_block", {
+              const next = await communityCall("set_user_block", {
                 p_target: targetUserId,
                 p_block: !blocked,
               });
-              setBlocked(!blocked);
-              setNotice(
-                blocked ? "Usuario desbloqueado." : "Usuario bloqueado.",
-              );
+              setBlocked(next);
+              setNotice(next ? "Usuario bloqueado." : "Usuario desbloqueado.");
             });
           }}
         >
@@ -193,7 +195,7 @@ export function SafetyActions({
           disponible.
         </p>
       )}
-      {notice && <p role="status">{notice}</p>}
+      {busy ? <p role="status">Guardando cambio…</p> : notice && <p role="status">{notice}</p>}
     </section>
   );
 }

@@ -25,6 +25,8 @@ export function RecoveryPanel({
   const [partner, setPartner] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [loading,setLoading]=useState(true);
+  const [revision,setRevision]=useState(0);
   const [stars, setStars] = useState("");
   const [independentReason, setIndependentReason] = useState("");
   const epoch = useRef(0),
@@ -48,6 +50,7 @@ export function RecoveryPanel({
     )
       throw Error("unavailable");
     setContext(result.data);
+    setLoading(false);
     unavailable.current=false;
     setNotice("");
     if (result.data.status !== latest.current.item.status)
@@ -55,13 +58,14 @@ export function RecoveryPanel({
   }
   useEffect(() => {
     const lifecycle = ++epoch.current;
-    unavailable.current=false;setContext(null);setNotice('');
+    unavailable.current=false;setContext(null);setNotice('');setBusy(false);setLoading(true);
     const update = () => {
       if (!supabase || pending.current||unavailable.current) return;
       void refresh(lifecycle).catch(error => {
         if (lifecycle === epoch.current) {
           unavailable.current=error instanceof ServiceUnavailableError;
           setContext(null);
+          setLoading(false);
           setNotice(
             unavailable.current?'Recuperación segura no disponible todavía. La confirmación requiere la actualización pendiente del servicio. No se cambió el estado.':"Recuperación segura no disponible. Revisá la conexión o intentá más tarde. No se cambió el estado.",
           );
@@ -77,7 +81,7 @@ export function RecoveryPanel({
       clearInterval(timer);
       window.removeEventListener("focus", update);
     };
-  }, [item.id, userId]);
+  }, [item.id, userId,revision]);
 
   async function run(action: () => Promise<unknown>) {
     if (!supabase || pending.current) return;
@@ -108,11 +112,12 @@ export function RecoveryPanel({
   return (
     <section
       aria-label="Recuperación segura"
-      className="rounded-2xl border p-4 space-y-3"
+      aria-busy={busy||loading}
+      className="recovery-tools rounded-2xl border p-4 space-y-3"
     >
       <h3 className="font-bold">Recuperación segura</h3>
       <p className="text-sm" role="status">
-        {context?.requests.some((r) => r.disputed)
+        {loading ? "Consultando recuperación…" : context?.requests.some((r) => r.disputed)
           ? "Devolución disputada"
           : context?.status === "recuperado"
             ? "Recuperado"
@@ -409,11 +414,11 @@ export function RecoveryPanel({
         </details>
       )}
       <button
-        disabled={busy}
+        disabled={busy||loading}
         className="underline text-sm"
-        onClick={() => void run(() => refresh())}
+        onClick={() => context ? void run(() => refresh()) : setRevision(v=>v+1)}
       >
-        Actualizar confirmaciones
+        {context ? 'Actualizar confirmaciones' : 'Volver a consultar recuperación'}
       </button>
     </section>
   );

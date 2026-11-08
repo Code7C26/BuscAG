@@ -42,7 +42,7 @@ try {
       "--mode",
       "presentation",
     ],
-    { cwd: root, env, stdio: "inherit" },
+    { cwd: root, env: {...env,BUSCAG_BUILD_COMMIT:sha.stdout.trim()}, stdio: "inherit" },
   );
   if (result.status !== 0) throw Error("No se pudo compilar la presentación.");
   const files=await inventoryCandidate(fileURLToPath(new URL('../dist-presentation/',import.meta.url)));

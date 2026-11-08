@@ -15,6 +15,7 @@ const env = presentationEnvironment({
   ...process.env,
   BUSCAG_STAGING_PUBLISHABLE_KEY: "sb_publishable_browser_fixture",
 });
+env.BUSCAG_BUILD_COMMIT='a'.repeat(40);
 const build = spawnSync(
   process.execPath,
   [
@@ -107,7 +108,7 @@ try {
       await page
         .getByRole("complementary", { name: "Entorno de presentación" })
         .innerText(),
-      "BuscAG · Entorno de pruebas",
+      "BuscAG · Entorno de pruebas · versión aaaaaaa",
     );
     await login(page);
     await page.getByRole("heading", { name: /Lo importante/ }).waitFor();

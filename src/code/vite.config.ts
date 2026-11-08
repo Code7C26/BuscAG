@@ -21,6 +21,7 @@ export default defineConfig(({ command, mode }) => {
   }
   return {
     envDir:(staging||release||presentation)?false:undefined,
+    define:{__BUSCAG_BUILD_COMMIT__:JSON.stringify(/^[a-f0-9]{40}$/.test(String(process.env.BUSCAG_BUILD_COMMIT??''))?process.env.BUSCAG_BUILD_COMMIT:'')},
     plugins: [react(), tailwindcss()],
     build: {outDir:presentation?'dist-presentation':staging?'dist-staging':'dist', rollupOptions: { output: { manualChunks(id) {
       if (id.includes('/node_modules/@supabase/')) return 'supabase';

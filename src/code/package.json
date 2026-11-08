@@ -40,7 +40,8 @@
     "verify:rc": "node scripts/verify-candidate.mjs",
     "test:v1": "node --import tsx --test tests/v1-compatibility.test.tsx tests/v1-school-backend.test.mjs tests/candidate-artifact.test.mjs",
     "test:application-upgrade": "node --test --test-concurrency=1 tests/application-upgrade.test.mjs",
-    "audit:hosting:releases": "node scripts/list-hosting-releases.mjs"
+    "audit:hosting:releases": "node scripts/list-hosting-releases.mjs",
+    "test:e2e:webkit": "playwright test --config=playwright.webkit.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

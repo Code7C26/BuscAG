@@ -18,5 +18,5 @@ createRoot(document.getElementById('root')!, {
 
 // Static offline fallback only. Never cache authenticated responses or app data.
 if(import.meta.env.PROD&&'serviceWorker' in navigator){
-  window.addEventListener('load',()=>{void navigator.serviceWorker.register('/sw.js').catch(()=>reportError('service_worker_registration_failed'));});
+  window.addEventListener('load',()=>{void navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).catch(()=>reportError('service_worker_registration_failed'));});
 }

@@ -1481,3 +1481,9 @@ a:focus-visible,
 .community-tools { min-width: 0; overflow-wrap: anywhere; }
 .modal-dialog { max-height: calc(100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
 @media (max-width: 640px) { .modal-dialog input, .modal-dialog textarea, .community-tools select { font-size: 16px; } }
+
+/* Avoid iPhone focus zoom and preserve usable touch targets in community flows. */
+@media (max-width: 640px) {
+  .community-tools input:not([type=checkbox]), .community-tools textarea, .community-tools select { font-size: 16px; }
+  .community-tools button, .community-tools summary, .recovery-tools button { min-height: 44px; }
+}

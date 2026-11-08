@@ -68,3 +68,35 @@ test('missing recovery and safety services do not offer mutations or keep pollin
   expect(backend.calls.some(c=>c.path==='/rest/v1/items'&&c.method==='PATCH'&&c.body?.status)).toBe(false);
   expect(backend.calls.some(c=>c.path==='/rest/v1/rpc/request_item_recovery')).toBe(false);
 });
+
+test('profile discovers installed community RPCs on explicit reload without logging out',async({page})=>{
+ const backend=await mockBackend(page);let installed=false;
+ await page.route('**/rest/v1/rpc/*',route=>{
+  const name=new URL(route.request().url()).pathname.split('/').pop()!;
+  if(!community.includes(name))return route.fallback();
+  if(!installed)return route.fulfill({status:404,json:missing});
+  return route.fulfill({json:name==='my_community_settings'?{version:1,name:'Lucía de prueba',avatar:'',phone:'',share_phone:false,location:'',moderator:false}:name==='my_item_follow'?{following:false,notify:true}:name==='can_share_contact'?false:[]});
+ });
+ await page.goto('/');await login(page);
+ await page.getByRole('navigation').getByRole('button',{name:'Perfil',exact:true}).click();
+ await page.getByRole('tab',{name:'Configuración',exact:true}).click();
+ const settings=page.getByRole('region',{name:'Privacidad y perfil'});
+ await expect(settings).toContainText('Perfil básico disponible');
+ installed=true;await settings.getByRole('button',{name:'Volver a cargar perfil y funciones'}).click();
+ await expect(settings.getByLabel('Teléfono privado',{exact:true})).toBeVisible();
+ await expect(settings.getByText(/Usuarios bloqueados/)).toBeVisible();
+ await expect(settings.getByRole('button',{name:'Guardar perfil y privacidad'})).toBeEnabled();
+ expect(backend.calls.some(c=>c.path==='/rest/v1/profiles'&&c.method==='PATCH')).toBe(false);
+});
+test('recovery can retry availability after migration without a direct status PATCH',async({page})=>{
+ const backend=await mockBackend(page);let installed=false,reads=0;
+ await page.route('**/rest/v1/rpc/recovery_context',route=>{reads++;return route.fulfill(installed?{json:{version:2,status:'encontrado',partners:[],requests:[]}}:{status:404,json:missing});});
+ await page.goto('/');await login(page);await page.getByText('Mochila verde de prueba',{exact:true}).click();
+ const recovery=page.getByRole('region',{name:'Recuperación segura',exact:true});
+ await expect(recovery.getByRole('alert')).toContainText('actualización pendiente');
+ installed=true;await recovery.getByRole('button',{name:'Volver a consultar recuperación'}).click();
+ await expect(recovery.getByRole('status')).toHaveText('La publicación sigue activa hasta confirmar la recuperación.');
+ await expect(recovery.getByRole('alert')).toHaveCount(0);
+ expect(reads).toBeGreaterThanOrEqual(2);
+ expect(backend.calls.some(c=>c.path==='/rest/v1/items'&&c.method==='PATCH'&&c.body?.status)).toBe(false);
+});

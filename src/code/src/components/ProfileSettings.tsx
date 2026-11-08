@@ -27,6 +27,7 @@ export function ProfileSettings({
     [moderator, setModerator] = useState(false),
     [audit, setAudit] = useState<any[]>([]);
   const [note, setNote] = useState("");
+  const [revision,setRevision]=useState(0);
   const [mode, setMode] = useState<'loading'|'basic'|'community'>('loading');
   const [extrasReady, setExtrasReady] = useState(false);
   useEffect(() => {
@@ -67,7 +68,7 @@ export function ProfileSettings({
       alive = false;
       ++lifecycle.current;
     };
-  }, [userId]);
+  }, [userId,revision]);
   const run = async (action: () => Promise<void>) => {
     if (busy) return;
     const version=lifecycle.current;
@@ -92,6 +93,10 @@ export function ProfileSettings({
     >
       <h3>Tu perfil y privacidad</h3>
       {mode==='basic'&&<p role="status">Perfil básico disponible. Compartir teléfono, bloqueos, denuncias y valoraciones todavía no están habilitados. Podés seguir usando el chat.</p>}
+      {(mode==='basic'||(notice&&(!ready||!extrasReady)))&&<div>
+        <button type="button" disabled={busy||mode==='loading'&&!notice} onClick={()=>setRevision(v=>v+1)}>Volver a cargar perfil y funciones</button>
+        <p className="text-xs">Volver a cargar descarta cambios sin guardar.</p>
+      </div>}
       <form
         onSubmit={(event) => {
           event.preventDefault();

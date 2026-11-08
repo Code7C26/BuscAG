@@ -24,7 +24,7 @@ import { Search, MapPin, SlidersHorizontal, Plus, AlertCircle, CheckCircle2, Spa
 import { Item, FilterType, Category, User, NotificationItem, Message, MatchResult, TabType } from './types';
 import { AuthView } from './components/AuthView';
 import { loadItems, loadMessages, loadNotifications, loadProfile, mapItem, mapMessage, mapNotification, uploadItemImage } from '../lib/database';
-import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus, disconnectPushDevice } from '../lib/push';
+import { disablePushNotifications, enablePushNotifications, getPushNotificationStatus, disconnectPushDevice, reconcilePushSession, revokePushOnSessionChange } from '../lib/push';
 // Utilidades de cálculo geográfico (Haversine)
 import { getDistanceKm, isValidCoordinates, NEARBY_RADIUS_KM } from './utils/geo';
 import { serializeItemDate, itemDateInput } from './utils/itemDate';
@@ -82,6 +82,7 @@ export default function App() {
       const next = user ? { user, guard: createSessionGuard(), key: ++sequence.current } : null;
       identityRef.current = next;
       setIdentity(next);
+      if(previous){const generation=sequence.current;void revokePushOnSessionChange(()=>sequence.current===generation).catch(()=>setAuthNotice('No se pudo desvincular push. Revisá los permisos de este dispositivo.'));}
     };
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (active && session?.user && event === 'PASSWORD_RECOVERY') setRecovery(true);
@@ -139,6 +140,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   const lifetime = useRef(createSessionGuard());
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pushRevision = useRef(0);
+  const pushPending = useRef(false);
+  const [pushBusy,setPushBusy]=useState(false);
   const messageIntents = useRef(createMessageIntents());
   const publications = useRef(createPublicationPublisher<Database['public']['Tables']['items']['Row']>());
   const messageRequests = useRef(new Map<string, Promise<void>>());
@@ -362,16 +365,21 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
     if (!authUser) return;
     const current = captureOperation();
     let active = true;
-    const revision = pushRevision.current;
-    void getPushNotificationStatus(authUser.id)
-      .then(enabled => {
-        if (active && current() && revision === pushRevision.current) setPushEnabled(enabled);
-      })
-      .catch(error => {
-        reportError('No se pudo verificar la suscripción a notificaciones:', error);
-      });
+    const refreshStatus=(reconcile=false)=>{
+      const revision=pushRevision.current;
+      void (reconcile?reconcilePushSession(authUser.id,current):Promise.resolve()).then(()=>getPushNotificationStatus(authUser.id))
+        .then(enabled=>{if(active&&current()&&revision===pushRevision.current)setPushEnabled(enabled);})
+        .catch(error=>{
+          reportError('No se pudo verificar la suscripción a notificaciones:',error);
+          if(active&&current()&&revision===pushRevision.current)setPushEnabled(false);
+        });
+    };
+    const focus=()=>refreshStatus();
+    refreshStatus(true);
+    window.addEventListener('focus',focus);
     return () => {
       active = false;
+      window.removeEventListener('focus',focus);
     };
   }, [authUser.id, captureOperation]);
 
@@ -721,7 +729,8 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
   };
 
   const handleTogglePushNotifications = async (enabled: boolean) => {
-    if (!currentUser) return;
+    if (!currentUser || pushPending.current) return;
+    pushPending.current=true;setPushBusy(true);
     pushRevision.current += 1;
     const current = captureOperation();
     try {
@@ -738,8 +747,11 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
       }
     } catch (error) {
       reportError('No se pudo actualizar la configuración de notificaciones:', error);
-      if (current()) triggerToast(error instanceof Error ? error.message : 'No se pudo actualizar la configuración de notificaciones.');
-    }
+      if(current()){
+        try{const actual=await getPushNotificationStatus(currentUser.id);if(current())setPushEnabled(actual);}catch{/* Keep last confirmed state when status cannot be verified. */}
+        if(current())triggerToast(error instanceof Error ? error.message : 'No se pudo actualizar la configuración de notificaciones.');
+      }
+    } finally {pushPending.current=false;if(current())setPushBusy(false);}
   };
 
   const handleSignOut = async () => {
@@ -1126,6 +1138,7 @@ function AccountApp({ authUser, sessionGuard, onChangePassword, onLogoutWarning,
             onDeleteItem={handleDeleteItem}
             onGoToMatches={() => setActiveTab('matches')}
             userMatchesCount={userMatchesCount}
+            pushBusy={pushBusy}
             pushEnabled={pushEnabled}
             onTogglePush={enabled => void handleTogglePushNotifications(enabled)}
           />

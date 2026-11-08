@@ -102,7 +102,7 @@ test("publication exposes follow preferences, reports and block without deleting
     .getByRole("button", { name: "Seguir publicación", exact: true })
     .click();
   await expect(
-    tools.getByRole("button", { name: "Dejar de seguir" }),
+    tools.getByRole("button", { name: "Dejar de seguir", exact:true }),
   ).toBeVisible();
   await tools
     .getByRole("checkbox", { name: "Avisarme cuando cambie el estado" })
@@ -113,7 +113,7 @@ test("publication exposes follow preferences, reports and block without deleting
     .selectOption("estafa");
   await tools.getByLabel("Descripción opcional").fill("Caso sintético");
   await tools.getByRole("button", { name: "Enviar denuncia" }).click();
-  await expect(tools.getByRole("status")).toContainText("Denuncia registrada");
+  await expect(tools.getByRole("status").filter({hasText:"Denuncia registrada"})).toContainText("Denuncia registrada");
   page.once("dialog", (d) => d.accept());
   await tools
     .getByRole("button", { name: "Bloquear usuario", exact: true })
@@ -373,4 +373,24 @@ test("a linked owner can declare independent recovery only after the pending han
     panel.getByRole("button", { name: "Confirmar valoración", exact: true }),
   ).toHaveCount(0);
   expect(requests.find((r) => r.mode === "bilateral").state).toBe("cancelled");
+});
+
+test('user follows are distinct from item follows and use the real RPC contract without optimistic success',async({page})=>{
+ await mockBackend(page);let following=false,writes=0;
+ await page.route('**/rest/v1/rpc/*',async route=>{
+  const name=new URL(route.request().url()).pathname.split('/').pop();
+  if(name==='list_my_blocks')return route.fulfill({json:[]});
+  if(name==='my_item_follow')return route.fulfill({json:{following:false,notify:true}});
+  if(name==='my_user_follow')return route.fulfill({json:following});
+  if(name==='set_user_follow'){const body=route.request().postDataJSON();expect(body.p_target).not.toBe(userId);following=body.p_follow;writes++;return route.fulfill({json:following});}
+  return route.fallback();
+ });
+ await page.goto('/');await login(page);
+ await page.getByRole('button',{name:/Mochila verde de prueba/}).first().click();
+ const controls=page.getByRole('region',{name:'Seguridad y seguimiento',exact:true});
+ await controls.getByRole('button',{name:'Seguir a esta persona',exact:true}).click();
+ await expect(controls.getByText('Seguirás sus nuevas publicaciones.',{exact:true})).toBeVisible();
+ await expect(controls.getByRole('button',{name:'Seguir publicación',exact:true})).toBeVisible();
+ await controls.getByRole('button',{name:'Dejar de seguir a esta persona',exact:true}).click();
+ await expect(controls.getByText('Dejaste de seguir a esta persona.',{exact:true})).toBeVisible();expect(writes).toBe(2);
 });

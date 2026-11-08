@@ -658,6 +658,7 @@ try {
   await (await import('./schoolChecks.mjs')).schoolChecks(db,[ids.a,ids.b,ids.c]);
   await (await import('./recoveryChecks.mjs')).recoveryChecks(db,[ids.a,ids.b,ids.c]);
   await (await import('./communityChecks.mjs')).communityChecks(db,[ids.a,ids.b,ids.c]);
+  await (await import('./pushChecks.mjs')).pushChecks(db);
   console.log(`PASS: ${passed} offline PostgreSQL security checks (${itemDateType}, ${observedShape?"observed":"repository"})`);
 } catch (error) {
   console.error('FAIL', error.code || error.name, error.message);

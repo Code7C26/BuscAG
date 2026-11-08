@@ -1,0 +1,26 @@
+-- REVIEW ONLY. Execute with psql, never paste into SQL Editor. No secrets in this file.
+\set ON_ERROR_STOP on
+\getenv authorization BUSCAG_PUSH_SCHEDULER_AUTHORIZATION
+\if :{?authorization}
+\else
+  \echo 'Missing explicit staging push authorization.'
+  \quit 3
+\endif
+\set buscag_sslmode ''
+\getenv buscag_sslmode PGSSLMODE
+\set buscag_root_ca ''
+\getenv buscag_root_ca PGSSLROOTCERT
+select :'authorization'='SCHEDULE_WEB_PUSH_ON_STAGING'
+ and :'HOST'='aws-0-us-east-1.pooler.supabase.com'
+ and :'PORT'='5432' and :'DBNAME'='postgres'
+ and :'buscag_sslmode'='verify-full' and :'buscag_root_ca'<>''
+ and :'USER'='postgres.yiarlhpbgkofhhipkfha'
+ and current_user='postgres' and current_database()='postgres'
+ and to_regprocedure('public.resolve_item_recovery(uuid,boolean)') is not null
+ and to_regprocedure('public.my_item_follow(uuid)') is not null as target_ok \gset
+\if :target_ok
+  \ir schedule_push_staging.review.sql
+\else
+  \echo 'Refused: expected staging session-pooler, community stage and verify-full with CA.'
+  \quit 3
+\endif

@@ -1,3 +1,4 @@
+import {UserFollowButton} from './UserFollowButton';
 import React, { useEffect, useState, useRef } from "react";
 import { communityCall, REPORT_REASONS, ServiceUnavailableError } from "../../lib/community";
 export function SafetyActions({
@@ -139,6 +140,7 @@ export function SafetyActions({
           Avisarme cuando cambie el estado
         </label>
       )}
+      <UserFollowButton key={userId+targetUserId} userId={userId} targetId={targetUserId} blocked={blocked}/>
       <details>
         <summary>Denunciar</summary>
         <div className="space-y-2 mt-2">

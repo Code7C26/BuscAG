@@ -140,6 +140,7 @@ try {
     await assert.rejects(module.uploadItemImage('https://images.invalid/example.png', profile.id, () => false), /sesión/);
     assert.equal(calls.length, 0);
   });
+  globalThis.Notification={permission:'granted'};
   globalThis.window = { Notification: {}, PushManager: {} };
   Object.defineProperty(globalThis, 'navigator', {
     configurable: true, value: { serviceWorker: { getRegistration: async () => undefined } }

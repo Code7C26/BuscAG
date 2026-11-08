@@ -33,6 +33,7 @@ interface ProfileViewProps {
   onDeleteItem: (id: string) => void;
   onGoToMatches?: () => void;
   userMatchesCount?: number;
+  pushBusy?: boolean;
   pushEnabled: boolean;
   onTogglePush: (enabled: boolean) => void;
 }
@@ -51,6 +52,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   onDeleteItem,
   onGoToMatches,
   userMatchesCount = 0,
+  pushBusy=false,
   pushEnabled,
   onTogglePush,
 }) => {
@@ -235,18 +237,22 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                     <span className="settings-copy">
                       <strong>Notificaciones push</strong>
                       <small>
-                        Avisos en este navegador, cuando el servicio esté
-                        configurado y des permiso.
+                        Avisos en este dispositivo, incluso con BuscAG cerrado.
+                        En iPhone: iOS 16.4 o posterior, agregá BuscAG a la pantalla
+                        de inicio y activá los avisos desde su icono.
                       </small>
                     </span>
                     <input
                       type="checkbox"
                       role="switch"
                       aria-label="Activar notificaciones push"
+                      disabled={pushBusy}
+                      aria-busy={pushBusy}
                       checked={pushEnabled}
                       onChange={(event) => onTogglePush(event.target.checked)}
                     />
                   </label>
+                  <p role="status" className="text-xs px-4 pb-3">{pushBusy?"Actualizando permisos del dispositivo…":pushEnabled?"Suscripción de este dispositivo activada. La entrega depende del servicio y de los permisos del sistema.":"Avisos externos desactivados en este dispositivo. Las notificaciones internas siguen disponibles."}</p>
                 </section>
                 <section
                   className="settings-group"

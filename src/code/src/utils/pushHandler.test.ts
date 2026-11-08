@@ -7,10 +7,10 @@ const payload={type:'INSERT',table:'notifications',schema:'public',record:{id,us
 const request=(data:unknown=payload,secret=webhookSecret)=>new Request('https://push.invalid',{method:'POST',headers:{'x-push-webhook-secret':secret},body:JSON.stringify(data)});
 const setup=()=>{
   const calls:{recipient?:string;body?:string;removed?:string;sent:number;logs:string[]}={sent:0,logs:[]};
-  const deps:PushDependencies={env:()=> webhookSecret,log:event=>calls.logs.push(event),configure:()=>{},
-    backend:()=>({notice:async()=>({id,user_id:'REAL',title:'Real',message:'Real message'}),
+  const deps:PushDependencies={env:name=>name==='SUPABASE_URL'?'https://yiarlhpbgkofhhipkfha.supabase.co':webhookSecret,log:event=>calls.logs.push(event),configure:()=>{},
+    backend:()=>({pending:async()=>[id],claim:async()=>id,finish:async(_id,endpoint,_token,result)=>{if(result==='expired')calls.removed=endpoint;},notice:async()=>({id,user_id:'REAL',type:'message'}),
       subscriptions:async user=>{calls.recipient=user;return [{endpoint:'https://fcm.googleapis.com/send/test',p256dh:'synthetic',auth:'synthetic'}];},
-      removeExpired:async endpoint=>{calls.removed=endpoint;}}),send:async(_sub,body)=>{calls.sent++;calls.body=body;}};
+}),send:async(_sub,body)=>{calls.sent++;calls.body=body;}};
   return {deps,calls};
 };
 test('push rejects arbitrary/private endpoints, URL credentials and provider lookalikes',()=>{
@@ -24,7 +24,7 @@ test('push authenticates before parsing or contacting the backend',async()=>{
 });
 test('push uses stored notification, not forged content or recipient from webhook',async()=>{
   const {deps,calls}=setup();const result=await createPushHandler(deps)(request());assert.equal(result.status,200);
-  assert.equal(calls.recipient,'REAL');assert.equal(JSON.parse(calls.body!).title,'Real');assert.equal(calls.sent,1);
+  assert.equal(calls.recipient,'REAL');assert.equal(JSON.parse(calls.body!).title,'BuscAG');assert.ok(!calls.body!.includes('FORGED'));assert.equal(calls.sent,1);
 });
 test('push removes only expired endpoints and never logs payloads or request error objects',async()=>{
   const {deps,calls}=setup();deps.send=async()=>{throw {statusCode:410,body:'SECRET'};};
@@ -44,4 +44,32 @@ test('push rejects weak configuration and oversized credentials before contactin
   deps.env=original;
   assert.equal((await createPushHandler(deps)(request(payload,'x'.repeat(513)))).status,401);
   assert.equal(calls.sent,0);
+});
+
+test('duplicate and concurrent wakeups cannot send without the durable database claim',async()=>{
+ const {deps,calls}=setup();const backend=deps.backend;let claimed=false;
+ deps.backend=(url,key)=>({...backend(url,key),claim:async()=>{if(claimed)return null;claimed=true;return id;}});
+ await Promise.all([createPushHandler(deps)(request()),createPushHandler(deps)(request())]);
+ assert.equal(calls.sent,1);
+});
+test('scheduler drains stored notice IDs, failures persist retries and foreign projects fail closed',async()=>{
+ const {deps,calls}=setup();let result='';const backend=deps.backend;
+ deps.backend=(url,key)=>({...backend(url,key),finish:async(_id,_endpoint,_token,state)=>{result=state;}});
+ deps.send=async()=>{throw {statusCode:503,body:'SECRET'};};
+ assert.equal((await createPushHandler(deps)(request({type:'DRAIN'}))).status,502);assert.equal(result,'retry');
+ const original=deps.env;deps.env=name=>name==='SUPABASE_URL'?'https://production.invalid':original(name);
+ assert.equal((await createPushHandler(deps)(request())).status,503);assert.equal(calls.sent,0);
+});
+test('suppressed notice and read/revoked device never send; payload omits personal content',async()=>{
+ const {deps,calls}=setup();const backend=deps.backend;
+ deps.backend=(url,key)=>({...backend(url,key),notice:async()=>null});
+ assert.equal((await createPushHandler(deps)(request())).status,200);assert.equal(calls.sent,0);
+ deps.backend=backend;await createPushHandler(deps)(request());const body=JSON.parse(calls.body!);
+ assert.equal(body.body,'Tenés un mensaje nuevo. Abrí BuscAG para verlo.');assert.equal(body.url,'/?notification='+id);
+});
+
+test('one invocation spends at most twenty device deliveries even across several notices',async()=>{
+ const {deps,calls}=setup();const backend=deps.backend;
+ deps.backend=(url,key)=>({...backend(url,key),pending:async()=>[id,id,id],subscriptions:async()=>Array.from({length:50},(_,i)=>({endpoint:'https://fcm.googleapis.com/'+i,p256dh:'x',auth:'x'}))});
+ assert.equal((await createPushHandler(deps)(request({type:'DRAIN'}))).status,200);assert.equal(calls.sent,20);
 });

@@ -22,7 +22,9 @@ const sources = {
     export const uploadItemImage=(...a)=>globalThis.__production.data.uploadItemImage(...a);
     export const mapItem=(row,user)=>({...row,user}); export const mapMessage=row=>row;
     export const mapNotification=row=>row;`,
-  push: `export const getPushNotificationStatus=(...a)=>globalThis.__production.push.status(...a);
+  push: `export const reconcilePushSession=async()=>{};
+    export const revokePushOnSessionChange=async()=>{};
+    export const getPushNotificationStatus=(...a)=>globalThis.__production.push.status(...a);
     export const enablePushNotifications=(...a)=>globalThis.__production.push.enable(...a);
     export const disablePushNotifications=(...a)=>globalThis.__production.push.disable(...a);
     export const disconnectPushDevice=(...a)=>globalThis.__production.push.disconnect(...a);`,
@@ -610,4 +612,12 @@ test('a stale reconnect read cannot erase a message confirmed while that read wa
   await act(async()=>mock.views.ContactModal.onSendMessage('item-a','Confirmed','a'));
   await act(async()=>pending.resolve([]));await settle();
   assert.ok(mock.views.ContactModal.messages.some(row=>row.id===saved.id));assert.ok(reads>=2);
+});
+
+test('returning from system permissions refreshes push status without requesting permission again',async()=>{
+ await mount(App);await emit('a');await act(async()=>mock.views.Header.onOpenProfile());
+ await act(async()=>mock.views.ProfileView.onTogglePush(true));assert.equal(mock.views.ProfileView.pushEnabled,true);
+ mock.push.status=async()=>false;
+ await act(async()=>window.dispatchEvent(new window.Event('focus')));
+ assert.equal(mock.views.ProfileView.pushEnabled,false);
 });

@@ -150,6 +150,8 @@ export interface Database {
       }
     }
     Functions: {
+      my_user_follow:{Args:{p_target:string};Returns:boolean}
+      set_user_follow:{Args:{p_target:string;p_follow:boolean};Returns:boolean}
       my_community_settings:{Args:Record<string,never>;Returns:any}
       save_my_profile:{Args:{p_name:string;p_avatar:string;p_phone:string;p_share:boolean;p_location:string};Returns:any}
       set_user_block:{Args:{p_target:string;p_block:boolean};Returns:boolean}

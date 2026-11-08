@@ -14,6 +14,8 @@ export type CommunityMethod =
   | "moderate_report"
   | "report_audit"
   | "set_item_follow"
+  | "my_user_follow"
+  | "set_user_follow"
   | "my_item_follow"
   | "rate_recovery"
   | "received_ratings"
@@ -30,7 +32,7 @@ export async function communityCall(
       "No se pudo confirmar la operación. Verificá la conexión y la disponibilidad del servicio.",
     );
   if (
-    ["set_user_block", "can_share_contact", "set_item_follow"].includes(name) &&
+    ["set_user_block", "can_share_contact", "set_item_follow", "my_user_follow", "set_user_follow"].includes(name) &&
     typeof data !== "boolean"
   )
     throw Error("Respuesta de servicio no válida.");

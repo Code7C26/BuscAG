@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 
+let sessionRevocation:Promise<void>=Promise.resolve();
+
 const requireClient = () => {
   if (!supabase) throw new Error('Supabase no está configurado.');
   return supabase;
@@ -17,7 +19,7 @@ const decodeApplicationServerKey = (key: string) => {
 };
 
 export async function getPushNotificationStatus(userId: string): Promise<boolean> {
-  if (!isPushAvailable()) return false;
+  if (!isPushAvailable() || Notification.permission !== 'granted') return false;
 
   const { data, error } = await requireClient()
     .from('push_subscriptions')
@@ -57,19 +59,22 @@ export async function enablePushNotifications(userId: string, isCurrent: () => b
       : 'Debes permitir las notificaciones para recibir avisos.');
   }
 
+  await sessionRevocation;
+  if (!isCurrent()) throw new Error('La sesión cambió.');
   let registration:ServiceWorkerRegistration;
-  try{registration=await navigator.serviceWorker.register('/sw.js',{scope:'/'});}catch{throw Error('No se pudo preparar este dispositivo para recibir avisos. Revisá la conexión segura e intentá nuevamente.');}
+  try{registration=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});}catch{throw Error('No se pudo preparar este dispositivo para recibir avisos. Revisá la conexión segura e intentá nuevamente.');}
   if (!isCurrent()) throw new Error('La sesión cambió.');
   let timer:ReturnType<typeof setTimeout>;
   try{await Promise.race([navigator.serviceWorker.ready,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('El dispositivo tardó demasiado en preparar los avisos. Intentá nuevamente.')),15000);})]);}finally{clearTimeout(timer!);}
   if (!isCurrent()) throw new Error('La sesión cambió.');
+  await reconcilePushSession(userId,isCurrent);
   let existing = await registration.pushManager.getSubscription();
   if (!isCurrent()) throw new Error('La sesión cambió.');
   const existingKey=existing?.options?.applicationServerKey;
   if(existing&&existingKey&&Array.from(new Uint8Array(existingKey)).join(',')!==Array.from(decodedKey).join(',')){
     const {error}=await requireClient().from('push_subscriptions').delete().eq('user_id',userId).eq('endpoint',existing.endpoint);if(error)throw error;
     if(!isCurrent())throw new Error('La sesión cambió.');
-    await existing.unsubscribe();existing=null;
+    if(!(await existing.unsubscribe()))throw new Error('No se pudo renovar la suscripción de este dispositivo.');existing=null;
   }
   if (!isCurrent()) throw new Error('La sesión cambió.');
   const subscription = existing ?? await registration.pushManager.subscribe({
@@ -93,6 +98,10 @@ export async function enablePushNotifications(userId: string, isCurrent: () => b
     }, { onConflict: 'endpoint' });
 
   if (error) throw error;
+  if(!isCurrent()){
+    await subscription.unsubscribe();
+    throw new Error('La sesión cambió.');
+  }
 }
 
 export async function disablePushNotifications(userId: string, isCurrent: () => boolean = () => true): Promise<void> {
@@ -112,7 +121,7 @@ export async function disablePushNotifications(userId: string, isCurrent: () => 
 
   if (error) throw error;
   if (!isCurrent()) return;
-  await subscription.unsubscribe();
+  if(!(await subscription.unsubscribe()))throw new Error('No se pudo desactivar la suscripción del dispositivo.');
 }
 
 /** Revoke this browser's delivery capability on logout without deleting stored rows. */
@@ -126,4 +135,32 @@ export async function disconnectPushDevice(isCurrent: () => boolean = () => true
   if (!isCurrent()) return;
   const notices = await registration.getNotifications?.();
   if (isCurrent()) notices?.forEach(notice => notice.close());
+}
+
+/** A session transition never carries another account's endpoint into the new session. */
+export function revokePushOnSessionChange(isCurrent:()=>boolean=()=>true):Promise<void>{
+  const revocation=sessionRevocation.then(()=>disconnectPushDevice(isCurrent));
+  sessionRevocation=revocation.catch(()=>{});
+  return revocation;
+}
+export async function reconcilePushSession(userId:string,isCurrent:()=>boolean=()=>true):Promise<void>{
+  await sessionRevocation;
+  if(!isCurrent()||!isPushAvailable())return;
+  const registration=await navigator.serviceWorker.getRegistration('/');
+  const subscription=await registration?.pushManager.getSubscription();
+  if(!subscription||!isCurrent())return;
+  const {data,error}=await requireClient().from('push_subscriptions').select('endpoint').eq('user_id',userId).eq('endpoint',subscription.endpoint);
+  if(!isCurrent())return;
+  if(error){
+    // Unknown ownership must not carry a previous account's delivery capability.
+    if(!(await subscription.unsubscribe()))throw Error('No se pudo desvincular el dispositivo. Revisá sus permisos de notificaciones.');
+    const notices=await registration?.getNotifications?.();
+    if(isCurrent())notices?.forEach(notice=>notice.close());
+    throw Error('No se pudo verificar la cuenta de este dispositivo. Reactivá los avisos cuando vuelva la conexión.');
+  }
+  if(!data?.some(row=>row.endpoint===subscription.endpoint)){
+    if(!(await subscription.unsubscribe()))throw Error('No se pudo desvincular el dispositivo de la cuenta anterior.');
+    const notices=await registration?.getNotifications?.();
+    if(isCurrent())notices?.forEach(notice=>notice.close());
+  }
 }

@@ -14,7 +14,7 @@
     "check:staging-public": "node scripts/check-staging-public.mjs",
     "test:staging-frontend": "tsx --test tests/staging-frontend.test.ts",
     "build": "vite build",
-    "test": "node --import tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs tests/storage-backup.test.mjs tests/restore-safety.test.mjs tests/mail-templates.test.mjs tests/hosting-releases.test.mjs",
+    "test": "node --import tsx --test src/utils/*.test.ts tests/production.test.mjs tests/service-worker.test.mjs tests/diagnostic.test.mjs tests/storage-backup.test.mjs tests/restore-safety.test.mjs tests/mail-templates.test.mjs tests/hosting-releases.test.mjs tests/push-tools.test.mjs tests/push-client.test.mjs",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
@@ -41,7 +41,8 @@
     "test:v1": "node --import tsx --test tests/v1-compatibility.test.tsx tests/v1-school-backend.test.mjs tests/candidate-artifact.test.mjs",
     "test:application-upgrade": "node --test --test-concurrency=1 tests/application-upgrade.test.mjs",
     "audit:hosting:releases": "node scripts/list-hosting-releases.mjs",
-    "test:e2e:webkit": "playwright test --config=playwright.webkit.config.ts"
+    "test:e2e:webkit": "playwright test --config=playwright.webkit.config.ts",
+    "push:staging": "node scripts/staging-push-worker.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

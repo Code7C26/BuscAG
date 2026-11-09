@@ -1,0 +1,78 @@
+{
+  "file": "deliverables/BuscAG-trailer-draft.mp4",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "frames": 2700,
+  "duration_seconds": 90.005,
+  "pixel_format": "yuv420p",
+  "color_space": "bt709",
+  "color_range": "tv",
+  "video": "h264",
+  "audio": "aac",
+  "bytes": 17931275,
+  "sha256": "bbcae3b755dc1d6e418a4de7be5c0936599cdf9d02ce40bb239ec120e9c9031f",
+  "scenes": [
+    {
+      "id": "problem",
+      "from": 0,
+      "to": 12
+    },
+    {
+      "id": "reveal",
+      "from": 12,
+      "to": 16
+    },
+    {
+      "id": "community",
+      "from": 16,
+      "to": 22
+    },
+    {
+      "id": "publish",
+      "from": 22,
+      "to": 28
+    },
+    {
+      "id": "search",
+      "from": 28,
+      "to": 35
+    },
+    {
+      "id": "map",
+      "from": 35,
+      "to": 42
+    },
+    {
+      "id": "filters",
+      "from": 42,
+      "to": 48
+    },
+    {
+      "id": "matches",
+      "from": 48,
+      "to": 55
+    },
+    {
+      "id": "chat",
+      "from": 55,
+      "to": 62
+    },
+    {
+      "id": "handover",
+      "from": 62,
+      "to": 69
+    },
+    {
+      "id": "recovered",
+      "from": 69,
+      "to": 77
+    },
+    {
+      "id": "close",
+      "from": 77,
+      "to": 90
+    }
+  ],
+  "device_or_backend_validation": false
+}

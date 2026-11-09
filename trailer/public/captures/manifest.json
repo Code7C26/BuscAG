@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "mode": "real_ui_synthetic_backend",
+  "app_tree": "7efa4510370a15ec95b8b26cad0f1fe56cb0bb76",
+  "source_files": [
+    "Header",
+    "ItemCard",
+    "PublishModal",
+    "AdvancedSearch",
+    "MapView",
+    "MatchesView",
+    "ContactModal",
+    "RecoveryPanel"
+  ],
+  "captures": [
+    "auth",
+    "home-desktop",
+    "item-card",
+    "home-phone",
+    "publish",
+    "search",
+    "filters",
+    "map",
+    "matches",
+    "comparison",
+    "chat",
+    "recovery-pending",
+    "recovery-confirmed"
+  ],
+  "real_credentials": false,
+  "external_network": "intercepted and fulfilled or aborted",
+  "map": "original illustrative tiles; actual Leaflet controls",
+  "simulated_recovery": "confirmed",
+  "mock_calls": 18
+}

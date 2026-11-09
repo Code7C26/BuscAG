@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {VIDEO,SCENES} from '../src/timeline.mjs';
+const file='deliverables/BuscAG-trailer-draft.mp4';
+const probe=spawnSync(process.env.FFPROBE_PATH||'ffprobe',['-v','error','-show_streams','-show_format','-of','json',file],{encoding:'utf8'});
+if(probe.error||probe.status!==0)throw Error('Instalá FFmpeg/ffprobe o configurá FFPROBE_PATH; primero renderizá el MP4.');
+const data=JSON.parse(probe.stdout),video=data.streams.find(s=>s.codec_type==='video'),audio=data.streams.find(s=>s.codec_type==='audio');
+assert.equal(video.width,VIDEO.width);assert.equal(video.height,VIDEO.height);assert.equal(video.avg_frame_rate,'30/1');assert.equal(video.codec_name,'h264');assert.equal(video.pix_fmt,'yuv420p');assert.equal(video.color_space,'bt709');assert.equal(video.color_range,'tv');assert.equal(Number(video.nb_frames),VIDEO.frames);assert.ok(Math.abs(Number(data.format.duration)-VIDEO.seconds)<.1);assert.equal(audio.codec_name,'aac');assert.equal(audio.channels,2);assert.equal(Number(audio.sample_rate),48000);
+const bytes=await readFile(file),report={file,width:video.width,height:video.height,fps:30,frames:Number(video.nb_frames),duration_seconds:Number(data.format.duration),pixel_format:video.pix_fmt,color_space:video.color_space,color_range:video.color_range,video:video.codec_name,audio:audio.codec_name,bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex'),scenes:SCENES.map(({id,from,to})=>({id,from,to})),device_or_backend_validation:false};
+await writeFile('deliverables/verification.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report,null,2));

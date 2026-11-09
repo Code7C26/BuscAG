@@ -1,0 +1,6 @@
+node_modules/
+.app-dist/
+.remotion/
+build/
+out/
+public/audio/*.wav

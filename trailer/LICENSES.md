@@ -4,7 +4,7 @@
   derechos originales. `icon.svg` se copia byte por byte desde src/code/public.
 - Ilustraciones de mochila, llaves, avatares y base de mapa: geometría SVG original
   creada para esta demostración, sin fotografías ni mapas de terceros.
-- Música y efectos: sintetizados por scripts/audio.mjs (osciladores, ruido y
+- Música y efectos: sintetizados por scripts/audio.mjs (V1) y v2/audio.mjs (V2) (osciladores, ruido y
   envolventes), sin muestras externas. Los recursos originales generados para este
   tráiler se ofrecen como CC0-1.0 para facilitar su uso y adaptación en BuscAG.
 - Manrope: Copyright The Manrope Project Authors; SIL Open Font License 1.1.

@@ -13,7 +13,16 @@
     "render:smoke": "node scripts/render.mjs --smoke",
     "verify": "node scripts/verify.mjs",
     "test": "node --test tests/*.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "audio:v2": "node v2/audio.mjs",
+    "capture:v2": "tsx v2/capture.ts",
+    "studio:v2": "remotion studio v2/index.ts --port=3102",
+    "stills:v2": "node v2/render.mjs --stills",
+    "render:v2": "node v2/render.mjs",
+    "smoke:v2": "node v2/render.mjs --smoke",
+    "verify:v2": "node v2/verify.mjs",
+    "test:v2": "node --test v2/tests.mjs",
+    "sheet:v2": "node v2/contact-sheet.mjs"
   },
   "dependencies": {
     "remotion": "4.0.541",

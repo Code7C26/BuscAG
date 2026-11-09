@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "method": "real_ui_action_frames_15fps_encoded_30fps",
+  "synthetic_backend": true,
+  "real_credentials": false,
+  "source_app_tree": "7efa4510370a15ec95b8b26cad0f1fe56cb0bb76",
+  "map": "illustrative original geometry, real Leaflet controls",
+  "clips": [
+    {
+      "name": "home",
+      "seconds": 6,
+      "frames": 180,
+      "path": "clips/home.mp4",
+      "simulated_backend": true
+    },
+    {
+      "name": "publish",
+      "seconds": 6,
+      "frames": 180,
+      "path": "clips/publish.mp4",
+      "simulated_backend": true
+    },
+    {
+      "name": "search",
+      "seconds": 6,
+      "frames": 180,
+      "path": "clips/search.mp4",
+      "simulated_backend": true
+    },
+    {
+      "name": "match",
+      "seconds": 5,
+      "frames": 150,
+      "path": "clips/match.mp4",
+      "simulated_backend": true
+    },
+    {
+      "name": "chat",
+      "seconds": 6,
+      "frames": 180,
+      "path": "clips/chat.mp4",
+      "simulated_backend": true
+    },
+    {
+      "name": "recovery",
+      "seconds": 5,
+      "frames": 150,
+      "path": "clips/recovery.mp4",
+      "simulated_backend": true
+    },
+    {
+      "name": "map",
+      "seconds": 6,
+      "frames": 180,
+      "path": "clips/map.mp4",
+      "simulated_backend": true
+    }
+  ]
+}

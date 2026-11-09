@@ -1,5 +1,8 @@
 # BuscAG — tráiler cinematográfico
 
+**Nueva versión dinámica de 60 s:** [V2: montaje, música y comandos](V2.md).
+La documentación siguiente describe la V1 de 90 s, que se conserva íntegra.
+
 Proyecto Remotion independiente. **90 segundos · 1920×1080 · 30 FPS · MP4 H.264/AAC**.
 Todos los archivos del tráiler están aquí. No cambia aplicación, base, Firebase,
 service worker ni configuración de producción. No necesita claves de Supabase.

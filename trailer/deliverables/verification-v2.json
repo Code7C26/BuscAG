@@ -1,0 +1,177 @@
+{
+  "version": 2,
+  "file": "deliverables/BuscAG-trailer-v2.mp4",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "frames": 1800,
+  "video_seconds": 60,
+  "container_seconds": 60.011,
+  "codec": "h264",
+  "pixel_format": "yuv420p",
+  "color_space": "bt709",
+  "audio": "aac",
+  "audio_channels": 2,
+  "sample_rate": 48000,
+  "bytes": 19973548,
+  "sha256": "78e47d564c5c81012d663e666ca4d5eca5bc26d2cb153e189229fabce88676ba",
+  "v1_preserved_sha256": "bbcae3b755dc1d6e418a4de7be5c0936599cdf9d02ce40bb239ec120e9c9031f",
+  "bpm": 120,
+  "drop_seconds": 32,
+  "narration": false,
+  "complete_decode": true,
+  "audio_integrated_lufs": -16,
+  "audio_true_peak_dbfs": -1.9,
+  "shots": [
+    {
+      "id": "mystery",
+      "from": 0,
+      "to": 2
+    },
+    {
+      "id": "lost",
+      "from": 2,
+      "to": 3.5
+    },
+    {
+      "id": "something",
+      "from": 3.5,
+      "to": 5
+    },
+    {
+      "id": "brand",
+      "from": 5,
+      "to": 7
+    },
+    {
+      "id": "community",
+      "from": 7,
+      "to": 9.5
+    },
+    {
+      "id": "together",
+      "from": 9.5,
+      "to": 10.5
+    },
+    {
+      "id": "cards",
+      "from": 10.5,
+      "to": 12
+    },
+    {
+      "id": "publish-title",
+      "from": 12,
+      "to": 13
+    },
+    {
+      "id": "publish",
+      "from": 13,
+      "to": 17
+    },
+    {
+      "id": "search-title",
+      "from": 17,
+      "to": 18
+    },
+    {
+      "id": "search",
+      "from": 18,
+      "to": 21
+    },
+    {
+      "id": "filters",
+      "from": 21,
+      "to": 24
+    },
+    {
+      "id": "map",
+      "from": 24,
+      "to": 27
+    },
+    {
+      "id": "flash-home",
+      "from": 27,
+      "to": 27.5
+    },
+    {
+      "id": "flash-search",
+      "from": 27.5,
+      "to": 28
+    },
+    {
+      "id": "flash-map",
+      "from": 28,
+      "to": 28.5
+    },
+    {
+      "id": "collision",
+      "from": 28.5,
+      "to": 30
+    },
+    {
+      "id": "build",
+      "from": 30,
+      "to": 31.5
+    },
+    {
+      "id": "suspense",
+      "from": 31.5,
+      "to": 32
+    },
+    {
+      "id": "drop",
+      "from": 32,
+      "to": 35
+    },
+    {
+      "id": "match-detail",
+      "from": 35,
+      "to": 38
+    },
+    {
+      "id": "connect",
+      "from": 38,
+      "to": 40
+    },
+    {
+      "id": "chat-title",
+      "from": 40,
+      "to": 41
+    },
+    {
+      "id": "chat",
+      "from": 41,
+      "to": 45
+    },
+    {
+      "id": "two-sides",
+      "from": 45,
+      "to": 46.5
+    },
+    {
+      "id": "recovery",
+      "from": 46.5,
+      "to": 49
+    },
+    {
+      "id": "recovered",
+      "from": 49,
+      "to": 51
+    },
+    {
+      "id": "return",
+      "from": 51,
+      "to": 53
+    },
+    {
+      "id": "final-reveal",
+      "from": 53,
+      "to": 55.5
+    },
+    {
+      "id": "final",
+      "from": 55.5,
+      "to": 60
+    }
+  ]
+}

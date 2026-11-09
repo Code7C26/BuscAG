@@ -5,6 +5,15 @@ no se configuraron secretos y no se desplegó Supabase ni Firebase. No se envió
 push real ni se verificó recepción en dispositivos. Las pruebas locales no demuestran
 entrega remota. Producción queda fuera de este procedimiento.
 
+
+> Estado informado: SQL Push, VAPID, send-push y Vault ya instalados; no repetirlos.
+> Actualización del programador: en Prueba se confirmó pg_net 0.20.4 con grants a
+> PUBLIC en sus tablas. El bloqueo de la opción A se conserva: no reintentar con
+> el secreto permanente en esa cola ni cambiar permisos administrados.
+> La ruta recomendada es ahora Cloud Scheduler + Cloud Run privado + Secret Manager
+> en un proyecto dedicado. Ver [diagnóstico y procedimiento](PUSH_SCHEDULER_REVIEW.md).
+> No modifica el job `buscag-staging-match-worker`.
+
 ## Auditoría y cambios
 
 Ya existían: avisos internos en `notifications`, RLS de suscripciones por propietario,

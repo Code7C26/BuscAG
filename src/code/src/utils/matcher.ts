@@ -11,6 +11,7 @@
  */
 
 import { Item, MatchResult } from '../types';
+import { itemDateTime } from './itemDate';
 import { getDistanceKm } from './geo';
 
 // Palabras vacías en español a ignorar en la tokenización para enfocar en palabras distintivas
@@ -27,6 +28,8 @@ const STOP_WORDS = new Set([
   'tiradas', 'olvidada', 'olvidado', 'encontre', 'perdi', 'extravio', 'recuperado',
   'av', 'avenida', 'calle', 'plaza'
 ]);
+
+const COLORS=new Set(['negro','negra','negros','negras','blanco','blanca','blancos','blancas','rojo','roja','rojos','rojas','azul','azules','verde','verdes','amarillo','amarilla','amarillos','amarillas','violeta','violetas','gris','grises','rosa','rosas','naranja','naranjas']);
 
 /**
  * Normaliza y divide una cadena en palabras clave relevantes
@@ -50,19 +53,23 @@ function calculateKeywordOverlap(words1: string[], words2: string[]): {
   matchedWords: string[];
 } {
   const set1 = new Set(words1);
-  const matchedWords: string[] = [];
-
-  for (const w of words2) {
-    if (set1.has(w) && !matchedWords.includes(w)) {
-      matchedWords.push(w);
-    }
-  }
-
-  const unionSize = new Set([...words1, ...words2]).size;
+  const matchedWords = [...new Set(words2)].filter(word => set1.has(word));
+  const unionSize = new Set([...set1, ...words2]).size;
   if (unionSize === 0) return { overlapScore: 0, matchedWords: [] };
 
   const overlapScore = matchedWords.length / unionSize;
   return { overlapScore, matchedWords };
+}
+
+// Cache tokenization only while both source strings remain unchanged. Weak keys
+// do not retain account data after its item objects are released.
+const keywordCache = new WeakMap<Item,{title:string;description:string;words:string[]}>();
+function itemKeywords(item: Item): string[] {
+  const cached = keywordCache.get(item);
+  if (cached?.title === item.title && cached.description === item.description) return cached.words;
+  const words = [...extractKeywords(item.title),...extractKeywords(item.description)];
+  keywordCache.set(item,{title:item.title,description:item.description,words});
+  return words;
 }
 
 /**
@@ -70,8 +77,9 @@ function calculateKeywordOverlap(words1: string[], words2: string[]): {
  * Si la puntuación mínima no se alcanza, devuelve null.
  */
 export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | null {
+  if(lostItem.user.id && lostItem.user.id===foundItem.user.id)return null;
   // 1. REGLA FUNDAMENTAL: Ambos deben pertenecer a la misma categoría
-  if (lostItem.category !== foundItem.category) {
+  if (!lostItem.category.trim() || lostItem.category !== foundItem.category) {
     return null;
   }
 
@@ -80,22 +88,38 @@ export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | 
     return null;
   }
 
+  const coordinates = [lostItem.lat, lostItem.lng, foundItem.lat, foundItem.lng];
+  if (
+    coordinates.some(value => !Number.isFinite(value)) ||
+    Math.abs(lostItem.lat) > 90 || Math.abs(foundItem.lat) > 90 ||
+    Math.abs(lostItem.lng) > 180 || Math.abs(foundItem.lng) > 180
+  ) {
+    return null;
+  }
+
+  const lostTime = itemDateTime(lostItem.date);
+  const foundTime = itemDateTime(foundItem.date);
+  if (!Number.isFinite(lostTime) || !Number.isFinite(foundTime)) return null;
+
+  const timeDiffHours = Math.abs(foundTime - lostTime) / (1000 * 60 * 60);
+  if (foundTime < lostTime && timeDiffHours > 24) return null;
+
   const reasons: string[] = [];
 
   // Categoría idéntica confirmada
+  reasons.push('Sugerencia orientativa: el índice no es una probabilidad ni una prueba de propiedad');
   reasons.push(`Misma categoría: ${lostItem.category}`);
 
   // 2. SIMILITUD DE TEXTO (TÍTULO Y DESCRIPCIÓN)
-  const lostKeywords = [
-    ...extractKeywords(lostItem.title),
-    ...extractKeywords(lostItem.description)
-  ];
-  const foundKeywords = [
-    ...extractKeywords(foundItem.title),
-    ...extractKeywords(foundItem.description)
-  ];
+  const lostKeywords = itemKeywords(lostItem);
+  const foundKeywords = itemKeywords(foundItem);
 
-  const { overlapScore, matchedWords } = calculateKeywordOverlap(lostKeywords, foundKeywords);
+  const canonical=(word:string)=>word==='azules'?'azul':word==='grises'?'gris':word.replace(/s$/,'').replace(/a$/,'o');
+  const lostColors=new Set(lostKeywords.filter(w=>COLORS.has(w)).map(canonical));
+  const foundColors=new Set(foundKeywords.filter(w=>COLORS.has(w)).map(canonical));
+  if(lostColors.size&&foundColors.size&&![...lostColors].some(c=>foundColors.has(c)))return null;
+  if(lostColors.size&&foundColors.size)reasons.push('Colores descritos compatibles; verificá las características en persona');
+  const { matchedWords } = calculateKeywordOverlap(lostKeywords, foundKeywords);
 
   let textScore = 0;
   if (matchedWords.length >= 3) {
@@ -109,8 +133,13 @@ export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | 
     reasons.push(`Término coincidente: "${matchedWords[0]}"`);
   } else {
     // Si no hay palabras exactas, verificamos si una palabra contiene a otra (ej: jansport)
-    const partialMatches = lostKeywords.filter(lw =>
-      foundKeywords.some(fw => fw.includes(lw) || lw.includes(fw))
+    const partialMatches = lostKeywords.filter(lostWord =>
+      lostWord.length >= 5 && foundKeywords.some(foundWord => {
+        const shorterLength = Math.min(lostWord.length, foundWord.length);
+        const longerLength = Math.max(lostWord.length, foundWord.length);
+        return shorterLength >= 5 && shorterLength / longerLength >= 0.75 &&
+          (foundWord.includes(lostWord) || lostWord.includes(foundWord));
+      })
     );
     if (partialMatches.length > 0) {
       textScore = 30;
@@ -141,10 +170,6 @@ export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | 
   }
 
   // 4. PROXIMIDAD TEMPORAL
-  const lostTime = new Date(lostItem.date).getTime();
-  const foundTime = new Date(foundItem.date).getTime();
-  const timeDiffHours = Math.abs(foundTime - lostTime) / (1000 * 60 * 60);
-
   let timeScore = 50;
   if (foundTime >= lostTime) {
     // Encontrado después de perdido (lo ideal)
@@ -187,6 +212,8 @@ export function compareTwoItems(lostItem: Item, foundItem: Item): MatchResult | 
   } else if (totalScore >= 55) {
     confidence = 'alta';
   }
+
+  if (textScore === 10) confidence = 'media';
 
   return {
     id: `match_${lostItem.id}_${foundItem.id}`,
@@ -233,19 +260,20 @@ export function findMatchesForSingleItem(targetItem: Item, allItems: Item[]): Ma
  */
 export function findAllMatches(allItems: Item[]): MatchResult[] {
   const lostItems = allItems.filter(i => i.status === 'perdido');
-  const foundItems = allItems.filter(i => i.status === 'encontrado');
+  const foundByCategory = new Map<Item['category'], Item[]>();
+  for (const item of allItems) {
+    if (item.status !== 'encontrado') continue;
+    const categoryItems = foundByCategory.get(item.category) ?? [];
+    categoryItems.push(item);
+    foundByCategory.set(item.category, categoryItems);
+  }
 
   const matches: MatchResult[] = [];
 
   for (const lost of lostItems) {
-    for (const found of foundItems) {
-      // Comparación por categoría
-      if (lost.category === found.category) {
-        const result = compareTwoItems(lost, found);
-        if (result) {
-          matches.push(result);
-        }
-      }
+    for (const found of foundByCategory.get(lost.category) ?? []) {
+      const result = compareTwoItems(lost, found);
+      if (result) matches.push(result);
     }
   }
 

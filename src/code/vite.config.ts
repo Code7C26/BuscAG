@@ -1,17 +1,41 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, loadEnv} from 'vite';
+import {validatePresentationEnvironment} from './lib/presentationEnvironment.mjs';
+import {validateEnvironment} from './lib/environment';
+import {validateReleaseEnvironment} from './lib/releaseEnvironment.mjs';
+import {validateStagingEnvironment,STAGING_CSP} from './lib/stagingEnvironment.mjs';
 
-export default defineConfig(() => {
+export default defineConfig(({ command, mode }) => {
+  const staging=mode==='staging';
+  const release=mode==='release';
+  const presentation=mode==='presentation';
+  const env = (staging||release||presentation)?process.env:{ ...loadEnv(mode, process.cwd(), 'VITE_'), ...process.env };
+  if(presentation){const error=validatePresentationEnvironment(env);if(error)throw new Error(error);}
+  if(release){const error=validateReleaseEnvironment(env);if(error)throw new Error(error);}
+  if(staging){const error=validateStagingEnvironment(env);if(error)throw new Error(error);}
+  if (command === 'build' || env.VITE_SUPABASE_PUBLISHABLE_KEY) {
+    const error = validateEnvironment(env, command === 'build'&&!staging);
+    if (error) throw new Error(error); // Never print variable values or credentials.
+  }
   return {
+    envDir:(staging||release||presentation)?false:undefined,
+    define:{__BUSCAG_BUILD_COMMIT__:JSON.stringify(/^[a-f0-9]{40}$/.test(String(process.env.BUSCAG_BUILD_COMMIT??''))?process.env.BUSCAG_BUILD_COMMIT:'')},
     plugins: [react(), tailwindcss()],
+    build: {outDir:presentation?'dist-presentation':staging?'dist-staging':'dist', rollupOptions: { output: { manualChunks(id) {
+      if (id.includes('/node_modules/@supabase/')) return 'supabase';
+    } } } },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    // Discover heavy lazy dependencies at startup, avoiding first-use reoptimization.
+    optimizeDeps: {include:['leaflet','qrcode']},
+    preview: staging?{host:'127.0.0.1',port:3001,strictPort:true,headers:{'Content-Security-Policy':STAGING_CSP,'Cache-Control':'no-store'}}:undefined,
     server: {
+      ...(staging?{host:'127.0.0.1',port:3001,strictPort:true,headers:{'Content-Security-Policy':STAGING_CSP,'Cache-Control':'no-store'}}:{}),
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

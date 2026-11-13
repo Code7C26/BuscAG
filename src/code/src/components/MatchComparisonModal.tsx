@@ -1,10 +1,13 @@
+import {categoryLabel} from "../i18n";
+import {t, useLanguage} from "../i18n";
+import { useDialogFocus } from '../utils/useDialogFocus';
 /**
  * MODAL DE COMPARACIÓN LADO A LADO DE COINCIDENCIAS (MatchComparisonModal.tsx)
  * Permite examinar minuciosamente un objeto perdido contra un objeto encontrado
  * para verificar si se trata del mismo artículo antes de coordinar la entrega.
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { X, Sparkles, MapPin, Clock, Tag, MessageSquare, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, ExternalLink } from 'lucide-react';
 import { MatchResult, Item, User } from '../types';
 import { formatTimeAgo } from '../utils/geo';
@@ -26,6 +29,9 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
   onViewItemDetail,
   currentUser
 }) => {
+  useLanguage();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen && Boolean(match), dialogRef, onClose);
   if (!isOpen || !match) return null;
 
   const { lostItem, foundItem, score, confidence, reasons, distanceKm, matchedKeywords } = match;
@@ -36,7 +42,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
       return {
         bg: 'bg-emerald-500 text-white',
         border: 'border-emerald-400',
-        label: 'Coincidencia Muy Alta',
+        label: t("Coincidencia Muy Alta"),
         scoreColor: 'text-emerald-600 bg-emerald-50 border-emerald-200'
       };
     }
@@ -44,14 +50,14 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
       return {
         bg: 'bg-blue-600 text-white',
         border: 'border-blue-400',
-        label: 'Coincidencia Alta',
+        label: t("Coincidencia Alta"),
         scoreColor: 'text-blue-600 bg-blue-50 border-blue-200'
       };
     }
     return {
       bg: 'bg-amber-500 text-white',
       border: 'border-amber-400',
-      label: 'Coincidencia Posible',
+      label: t("Coincidencia Posible"),
       scoreColor: 'text-amber-600 bg-amber-50 border-amber-200'
     };
   };
@@ -60,7 +66,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
 
   return (
     <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="modal-dialog w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t("Comparación de coincidencias")} tabIndex={-1} className="modal-dialog w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
         
         {/* Cabecera del Modal */}
         <div className="modal-header p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between gap-3 shrink-0">
@@ -70,23 +76,18 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-extrabold text-slate-900 text-base sm:text-lg">
-                  Comparación de Coincidencia
-                </h2>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeInfo.bg}`}>
-                  {score}% Match
+                <h2 className="font-extrabold text-slate-900 text-base sm:text-lg">{t("Comparación de Coincidencia")}</h2>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${badgeInfo.bg}`}> {t("Índice")} {score}/100
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
-                Sistema de comparación automática por categoría, geolocalización y similitud
-              </p>
+              <p className="text-xs text-slate-500">{t("Sistema de comparación automática por categoría, geolocalización y similitud")}</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 rounded-full transition cursor-pointer"
-            title="Cerrar modal"
+            title={t("Cerrar modal")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -99,11 +100,9 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                Nivel de Probabilidad de Match
-              </span>
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />{t("Probabilidad de coincidencia")}</span>
               <span className="text-xs font-extrabold text-slate-900">
-                {score}% - {badgeInfo.label}
+                {score}/100 - {badgeInfo.label}
               </span>
             </div>
 
@@ -125,13 +124,12 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                   className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white text-slate-700 border border-slate-200 shadow-2xs"
                 >
                   <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                  {reason}
+                  {t(reason)}
                 </span>
               ))}
               {matchedKeywords.length > 0 && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
-                  <Tag className="w-3 h-3 text-blue-600 shrink-0" />
-                  Términos clave: {matchedKeywords.join(', ')}
+                  <Tag className="w-3 h-3 text-blue-600 shrink-0" /> {t("Términos clave:")} {matchedKeywords.join(', ')}
                 </span>
               )}
             </div>
@@ -150,14 +148,11 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-red-600 text-white shadow-xs">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    Objeto Perdido
-                  </span>
+                    <AlertCircle className="w-3.5 h-3.5" />{t("Objeto Perdido")}</span>
                   <button
                     onClick={() => onViewItemDetail(lostItem)}
                     className="text-xs text-red-700 hover:text-red-900 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    Ver ficha <ExternalLink className="w-3 h-3" />
+                  > {t("Ver ficha")} <ExternalLink className="w-3 h-3" />
                   </button>
                 </div>
 
@@ -186,7 +181,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                 <div className="space-y-1.5 pt-2 border-t border-red-100 text-xs text-slate-600">
                   <div className="flex items-center gap-1.5">
                     <Tag className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                    <span className="font-semibold text-slate-800">{lostItem.category}</span>
+                    <span className="font-semibold text-slate-800">{categoryLabel(lostItem.category)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-red-500 shrink-0" />
@@ -194,7 +189,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-red-500 shrink-0" />
-                    <span>Perdido: {formatTimeAgo(lostItem.date)}</span>
+                    <span>{t("Perdido:")} {formatTimeAgo(lostItem.date)}</span>
                   </div>
                 </div>
               </div>
@@ -209,7 +204,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                   />
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-800 truncate">{lostItem.user.name}</p>
-                    <p className="text-[10px] text-slate-500 truncate">Dueño que busca</p>
+                    <p className="text-[10px] text-slate-500 truncate">{t("Dueño que busca")}</p>
                   </div>
                 </div>
 
@@ -217,9 +212,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                   onClick={() => onContact(lostItem)}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white transition cursor-pointer inline-flex items-center gap-1 shadow-xs"
                 >
-                  <MessageSquare className="w-3 h-3" />
-                  Contactar
-                </button>
+                  <MessageSquare className="w-3 h-3" />{t("Contactar")}</button>
               </div>
             </div>
 
@@ -228,14 +221,11 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-600 text-white shadow-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Objeto Encontrado
-                  </span>
+                    <CheckCircle2 className="w-3.5 h-3.5" />{t("Objeto Encontrado")}</span>
                   <button
                     onClick={() => onViewItemDetail(foundItem)}
                     className="text-xs text-emerald-700 hover:text-emerald-900 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    Ver ficha <ExternalLink className="w-3 h-3" />
+                  > {t("Ver ficha")} <ExternalLink className="w-3 h-3" />
                   </button>
                 </div>
 
@@ -245,9 +235,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                     alt={foundItem.title}
                     className="w-full h-full object-cover"
                   />
-                  <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-700 text-white shadow-xs">
-                    En custodia
-                  </span>
+                  <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-700 text-white shadow-xs">{t("En custodia")}</span>
                 </div>
 
                 <div>
@@ -262,7 +250,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                 <div className="space-y-1.5 pt-2 border-t border-emerald-100 text-xs text-slate-600">
                   <div className="flex items-center gap-1.5">
                     <Tag className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span className="font-semibold text-slate-800">{foundItem.category}</span>
+                    <span className="font-semibold text-slate-800">{categoryLabel(foundItem.category)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -270,7 +258,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                    <span>Hallado: {formatTimeAgo(foundItem.date)}</span>
+                    <span>{t("Hallado:")} {formatTimeAgo(foundItem.date)}</span>
                   </div>
                 </div>
               </div>
@@ -285,7 +273,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                   />
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-slate-800 truncate">{foundItem.user.name}</p>
-                    <p className="text-[10px] text-slate-500 truncate">Quien lo encontró</p>
+                    <p className="text-[10px] text-slate-500 truncate">{t("Quien lo encontró")}</p>
                   </div>
                 </div>
 
@@ -293,9 +281,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
                   onClick={() => onContact(foundItem)}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition cursor-pointer inline-flex items-center gap-1 shadow-xs"
                 >
-                  <MessageSquare className="w-3 h-3" />
-                  Contactar
-                </button>
+                  <MessageSquare className="w-3 h-3" />{t("Contactar")}</button>
               </div>
             </div>
 
@@ -305,13 +291,10 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
           <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-between text-xs text-blue-800">
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>
-                Distancia entre los dos puntos de reporte: <strong>{distanceKm < 1 ? `${(distanceKm * 1000).toFixed(0)} metros` : `${distanceKm.toFixed(1)} km`}</strong>.
+              <span> {t("Distancia entre los dos puntos de reporte:")} <strong>{distanceKm < 1 ? `${(distanceKm * 1000).toFixed(0)} metros` : `${distanceKm.toFixed(1)} km`}</strong>.
               </span>
             </div>
-            <span className="font-semibold text-[11px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">
-              Zona compatible
-            </span>
+            <span className="font-semibold text-[11px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">{t("Zona compatible")}</span>
           </div>
 
         </div>
@@ -321,9 +304,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-200/70 transition cursor-pointer"
-          >
-            Cerrar
-          </button>
+          >{t("Cerrar")}</button>
           <button
             onClick={() => {
               // Si el usuario es dueño del objeto perdido, contacta a quien lo encontró, o viceversa
@@ -336,9 +317,7 @@ export const MatchComparisonModal: React.FC<MatchComparisonModalProps> = ({
             }}
             className="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-blue-600 hover:bg-blue-700 text-white transition cursor-pointer shadow-md shadow-blue-600/20 flex items-center gap-1.5"
           >
-            <MessageSquare className="w-4 h-4" />
-            Iniciar Conversación de Reconciliación
-          </button>
+            <MessageSquare className="w-4 h-4" />{t("Iniciar Conversación de Reconciliación")}</button>
         </div>
 
       </div>

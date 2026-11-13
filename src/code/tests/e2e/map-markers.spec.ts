@@ -1,0 +1,44 @@
+import { test, expect } from '@playwright/test';
+import { mockBackend, login } from './fixtures';
+
+test('compiled maps render the red location pin and publication markers', async ({ page, context }) => {
+  const backend = await mockBackend(page);
+  // A local photo keeps this regression independent of external image servers.
+  backend.store.items[0].image_url = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="green"/></svg>');
+  backend.store.items[0].status = 'perdido';
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: -34.6, longitude: -58.4 });
+  await page.goto('/');
+  await login(page);
+  await page.getByRole('button', { name: 'Publicar objeto', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  const pin = dialog.locator('img.leaflet-marker-icon');
+  await expect(pin).toHaveAttribute('alt', 'Ubicación seleccionada');
+  await expect.poll(() => pin.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+  const source = await pin.getAttribute('src');
+  const svg = await page.evaluate(async url => (await fetch(url!)).text(), source);
+  expect(svg).toContain('#DC2626');
+  expect(source).not.toContain('marker-icon.png');
+  const map = dialog.locator('.leaflet-container');
+  await map.click({ position: { x: 70, y: 50 } });
+  await expect(dialog.getByPlaceholder('Ej: Plaza Italia, Av. Cabildo 2000...')).toHaveValue('Ubicación marcada en mapa');
+  const box = await pin.boundingBox();
+  await page.mouse.move(box!.x + 16, box!.y + 16);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + 46, box!.y + 26, { steps: 8 });
+  await page.mouse.up();
+  await expect(dialog.getByPlaceholder('Ej: Plaza Italia, Av. Cabildo 2000...')).toHaveValue(/Ubicación seleccionada/);
+  await dialog.getByRole('button', { name: 'Usar mi GPS' }).click();
+  await expect(dialog.getByPlaceholder('Ej: Plaza Italia, Av. Cabildo 2000...')).toHaveValue('Mi ubicación actual (GPS)');
+  await expect.poll(() => pin.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Mapa', exact: true }).click();
+  const publication = page.locator('.custom-map-pin').first();
+  await expect(publication).toBeVisible();
+  await expect.poll(() => publication.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  await publication.click();
+  await page.getByRole('button', { name: 'Ver publicación', exact: true }).click();
+  await expect(page.locator('.mini-map-pin')).toBeVisible();
+  expect(await page.locator('.mini-map-pin').locator('div').evaluate(el => getComputedStyle(el).backgroundColor)).toBe('rgb(156, 52, 39)');
+  expect(backend.calls.filter(call => call.method !== 'GET' && call.path.startsWith('/rest/') && !['recovery_context','list_my_blocks','my_item_follow'].some(name=>call.path.endsWith('/rpc/'+name)))).toHaveLength(0);
+});

@@ -1,0 +1,12 @@
+# Candidate configuration only. This does not deploy or configure a scheduler.
+project_id = "BuscAG"
+
+[functions.process-matches]
+# Scheduled calls use an independent server-only secret, verified by the handler.
+# The handler denies calls when this secret or backend configuration is absent.
+verify_jwt = false
+
+[functions.send-push]
+# Database webhooks authenticate with x-push-webhook-secret in the handler.
+# Gateway JWT checks would reject this independent secret before handler execution.
+verify_jwt = false

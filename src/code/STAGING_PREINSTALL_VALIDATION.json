@@ -1,0 +1,247 @@
+{
+  "branch": "Alexis",
+  "reviewed_code_commit": "c516059",
+  "changes": "documentation_only",
+  "remote_connection_attempted": false,
+  "remote_migrations_executed": false,
+  "remote_backup_verified_set": false,
+  "firebase_deployed": false,
+  "additional_backup_created": false,
+  "platform_modified": false,
+  "operator_reported_plan": {
+    "stage": "school",
+    "compatible_catalog": true,
+    "platform_preservation_eligible": true,
+    "blockers": [],
+    "independently_opened_here": false
+  },
+  "exact_windows_installer": {
+    "accessible": false,
+    "sha256": null,
+    "audit_status": "blocked_until_exact_plan_and_sql_are_available"
+  },
+  "backup": {
+    "file_name": "BuscAG_Staging_backup.dump",
+    "accessible": false,
+    "size": null,
+    "sha256": null,
+    "format": null,
+    "server_version": null,
+    "archive_listing_verified": false,
+    "fully_read": false,
+    "restore_executed": false,
+    "restore_verified": false,
+    "sufficiency": "unknown"
+  },
+  "original_application_sources": [
+    {
+      "file": "supabase/proposals/20261106000000_secure_recovery.sql",
+      "sha256_bytes": "db4c8f76aebf8a77f4f4c563d2c2fedb58a0c68bf745cdab079e914b2130262e",
+      "sha256_lf": "db4c8f76aebf8a77f4f4c563d2c2fedb58a0c68bf745cdab079e914b2130262e",
+      "functions": [
+        {
+          "name": "buscag_private.recovery_partners",
+          "line": 16,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.recovery_context",
+          "line": 27,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "buscag_private.require_recovery_evidence",
+          "line": 47,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.request_item_recovery",
+          "line": 61,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.resolve_item_recovery",
+          "line": 98,
+          "security_definer": true,
+          "empty_search_path": true
+        }
+      ]
+    },
+    {
+      "file": "supabase/proposals/20261106001000_community_safety.sql",
+      "sha256_bytes": "24568b8415834492f8257b6403d0c27bae3ae125646647e1a0794cccc0dee903",
+      "sha256_lf": "24568b8415834492f8257b6403d0c27bae3ae125646647e1a0794cccc0dee903",
+      "functions": [
+        {
+          "name": "buscag_private.record_recovery_decision",
+          "line": 25,
+          "security_definer": false,
+          "empty_search_path": true
+        },
+        {
+          "name": "buscag_private.anonymize_recovery_participant",
+          "line": 33,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "buscag_private.validate_phone_update",
+          "line": 42,
+          "security_definer": false,
+          "empty_search_path": true
+        },
+        {
+          "name": "buscag_private.blocked",
+          "line": 92,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.can_send_item_message",
+          "line": 96,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "buscag_private.enforce_message_access",
+          "line": 105,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.set_user_block",
+          "line": 118,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.list_my_blocks",
+          "line": 128,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.can_share_contact",
+          "line": 133,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.save_my_profile",
+          "line": 151,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.my_community_settings",
+          "line": 162,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.submit_report",
+          "line": 169,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.list_reports",
+          "line": 186,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.moderate_report",
+          "line": 192,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.report_audit",
+          "line": 203,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.set_item_follow",
+          "line": 209,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.my_item_follow",
+          "line": 219,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "buscag_private.notify_item_followers",
+          "line": 224,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.rate_recovery",
+          "line": 235,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.received_ratings",
+          "line": 251,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.declare_independent_recovery",
+          "line": 260,
+          "security_definer": true,
+          "empty_search_path": true
+        },
+        {
+          "name": "public.recovery_context",
+          "line": 279,
+          "security_definer": true,
+          "empty_search_path": true
+        }
+      ]
+    }
+  ],
+  "generator_review": {
+    "source": "scripts/staging-upgrade.mjs",
+    "application_scope": "only_two_pinned_application_migrations",
+    "managed_wrapper_changes": false,
+    "extension_ddl": false,
+    "atomic_transaction": true,
+    "psql_required": true,
+    "lock_timeout_seconds": 5,
+    "initial_statement_timeout_seconds": 120,
+    "migration_settings_statement_timeout_seconds": 60,
+    "total_transaction_timeout_guaranteed": false,
+    "backup_guard": "manual_operator_attestation_not_backup_validation",
+    "project_identity": "must_be_enforced_in_connection_not_only_sql_comment"
+  },
+  "checks_this_delivery": {
+    "npm_test": "passed_exit_0",
+    "typescript": "passed_exit_0",
+    "vite_build": "passed_exit_0",
+    "client_security": {
+      "passed": 18,
+      "failed": 0
+    },
+    "pinned_source_integrity": "passed"
+  },
+  "reused_prior_evidence": "STAGING_CRON_NET_ACL_VALIDATION.json at c516059; disposable synthetic tests, NOT a restore of this dump",
+  "new_disposable_restore_migration_test": "not_run_backup_unavailable",
+  "ready_to_install": false,
+  "blockers": [
+    "Exact Windows plan.json and install.review.sql unavailable for artifact audit",
+    "Existing backup integrity, coverage and real isolated restore unverified",
+    "Migration rehearsal on that restored database not performed",
+    "Future explicit installation authorization required"
+  ]
+}

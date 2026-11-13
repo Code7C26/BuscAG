@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-06",
+  "branch": "Alexis",
+  "functional_commit": "8d4bf5d",
+  "services": "local_simulated_or_disposable",
+  "remote_catalog": "operator_partial_evidence_only",
+  "remote_connection_attempted": false,
+  "remote_migrations_executed": false,
+  "firebase_deployed": false,
+  "backup_of_prueba_restored": "not_verified",
+  "application_tests": {
+    "passed": 133,
+    "failed": 0
+  },
+  "typecheck": "passed",
+  "vite_build": "passed",
+  "client_security_checks": 18,
+  "staging_tool_tests": 11,
+  "tls_tests": 3,
+  "backend": {
+    "matrices": [
+      "repository/date",
+      "repository/timestamptz",
+      "observed/date"
+    ],
+    "native_postgresql": {
+      "passed": true,
+      "base_checks": [
+        61,
+        61,
+        64
+      ],
+      "school_groups_each": 17,
+      "recovery_groups_each": 8,
+      "community_groups_each": 15,
+      "upgrade_tests": 7,
+      "activation_order": "passed"
+    },
+    "pglite": {
+      "passed": true,
+      "base_checks": [
+        58,
+        58,
+        61
+      ],
+      "school_groups_each": 16,
+      "recovery_groups_each": 7,
+      "community_groups_each": 13,
+      "upgrade_tests": 7,
+      "activation_order": "passed"
+    }
+  },
+  "browser": "not_repeated_no_ui_changes",
+  "authorization_to_install": false,
+  "pending": [
+    "complete_remote_catalog_review",
+    "verified_restore_evidence",
+    "explicit_approval_of_reviewed_sql",
+    "remote_install_and_functional_qa",
+    "separate_firebase_prueba_approval",
+    "real_iphone_validation"
+  ]
+}

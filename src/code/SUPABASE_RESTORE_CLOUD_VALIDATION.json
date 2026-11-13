@@ -1,0 +1,50 @@
+{
+  "branch": "Alexis",
+  "base_commit": "72e154e",
+  "actual_preflight": {
+    "version": 1,
+    "mode": "cloud_preflight",
+    "image": "supabase/postgres@sha256:5a4314708484bec672de2c09653a5c01fb1c84a998564ac231b0325e2238ed5b",
+    "platform": "linux",
+    "dockerReady": true,
+    "freeDiskBytes": null,
+    "memoryBytes": 8589934592,
+    "archiveAvailable": false,
+    "archivePrivate": false,
+    "host_free_disk_bytes": 6673793024,
+    "storage_driver": "vfs",
+    "minimum_disk_bytes": 21474836480,
+    "minimum_memory_bytes": 4294967296,
+    "blockers": [
+      "docker_disk_unknown",
+      "private_archive_unavailable"
+    ],
+    "restore_completed": false,
+    "backup_verified": false,
+    "supabase_remote_contacted": false,
+    "personal_data_exported": false,
+    "status": "blocked"
+  },
+  "real_backup_accessible": false,
+  "real_restore_executed": false,
+  "backup_verified": false,
+  "supabase_remote_modified": false,
+  "firebase_deployed": false,
+  "pending_app_migrations_executed": false,
+  "tests": {
+    "restore_safety": {
+      "passed": 9,
+      "failed": 0
+    },
+    "application": {
+      "passed": 141,
+      "failed": 0
+    },
+    "typescript": "passed",
+    "build": "passed",
+    "client_security_checks": 18
+  },
+  "integration_status": "blocked_no_private_archive_and_no_verified_docker_free_disk",
+  "alternative": "temporary private Linux x86_64 VM, 8GiB RAM and 40-60GiB disk; at least 20GiB free Docker storage required by conservative preflight",
+  "next_step": "Provide archive through private attachment or private VM upload outside Git; run --check before --restore. Never treat a blocked preflight as successful restoration."
+}

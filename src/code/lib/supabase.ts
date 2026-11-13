@@ -1,3 +1,7 @@
+import {validatePresentationEnvironment,PRESENTATION_STORAGE_KEY} from './presentationEnvironment.mjs';
+import {validateReleaseEnvironment} from './releaseEnvironment.mjs';
+import {validateStagingEnvironment,STAGING_REF} from './stagingEnvironment.mjs';
+import { validateEnvironment } from './environment';
 import { createClient } from '@supabase/supabase-js'
 
 type Table<Row, Insert, Update = Partial<Insert>> = {
@@ -16,6 +20,8 @@ export interface Database {
           full_name: string
           avatar_url: string
           phone: string
+          phone_shared?: boolean
+          rating_count?: number
           location: string
           rating: number
           created_at: string
@@ -34,15 +40,15 @@ export interface Database {
         {
           id: string
           owner_id: string | null
-          title: string
-          description: string
-          category: string
-          status: string
-          location_name: string
-          lat: number
-          lng: number
-          date: string
-          image_url: string
+          title: string | null
+          description: string | null
+          category: string | null
+          status: string | null
+          location_name: string | null
+          lat: number | null
+          lng: number | null
+          date: string | null
+          image_url: string | null
           reward: string | null
           contact_count: number
           created_at: string
@@ -137,8 +143,52 @@ export interface Database {
         }
       >
     }
-    Views: Record<string, never>
-    Functions: Record<string, never>
+    Views: {
+      public_profiles: {
+        Row: Database['public']['Tables']['profiles']['Row']
+        Relationships: []
+      }
+    }
+    Functions: {
+      my_user_follow:{Args:{p_target:string};Returns:boolean}
+      set_user_follow:{Args:{p_target:string;p_follow:boolean};Returns:boolean}
+      my_community_settings:{Args:Record<string,never>;Returns:any}
+      save_my_profile:{Args:{p_name:string;p_avatar:string;p_phone:string;p_share:boolean;p_location:string};Returns:any}
+      set_user_block:{Args:{p_target:string;p_block:boolean};Returns:boolean}
+      list_my_blocks:{Args:Record<string,never>;Returns:any[]}
+      can_share_contact:{Args:{p_target:string};Returns:boolean}
+      submit_report:{Args:{p_kind:string;p_target:string;p_reason:string;p_description:string};Returns:string}
+      list_reports:{Args:Record<string,never>;Returns:any[]}
+      moderate_report:{Args:{p_report:string;p_state:string;p_note:string};Returns:string}
+      report_audit:{Args:{p_report:string};Returns:any[]}
+      set_item_follow:{Args:{p_item:string;p_follow:boolean;p_notify:boolean};Returns:boolean}
+      my_item_follow:{Args:{p_item:string};Returns:{following:boolean;notify:boolean}}
+      rate_recovery:{Args:{p_request:string;p_stars:number};Returns:string}
+      declare_independent_recovery:{Args:{p_item:string;p_reason:string};Returns:string}
+      received_ratings:{Args:Record<string,never>;Returns:any[]}
+      school_features:{Args:Record<string,never>;Returns:{version:number;matching_enabled:boolean}}
+      get_item_watch:{Args:{p_item:string};Returns:import('./schoolFeatures').Watch|null}
+      set_item_watch:{Args:{p_item:string;p_enabled:boolean;p_lat:number;p_lng:number;p_radius:number};Returns:import('./schoolFeatures').Watch}
+      get_match_preference:{Args:Record<string,never>;Returns:boolean}
+      set_match_preference:{Args:{p_enabled:boolean};Returns:boolean}
+      manage_object_tag:{Args:{p_item:string;p_enabled:boolean;p_rotate:boolean};Returns:{token:string;enabled:boolean}}
+      resolve_object_tag:{Args:{p_token:string};Returns:import('./schoolFeatures').PublicTag|null}
+      list_recovery_confirmations:{Args:{p_item:string};Returns:import('./schoolFeatures').Recovery[]}
+      recovery_context:{Args:{p_item:string};Returns:{version:number;status:string;partners:{id:string;name:string}[];requests:import('./schoolFeatures').Recovery[]}}
+      request_item_recovery:{Args:{p_item:string;p_partner:string|null};Returns:string}
+      resolve_item_recovery:{Args:{p_request:string;p_accept:boolean};Returns:string}
+      community_statistics:{Args:Record<string,never>;Returns:import('./schoolFeatures').CommunityStats}
+
+      publish_item_once: {
+        Args:{p_request_key:string;p_payload:Omit<import('./publicationDelivery').PublicationInput,'owner_id'>}
+        Returns:Database['public']['Tables']['items']['Row'][]
+      }
+      buscag_capabilities: { Args: Record<string,never>; Returns: {queued_match_notifications:boolean}[] };
+      send_message_once: {
+        Args: {p_request_key:string;p_item_id:string;p_recipient_id:string;p_text:string}
+        Returns: Database['public']['Tables']['messages']['Row'][]
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }
@@ -147,8 +197,11 @@ export interface Database {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey)
+const staging=import.meta.env.MODE==='staging';
+const presentation=import.meta.env.MODE==='presentation';
+export const configurationError = (presentation?validatePresentationEnvironment(import.meta.env):staging?validateStagingEnvironment(import.meta.env):import.meta.env.MODE==='release'?validateReleaseEnvironment(import.meta.env):null) || validateEnvironment(import.meta.env, import.meta.env.PROD&&!staging);
+export const isSupabaseConfigured = !configurationError
 
 export const supabase = isSupabaseConfigured
-  ? createClient<Database>(supabaseUrl, supabasePublishableKey)
+  ? createClient<Database>(supabaseUrl, supabasePublishableKey,presentation?{auth:{storageKey:PRESENTATION_STORAGE_KEY}}:staging?{auth:{storageKey:`buscag-staging-${STAGING_REF}-auth`}}:undefined)
   : null

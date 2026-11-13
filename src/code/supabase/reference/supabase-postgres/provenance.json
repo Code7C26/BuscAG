@@ -1,0 +1,111 @@
+{
+  "repository": "supabase/postgres",
+  "commit": "c6226c631d3f9048586005f0bca8c9fc10a72940",
+  "files": [
+    {
+      "file": "00000000000000-initial-schema.sql",
+      "path": "migrations/db/init-scripts/00000000000000-initial-schema.sql",
+      "git_blob": "b32db6b939afc914db36b83bcac245df27f90902",
+      "sha256": "84588fff60ff3cadcd361c820fe502052f4c5fd5aa273740e0690c5ee59ec813"
+    },
+    {
+      "file": "00000000000003-post-setup.sql",
+      "path": "migrations/db/init-scripts/00000000000003-post-setup.sql",
+      "git_blob": "3bfa90b35ee1f954185d0bdf5c973c39ebf2f419",
+      "sha256": "f38552008ac577b3e65fbcab784a612b72d079f6695871c84b045a1a921f7096"
+    },
+    {
+      "file": "20220126121436_finer-postgrest-triggers.sql",
+      "path": "migrations/db/migrations/20220126121436_finer-postgrest-triggers.sql",
+      "git_blob": "864bcc36b2d603a39dd3a1c50badd7a8ce05b521",
+      "sha256": "85dc26173d7254490d0c20389bc7e3ac7f7752b872c99bb714167cb01b231312"
+    },
+    {
+      "file": "20220317095840_pg_graphql.sql",
+      "path": "migrations/db/migrations/20220317095840_pg_graphql.sql",
+      "git_blob": "24eac1a0a8ab8be6416b31bc9592dbc24bd68743",
+      "sha256": "31f5b997cba8d74936203a78613b5bda9b51e339c6c14f80c203440f82e95cf9"
+    },
+    {
+      "file": "20220713082019_pg_cron-pg_net-temp-perms-fix.sql",
+      "path": "migrations/db/migrations/20220713082019_pg_cron-pg_net-temp-perms-fix.sql",
+      "git_blob": "f98c871997567ce0a2e7ffdcb69e0188984c0cdf",
+      "sha256": "143d6e664f2f508f76964fbaaa018c6ee262464c8c7a881201ae56e025787c94"
+    },
+    {
+      "file": "20231020085357_revoke_writes_on_cron_job_from_postgres.sql",
+      "path": "migrations/db/migrations/20231020085357_revoke_writes_on_cron_job_from_postgres.sql",
+      "git_blob": "4aea5d10c8a7d5ce36899f000886e38068ef7842",
+      "sha256": "6c37208218a84c3ab40e5e0369b86d31a6ddc56fbfe95c03800776b3fa9ce4b7"
+    },
+    {
+      "file": "20250402065937_alter_internal_event_triggers_owner_to_supabase_admin.sql",
+      "path": "migrations/db/migrations/20250402065937_alter_internal_event_triggers_owner_to_supabase_admin.sql",
+      "git_blob": "9308f07d4433ff674ac66f32679ca46e80f54aec",
+      "sha256": "1197d727fb7a8ddf8a61c992ff5698d81a5e908e677cc3a4d835b079aeacb8f1"
+    },
+    {
+      "file": "20261016000001_search_path_for_supa_functions.sql",
+      "path": "migrations/db/migrations/20261016000001_search_path_for_supa_functions.sql",
+      "git_blob": "286eb69867014d90a69033f76b59fe09825fadfe",
+      "sha256": "ca312626320cd78dcdfc3ca89a61194ab34e651dc94d3f576a71cd2d56510f83"
+    },
+    {
+      "file": "evtrigs.out",
+      "path": "nix/tests/expected/evtrigs.out",
+      "git_blob": "84f3e2705846da04c62697e546fdd7562b87b1a6",
+      "sha256": "1028276f0be568154a4b6419a8b41af01aeb43629c37121b143bb624f247e1c4"
+    },
+    {
+      "file": "schema-17.sql",
+      "path": "migrations/schema-17.sql",
+      "git_blob": "84790a4277ce693ad945c1e57c8f9eccc40bff23",
+      "sha256": "ceab43c0ad7d40edd5b9b3a9caf1042006e16c99443b703df614817572f6018a"
+    },
+    {
+      "file": "migrate.sh",
+      "path": "migrations/db/migrate.sh",
+      "git_blob": "e7092c4d70e57ba7ff0183ca5d1803844f5f7862",
+      "sha256": "eb6a57848a73dfbc3b8e40edbadcc7a933f1099ac62cef8c138a18115655b745"
+    },
+    {
+      "file": "20220321174452_fix-postgrest-alter-type-event-trigger.sql",
+      "path": "migrations/db/migrations/20220321174452_fix-postgrest-alter-type-event-trigger.sql",
+      "git_blob": "339def9bd8bbf2381cff6d6040bad585ec5dcc68",
+      "sha256": "674bfe11a9cb828c55ca7c9e00d4f4edcbcb0003d956d8866c9563810e7f0f0e"
+    },
+    {
+      "file": "20230224042246_grant_extensions_perms_for_postgres.sql",
+      "path": "migrations/db/migrations/20230224042246_grant_extensions_perms_for_postgres.sql",
+      "git_blob": "f00fffee413da7e0c3c75a98bb9cc36a1c33b535",
+      "sha256": "9e1e777fb8317dcccdb88ead19201a5670c890fa69dfc51c8d7b369229c3ca8d"
+    },
+    {
+      "file": "20230529180330_alter_api_roles_for_inherit.sql",
+      "path": "migrations/db/migrations/20230529180330_alter_api_roles_for_inherit.sql",
+      "git_blob": "d8291bbaaf672cb1c33965febc08d499fdc2967d",
+      "sha256": "e78a67f8e6ae847765a80898824d404ab370daa3d6f6dbf61ea6d9e0a69144f3"
+    },
+    {
+      "file": "cron-pre-cascade.sql",
+      "path": "migrations/db/migrations/20260730000000_revoke_trigger_on_cron_tables_from_postgres.sql",
+      "commit": "78299525c30f99047184dc30a3b36d029d70076b",
+      "git_blob": "97dcb4143b9b395210be06c2eff409c1a1992c54",
+      "sha256": "72c01b3b55d1c3a3708d921e80fe68d8a814694f4501aa2d0e37c79cb82ff5c1"
+    },
+    {
+      "file": "pr2410-intermediate.sql",
+      "path": "migrations/db/migrations/20260820000001_rescope_pg_graphql_access_trigger.sql",
+      "commit": "a458f16fb7bb7742067507559c591d9c54c52878",
+      "git_blob": "9b8c7ea54003a7ef4703fb04dbeb5e8305333f5a",
+      "sha256": "bc16367be93b01def1a8d774a7d242e1665925fc0a83bade020e592f24a2c2fd"
+    },
+    {
+      "file": "event_trigger_search_path.sql",
+      "path": "nix/tests/sql/event_trigger_search_path.sql",
+      "commit": "c6226c631d3f9048586005f0bca8c9fc10a72940",
+      "git_blob": "2de883d66f7a50ae58374657e5b68bbd07cd2fa2",
+      "sha256": "e65a04cbcde744358765234a17ec849ca6bdbb5baf04c99009d98fb0d318cf04"
+    }
+  ]
+}

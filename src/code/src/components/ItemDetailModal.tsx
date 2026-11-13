@@ -1,3 +1,11 @@
+import {categoryLabel} from "../i18n";
+import {t, useLanguage} from "../i18n";
+import {SafetyActions} from './SafetyActions';
+import { RecoveryPanel } from './RecoveryPanel';
+import {ItemSchoolTools} from './ItemSchoolTools';
+import {Avatar} from './Avatar';
+import { formatItemDate } from '../utils/itemDate';
+import { useDialogFocus } from '../utils/useDialogFocus';
 /**
  * MODAL DE DETALLE DE PUBLICACIÓN (ItemDetailModal.tsx)
  * Muestra la información completa de un objeto seleccionado:
@@ -5,14 +13,14 @@
  * - Título, descripción detallada, categoría y recompensa si aplica
  * - Mini-mapa interactivo Leaflet con la ubicación exacta donde ocurrió el hallazgo o pérdida
  * - Perfil del usuario publicador con insignia de verificación y calificación
- * - Acciones contextuales: Si es el dueño, permite marcarlo como "Recuperado" o eliminarlo.
+ * - Acciones contextuales: Si es el dueño, permite gestionar la recuperación o eliminarlo.
  *   Si es otro usuario, permite abrir el flujo de contacto directo.
  */
 import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { X, MapPin, Clock, Tag, ShieldCheck, MessageCircle, Phone, Share2, CheckCircle2, AlertCircle, Trash2, PartyPopper, Sparkles, ChevronRight } from 'lucide-react';
+import { X, MapPin, Clock, Tag, ShieldCheck, MessageCircle, Phone, Share2, CheckCircle2, AlertCircle, Trash2, Sparkles, ChevronRight } from 'lucide-react';
 import L from 'leaflet';
-import { Item, User, MatchResult } from '../types';
-import { formatTimeAgo } from '../utils/geo';
+import { Item, User, MatchResult, Message } from '../types';
+import { formatTimeAgo, isValidCoordinates } from '../utils/geo';
 import { findMatchesForSingleItem } from '../utils/matcher';
 
 // Propiedades que recibe el modal de detalle
@@ -20,9 +28,12 @@ interface ItemDetailModalProps {
   item: Item | null;                             // Objeto a detallar (null si el modal está cerrado)
   onClose: () => void;                           // Cierra este modal
   onContact: (item: Item) => void;               // Inicia el contacto con el publicador
+  onEditItem?: (item: Item) => void;
+  onViewProfile?: (user:User)=>void;
   currentUser: User;                             // Usuario que está utilizando la app actualmente
-  onMarkAsRecovered?: (itemId: string) => void;  // Cambia el estado a 'recuperado'
-  onDeleteItem?: (itemId: string) => void;       // Elimina la publicación de la lista
+  onDeleteItem?: (itemId: string) => Promise<boolean>;       // Elimina la publicación de la lista
+  messages?: Message[];
+  onRecoveryChanged?:()=>void;
   allItems?: Item[];                             // Catálogo completo de publicaciones para calcular matches
   onOpenMatchComparison?: (match: MatchResult) => void; // Abre la vista de comparación lado a lado
 }
@@ -32,17 +43,24 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   onClose,
   onContact,
   currentUser,
-  onMarkAsRecovered,
+  onEditItem,
+  onViewProfile,
   onDeleteItem,
+  messages = [],
+  onRecoveryChanged = ()=>{},
   allItems = [],
   onOpenMatchComparison
 }) => {
+  useLanguage();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(Boolean(item), dialogRef, onClose);
+
   // Referencias para el mini-mapa dentro del modal
   const miniMapRef = useRef<HTMLDivElement>(null);
   const leafletMiniMapRef = useRef<L.Map | null>(null);
 
-  // Estado para mostrar un banner de celebración festiva al recuperar el objeto
-  const [showRecoveredConfetti, setShowRecoveredConfetti] = useState(false);
+  // Conserva un fallback si la foto de la publicación no se puede cargar.
+  const [failedImage,setFailedImage]=useState<string|null>(null);
 
   // Verificaciones de permisos y estado del objeto
   const isOwner = Boolean(item && currentUser.id === item.user.id);
@@ -59,7 +77,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
    * EFECTO: Inicializa el mini-mapa Leaflet enfocado exactamente en la lat/lng del objeto
    */
   useEffect(() => {
-    if (!item || !miniMapRef.current || leafletMiniMapRef.current) return;
+    if (!item || !isValidCoordinates(item.lat, item.lng) || !miniMapRef.current || leafletMiniMapRef.current) return;
 
     // Instanciamos el mapa centrado en el objeto
     const map = L.map(miniMapRef.current, {
@@ -71,10 +89,10 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     });
 
     // Mosaicos de OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
 
     // Color del marcador según estado (Rojo: Perdido, Verde: Encontrado / Recuperado)
-    const pinColor = isLost ? '#DC2626' : isRecovered ? '#059669' : '#16A34A';
+    const pinColor = isLost ? '#9c3427' : isRecovered ? '#031926' : '#315e65';
     const icon = L.divIcon({
       html: `
         <div style="
@@ -97,7 +115,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
     });
 
     // Añade el marcador fijo en la coordenada del objeto
-    L.marker([item.lat, item.lng], { icon }).addTo(map);
+    L.marker([item.lat, item.lng], { icon, interactive: false, keyboard: false, title: 'Ubicación de la publicación' }).addTo(map);
     leafletMiniMapRef.current = map;
 
     // Recalcula dimensiones para evitar desfasajes en modales
@@ -115,44 +133,26 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   // Si no hay ningún objeto seleccionado, no renderizamos el modal
   if (!item) return null;
 
-  /**
-   * Manejador para marcar el objeto como recuperado con animación de celebración
-   */
-  const handleMarkRecovered = () => {
-    setShowRecoveredConfetti(true);
-    if (onMarkAsRecovered) {
-      onMarkAsRecovered(item.id);
-    }
-    setTimeout(() => {
-      setShowRecoveredConfetti(false);
-    }, 3000);
-  };
 
   return (
     <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div className="modal-dialog w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t("Detalle de publicación")} tabIndex={-1} className="modal-dialog w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
         
-        {/* Banner animado de felicitaciones al recuperar el objeto */}
-        {showRecoveredConfetti && (
-          <div className="absolute top-0 inset-x-0 bg-emerald-600 text-white p-3 text-center z-30 font-extrabold text-sm flex items-center justify-center gap-2 animate-bounce shadow-lg">
-            <PartyPopper className="w-5 h-5" />
-            ¡Felicidades! Objeto marcado como RECUPERADO 🎉
-          </div>
-        )}
 
         {/* Imagen principal superior con botón de cierre e insignias de estado */}
-        <div className="relative aspect-16/10 w-full bg-slate-900 overflow-hidden">
-          <img
+        <div className="relative aspect-16/10 max-h-[30vh] shrink-0 w-full bg-slate-900 overflow-hidden">
+          {item.imageUrl&&failedImage!==item.imageUrl?<img
             src={item.imageUrl}
-            alt={item.title}
+            alt={item.title||t("Publicación sin título")}
+            onError={()=>setFailedImage(item.imageUrl)}
             className="w-full h-full object-cover"
-          />
+          />:<div className="image-placeholder bg-slate-50"><Tag size={36} aria-hidden="true"/><span>{t("Foto no disponible")}</span></div>}
 
           {/* Botón flotante para cerrar el modal */}
           <button
             onClick={onClose}
             className="absolute top-3 right-3 p-2 bg-slate-900/60 hover:bg-slate-900/80 text-white rounded-full backdrop-blur-md transition cursor-pointer"
-            title="Cerrar"
+            title={t("Cerrar")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -161,35 +161,31 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           <div className="absolute bottom-3 left-3 flex gap-2">
             {isLost ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-red-600 text-white shadow-lg">
-                <AlertCircle className="w-4 h-4" />
-                Objeto Perdido
-              </span>
+                <AlertCircle className="w-4 h-4" />{t("Objeto Perdido")}</span>
             ) : isRecovered ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-600 text-white shadow-lg">
-                <CheckCircle2 className="w-4 h-4" />
-                Objeto Recuperado
-              </span>
+                <CheckCircle2 className="w-4 h-4" />{t("Objeto Recuperado")}</span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-green-600 text-white shadow-lg">
                 <CheckCircle2 className="w-4 h-4" />
-                Objeto Encontrado
+                {item.status==='encontrado'?t("Objeto Encontrado"):t("Estado sin informar")}
               </span>
             )}
 
             {/* Insignia de categoría */}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-900/80 text-white backdrop-blur-md">
               <Tag className="w-3.5 h-3.5" />
-              {item.category}
+              {categoryLabel(item.category)||t("Categoría sin informar")}
             </span>
           </div>
         </div>
 
         {/* Cuerpo del modal con información detallada */}
-        <div className="p-5 overflow-y-auto space-y-5 flex-1">
+        <div className="p-5 min-h-0 overflow-y-auto space-y-5 flex-1">
           {/* Título y Recompensa */}
           <div>
             <h2 className="font-extrabold text-slate-900 text-xl sm:text-2xl leading-tight">
-              {item.title}
+              {item.title||t("Publicación sin título")}
             </h2>
 
             {item.reward && isLost && (
@@ -201,9 +197,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
 
           {/* Descripción */}
           <div>
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-              Descripción del Objeto
-            </h4>
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t("Descripción del Objeto")}</h4>
             <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line font-normal bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
               {item.description}
             </p>
@@ -214,7 +208,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 flex items-start gap-2.5">
               <MapPin className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <span className="text-[11px] font-bold text-blue-700 block uppercase">Lugar</span>
+                <span className="text-[11px] font-bold text-blue-700 block uppercase">{t("Lugar")}</span>
                 <span className="text-xs font-semibold text-slate-800 block">{item.locationName}</span>
               </div>
             </div>
@@ -222,9 +216,9 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-start gap-2.5">
               <Clock className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
               <div>
-                <span className="text-[11px] font-bold text-slate-500 block uppercase">Fecha de reporte</span>
+                <span className="text-[11px] font-bold text-slate-500 block uppercase">{t("Fecha de reporte")}</span>
                 <span className="text-xs font-semibold text-slate-800 block">
-                  {formatTimeAgo(item.date)} ({new Date(item.date).toLocaleDateString('es-ES')})
+                  {formatTimeAgo(item.date)} ({formatItemDate(item.date)})
                 </span>
               </div>
             </div>
@@ -233,8 +227,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           {/* Mini Mapa de Localización */}
           <div>
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-              <span>📍 Mapa de Ubicación</span>
-              <span className="text-[11px] text-blue-600 lowercase font-medium">Ubicación aproximada</span>
+              <span>{t("📍 Mapa de Ubicación")}</span>
+              <span className="text-[11px] text-blue-600 lowercase font-medium">{t("Ubicación aproximada")}</span>
             </h4>
             <div className="h-44 rounded-2xl overflow-hidden border border-slate-200 shadow-inner relative">
               <div ref={miniMapRef} className="w-full h-full z-0" />
@@ -250,14 +244,12 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                     <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                      Coincidencias Automáticas Sugeridas
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-600 text-white font-bold">
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"> {t("Coincidencias Automáticas Sugeridas")} <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-600 text-white font-bold">
                         {suggestedMatches.length}
                       </span>
                     </h4>
                     <p className="text-[11px] text-slate-500">
-                      {isLost ? 'Objetos encontrados de la misma categoría compatibles' : 'Reportes de pérdida de la misma categoría compatibles'}
+                      {isLost ? t("Objetos encontrados de la misma categoría compatibles") : t("Reportes de pérdida de la misma categoría compatibles")}
                     </p>
                   </div>
                 </div>
@@ -281,11 +273,10 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className={`px-2 py-0.2 rounded-full text-[10px] font-extrabold ${
                               match.score >= 75 ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'
-                            }`}>
-                              {match.score}% Match
+                            }`}> {t("Índice")} {match.score}/100
                             </span>
                             <span className="text-[10px] font-semibold text-slate-500">
-                              {counterpart.status === 'encontrado' ? '🟢 Encontrado' : '🔴 Perdido'}
+                              {counterpart.status === 'encontrado' ? t("🟢 Encontrado") : t("🔴 Perdido")}
                             </span>
                           </div>
                           <p className="font-bold text-slate-900 text-xs truncate mt-0.5">
@@ -303,9 +294,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                           <button
                             onClick={() => onOpenMatchComparison(match)}
                             className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer flex items-center gap-1"
-                          >
-                            Comparar
-                            <ChevronRight className="w-3.5 h-3.5" />
+                          > {t("Comparar")} <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -317,74 +306,62 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           )}
 
           {/* Tarjeta del usuario que publicó el objeto */}
+          <SafetyActions key={`safety-${item.id}-${currentUser.id}`} userId={currentUser.id} targetUserId={item.user.id} itemId={item.id}/>
+          <RecoveryPanel key={`recovery-${item.id}-${currentUser.id}`} item={item} userId={currentUser.id} onChanged={onRecoveryChanged}/>
+          <ItemSchoolTools key={item.id+currentUser.id} item={item} userId={currentUser.id}/>
           <div className="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/80 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <img
-                src={item.user.avatar}
-                alt={item.user.name}
-                className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs"
-              />
+            <div className="flex items-center gap-3 min-w-0">
+              <Avatar src={item.user.avatar} name={item.user.name} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs"/>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-900 text-sm">{item.user.name}</span>
+                  <span className="font-bold text-slate-900 text-sm">{item.user.name} · {isOwner ? t("Tu publicación") : t("Publicación de otra persona")}</span>
                   {item.user.verified && (
-                    <ShieldCheck className="w-4 h-4 text-blue-600" aria-label="Usuario verificado" />
+                    <ShieldCheck className="w-4 h-4 text-blue-600" aria-label={t("Usuario verificado")} />
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                  <span>⭐ {item.user.rating} calificación</span>
+                  <span>{item.user.ratingCount ? `⭐ ${item.user.rating}/5 (${item.user.ratingCount})` : t("Sin valoraciones")}</span>
                   <span>•</span>
                   <span>{item.user.location}</span>
                 </div>
+                {onViewProfile&&item.user.id&&<button type="button" className="public-profile-link" onClick={()=>onViewProfile(item.user)}>{t("Ver perfil público")} <ChevronRight size={14}/></button>}
               </div>
             </div>
 
-            {/* Enlace de llamada rápida si el publicador configuró su teléfono */}
-            {item.user.phone && !isOwner && (
-              <a
-                href={`tel:${item.user.phone}`}
-                className="p-2.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-xl transition cursor-pointer"
-                title="Llamar directamente por teléfono"
-              >
-                <Phone className="w-4 h-4" />
-              </a>
-            )}
+
           </div>
         </div>
 
         {/* Barra inferior de acciones (depende de si es el dueño o no) */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
+        <div className="p-4 shrink-0 border-t border-slate-100 bg-slate-50 flex items-center gap-2">
           {/* Si el usuario actual es el autor de la publicación */}
           {isOwner ? (
             <div className="w-full flex gap-2">
+              {onEditItem && <button type="button" onClick={() => onEditItem(item)}
+                className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0">{t("Editar")}</button>}
               {!isRecovered && (
                 <button
-                  onClick={handleMarkRecovered}
+                  onClick={() => dialogRef.current?.querySelector('[aria-label="Recuperación segura"]')?.scrollIntoView({ behavior: 'smooth' })}
                   className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Marcar como Recuperado
-                </button>
+                  <CheckCircle2 className="w-4 h-4" />{t("Gestionar recuperación")}</button>
               )}
 
               {onDeleteItem && (
                 <button
                   onClick={() => {
-                    if (confirm('¿Estás seguro de eliminar esta publicación?')) {
-                      onDeleteItem(item.id);
-                      onClose();
-                    }
+                    void onDeleteItem(item.id).then(deleted => {
+                      if (deleted) onClose();
+                    });
                   }}
                   className="px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Eliminar
-                </button>
+                  <Trash2 className="w-4 h-4" />{t("Eliminar")}</button>
               )}
             </div>
           ) : (
-            /* Si es un visitante o persona que encontró/perdió el objeto */
-            <button
+            <>
+            {isRecovered&&!messages.some(message=>message.itemId===item.id&&((message.senderId===currentUser.id&&message.receiverId===item.user.id)||(message.receiverId===currentUser.id&&message.senderId===item.user.id))) ? <p className="text-sm font-semibold">{t("Objeto recuperado · se conserva en el historial")}</p> : (<button
               onClick={() => {
                 onClose();
                 onContact(item);
@@ -392,8 +369,9 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white rounded-2xl font-extrabold text-sm sm:text-base shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 fill-current" />
-              Contactar al Publicador
-            </button>
+              {isRecovered?t("Abrir conversación existente"):t("Contactar al Publicador")}
+            </button>)}
+            </>
           )}
         </div>
       </div>

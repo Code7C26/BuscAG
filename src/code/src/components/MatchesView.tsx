@@ -1,3 +1,5 @@
+import {categoryLabel} from "../i18n";
+import {t, useLanguage} from "../i18n";
 /**
  * PANTALLA PRINCIPAL DE MATCHES Y COINCIDENCIAS AUTOMÁTICAS (MatchesView.tsx)
  * Permite explorar todas las sugerencias de coincidencias generadas por el algoritmo.
@@ -25,6 +27,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
   onViewItemDetail,
   currentUser
 }) => {
+  useLanguage();
   // Filtro por categoría
   const [selectedCategory, setSelectedCategory] = useState<Category | 'Todos'>('Todos');
   // Filtro por pertenencia (todas vs solo las que involucran a currentUser)
@@ -79,32 +82,26 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
         {/* Decoración de fondo */}
         <div className="relative z-10 space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-xs font-medium border border-white/15 text-blue-100">
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
-            Sistema Inteligente de Coincidencias
-          </div>
+            <Sparkles className="w-3.5 h-3.5 fill-current" />{t("Sistema Inteligente de Coincidencias")}</div>
 
           <div>
-            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">
-              Sugerencias Automáticas de Match
-            </h1>
-            <p className="text-xs sm:text-sm text-blue-100 max-w-2xl mt-1 leading-relaxed">
-              El motor compara automáticamente publicaciones de <strong>objetos perdidos</strong> con <strong>objetos encontrados</strong> que comparten la misma categoría, calculando la cercanía geográfica, compatibilidad de fechas y coincidencia de términos.
-            </p>
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-white">{t("Coincidencias automáticas sugeridas")}</h1>
+            <p className="text-xs sm:text-sm text-blue-100 max-w-2xl mt-1 leading-relaxed"> {t("El motor compara automáticamente publicaciones de")} <strong>{t("objetos perdidos")}</strong> {t("con")} <strong>{t("objetos encontrados")}</strong>{t("que comparten la misma categoría, calculando la cercanía geográfica, compatibilidad de fechas y coincidencia de términos.")}</p>
           </div>
 
           {/* Estadísticas clave */}
           <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-2">
             <div className="matches-hero__stat p-2.5 sm:p-3 border text-center">
               <span className="block text-lg sm:text-2xl font-black text-white">{matches.length}</span>
-              <span className="text-[10px] sm:text-xs text-blue-200 font-medium">Matches Totales</span>
+              <span className="text-[10px] sm:text-xs text-blue-200 font-medium">{t("Coincidencias totales")}</span>
             </div>
             <div className="matches-hero__stat p-2.5 sm:p-3 border text-center">
               <span className="block text-lg sm:text-2xl font-black text-emerald-300">{highConfidenceCount}</span>
-              <span className="text-[10px] sm:text-xs text-blue-200 font-medium">Probabilidad Alta</span>
+              <span className="text-[10px] sm:text-xs text-blue-200 font-medium">{t("Probabilidad Alta")}</span>
             </div>
             <div className="matches-hero__stat p-2.5 sm:p-3 border text-center">
               <span className="block text-lg sm:text-2xl font-black text-amber-300">{myMatchesCount}</span>
-              <span className="text-[10px] sm:text-xs text-blue-200 font-medium">En tus Reportes</span>
+              <span className="text-[10px] sm:text-xs text-blue-200 font-medium">{t("En tus Reportes")}</span>
             </div>
           </div>
         </div>
@@ -121,8 +118,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
             }`}
-          >
-            Todas las coincidencias ({matches.length})
+          > {t("Todas las coincidencias (")}{matches.length})
           </button>
           <button
             onClick={() => setFilterScope('mine')}
@@ -132,8 +128,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 fill-current" />
-            Mis publicaciones ({myMatchesCount})
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 fill-current" /> {t("Mis publicaciones (")}{myMatchesCount})
           </button>
           <button
             onClick={() => setConfidenceFilter(prev => prev === 'all' ? 'high' : 'all')}
@@ -142,10 +137,9 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                 ? 'bg-emerald-600 text-white border-emerald-600'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
             }`}
-            title="Filtrar solo coincidencias muy altas (>75%)"
+            title={t("Filtrar solo coincidencias muy altas (>75%)")}
           >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            Alta {'>'} 75%
+            <CheckCircle2 className="w-3.5 h-3.5" /> {t("Alta")} {'>'} 75%
           </button>
         </div>
 
@@ -161,7 +155,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                   : 'bg-slate-200/60 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              {cat}
+              {categoryLabel(cat)}
             </button>
           ))}
         </div>
@@ -171,21 +165,16 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-extrabold text-slate-900 text-base flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            Coincidencias Sugeridas
-          </h2>
+            <Sparkles className="w-4 h-4 text-blue-600" />{t("Coincidencias Sugeridas")}</h2>
           <span className="text-xs text-slate-500 font-medium">
-            {filteredMatches.length} pares sugeridos
-          </span>
+            {filteredMatches.length} {t("pares sugeridos")} </span>
         </div>
 
         {filteredMatches.length === 0 ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-8 text-center space-y-3">
             <ShieldAlert className="w-12 h-12 text-slate-300 mx-auto" />
-            <p className="font-bold text-slate-700 text-base">No hay coincidencias con este filtro</p>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Prueba seleccionando otra categoría o cambiando a "Todas las coincidencias". A medida que la comunidad publica más objetos, el sistema generará nuevos matches.
-            </p>
+            <p className="font-bold text-slate-700 text-base">{t("No hay coincidencias con este filtro")}</p>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto"> {t("Prueba seleccionando otra categoría o cambiando a \"Todas las coincidencias\". A medida que la comunidad publica más objetos, el sistema generará nuevas coincidencias.")} </p>
           </div>
         ) : (
           filteredMatches.map((match) => {
@@ -209,24 +198,20 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                           : 'bg-amber-500 text-white'
                       }`}
                     >
-                      <Sparkles className="w-3 h-3 fill-current" />
-                      {score}% Coincidencia
+                      <Sparkles className="w-3 h-3 fill-current" /> {t("Índice")} {score}/100
                     </span>
 
-                    <span className="text-xs font-semibold text-slate-700 hidden sm:inline">
-                      Categoría: {lostItem.category}
+                    <span className="text-xs font-semibold text-slate-700 hidden sm:inline"> {t("Categoría:")} {categoryLabel(lostItem.category)}
                     </span>
 
                     {isUserInvolved && (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                        Involucra tu reporte
-                      </span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">{t("Involucra tu reporte")}</span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-1.5 text-xs text-slate-500">
                     <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>A <strong>{distanceKm < 1 ? `${(distanceKm * 1000).toFixed(0)}m` : `${distanceKm.toFixed(1)} km`}</strong> de distancia</span>
+                    <span>{t("A")} <strong>{distanceKm < 1 ? `${(distanceKm * 1000).toFixed(0)}m` : `${distanceKm.toFixed(1)} km`}</strong> {t("de distancia")}</span>
                   </div>
                 </div>
 
@@ -243,9 +228,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                     <div className="min-w-0 flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-red-600 text-white">
-                            🔴 Perdido
-                          </span>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-red-600 text-white">{t("🔴 Perdido")}</span>
                           <span className="text-[11px] text-slate-400">
                             {formatTimeAgo(lostItem.date)}
                           </span>
@@ -280,9 +263,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                     <div className="min-w-0 flex-1 flex flex-col justify-between">
                       <div>
                         <div className="flex items-center gap-1.5 mb-1">
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-600 text-white">
-                            🟢 Encontrado
-                          </span>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-600 text-white">{t("🟢 Encontrado")}</span>
                           <span className="text-[11px] text-slate-400">
                             {formatTimeAgo(foundItem.date)}
                           </span>
@@ -317,24 +298,20 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                       className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-700"
                     >
                       <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" />
-                      {r}
+                      {t(r)}
                     </span>
                   ))}
                 </div>
 
                 {/* Pie con botones de acción */}
                 <div className="px-4 sm:px-5 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
-                  <div className="text-xs text-slate-500 font-medium">
-                    ¿Crees que es el mismo objeto?
-                  </div>
+                  <div className="text-xs text-slate-500 font-medium">{t("¿Crees que es el mismo objeto?")}</div>
 
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onSelectMatch(match)}
                       className="px-4 py-2 rounded-xl text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer flex items-center gap-1"
-                    >
-                      Comparar lado a lado
-                      <ChevronRight className="w-3.5 h-3.5" />
+                    > {t("Comparar lado a lado")} <ChevronRight className="w-3.5 h-3.5" />
                     </button>
 
                     <button
@@ -348,9 +325,7 @@ export const MatchesView: React.FC<MatchesViewProps> = ({
                       }}
                       className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition cursor-pointer shadow-xs flex items-center gap-1"
                     >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      Contactar
-                    </button>
+                      <MessageSquare className="w-3.5 h-3.5" />{t("Contactar")}</button>
                   </div>
                 </div>
 

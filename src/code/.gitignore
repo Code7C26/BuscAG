@@ -6,3 +6,16 @@ coverage/
 *.log
 .env*
 !.env.example
+
+dist-staging/
+
+playwright-report/
+test-results/
+
+dist-pwa-test/
+
+dist-presentation/
+dist-presentation-test/
+presentation-test-results/
+
+dist-e2e/

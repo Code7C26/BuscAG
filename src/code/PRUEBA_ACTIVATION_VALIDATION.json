@@ -1,0 +1,182 @@
+{
+  "branch": "Alexis",
+  "base_commit": "06fdff37ec89f2b47dfe8a807de8bbb21ee315a0",
+  "candidate": "1.0.0-rc.1",
+  "services": "local_simulated_or_disposable",
+  "remote_migrations_executed": false,
+  "remote_catalog_collected": false,
+  "managed_wrappers_modified_remotely": false,
+  "firebase_deployed": false,
+  "backup_repeated": false,
+  "existing_backup_restore_evidence": "not_provided_for_this_run",
+  "authorization_to_apply": false,
+  "application_scope": {
+    "flag": "--preserve-platform",
+    "only": [
+      "proposals/20261106000000_secure_recovery.sql",
+      "proposals/20261106001000_community_safety.sql"
+    ],
+    "platform_approved": false,
+    "official_validation_remains_false": true,
+    "six_observed_wrapper_bodies_executed_in_local_fixture": true,
+    "extension_wrapper_calls_during_application_ddl": 0,
+    "postgrest_watchers_executed": true,
+    "supported_server_majors": [
+      17,
+      18
+    ],
+    "unknown_differences": "block",
+    "temporary_objects_created_by_application_bundle": false
+  },
+  "native_postgresql_17_10": {
+    "backend_matrices": [
+      "repository/date",
+      "repository/timestamptz",
+      "observed/date"
+    ],
+    "base_security_checks": [
+      61,
+      61,
+      64
+    ],
+    "school_groups_per_matrix": 17,
+    "secure_recovery_groups_per_matrix": 8,
+    "community_groups_per_matrix": 15,
+    "activation_order_tests": 1,
+    "strict_and_application_upgrade_tests": 21,
+    "failed": 0
+  },
+  "native_postgresql_18_6": {
+    "application_upgrade_tests": 9,
+    "failed": 0
+  },
+  "native_operator_proof": {
+    "postgres_superuser": false,
+    "auth_users_owner": "supabase_auth_admin",
+    "passed_on": [
+      17,
+      18
+    ]
+  },
+  "deno": {
+    "version": "2.9.6",
+    "frozen": true,
+    "tls_verification": true,
+    "process_matches": "passed",
+    "send_push": "passed"
+  },
+  "qa_local": {
+    "status": "passed",
+    "stages": 17,
+    "results": [
+      {
+        "step": "test",
+        "passed": true,
+        "elapsed_ms": 10151
+      },
+      {
+        "step": "lint",
+        "passed": true,
+        "elapsed_ms": 17211
+      },
+      {
+        "step": "test:v1",
+        "passed": true,
+        "elapsed_ms": 6082
+      },
+      {
+        "step": "test:staging-frontend",
+        "passed": true,
+        "elapsed_ms": 958
+      },
+      {
+        "step": "test:staging-tls",
+        "passed": true,
+        "elapsed_ms": 711
+      },
+      {
+        "step": "test:release",
+        "passed": true,
+        "elapsed_ms": 894
+      },
+      {
+        "step": "test:staging-live-tools",
+        "passed": true,
+        "elapsed_ms": 10289
+      },
+      {
+        "step": "test:visitors",
+        "passed": true,
+        "elapsed_ms": 275
+      },
+      {
+        "step": "test:staging-worker-tools",
+        "passed": true,
+        "elapsed_ms": 235
+      },
+      {
+        "step": "test:presentation",
+        "passed": true,
+        "elapsed_ms": 860
+      },
+      {
+        "step": "test:staging-tools",
+        "passed": true,
+        "elapsed_ms": 47138
+      },
+      {
+        "step": "test:backend",
+        "passed": true,
+        "elapsed_ms": 64850
+      },
+      {
+        "step": "build",
+        "passed": true,
+        "elapsed_ms": 8694
+      },
+      {
+        "step": "test:e2e",
+        "passed": true,
+        "elapsed_ms": 250908
+      },
+      {
+        "step": "test:pwa-browser",
+        "passed": true,
+        "elapsed_ms": 6286
+      },
+      {
+        "step": "test:presentation-browser",
+        "passed": true,
+        "elapsed_ms": 7280
+      },
+      {
+        "step": "client-security",
+        "passed": true
+      }
+    ],
+    "application_tests": 133,
+    "v1_compatibility_tests": 11,
+    "browser_tests": 90,
+    "client_security_checks": 18,
+    "staging_tools": {
+      "passed": 23,
+      "skipped_native_only": 2,
+      "failed": 0
+    },
+    "typecheck": "passed",
+    "vite_build": "passed",
+    "pwa_browser": "passed",
+    "presentation_browser": "passed"
+  },
+  "pending": [
+    "fresh remote read-only application plan",
+    "review existing backup and restore evidence",
+    "explicit approval to apply two migrations",
+    "real Auth/API acceptance on Prueba",
+    "explicit moderator enrollment if required",
+    "worker private configuration, heartbeat and scheduler",
+    "optional reviewed historical queue operation",
+    "push configuration and device delivery",
+    "separately authorized Firebase publication"
+  ]
+}

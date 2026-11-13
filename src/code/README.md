@@ -1,12 +1,38 @@
+> Presentación final: [ensayo real con cuentas existentes](PRESENTATION_STAGING_CHECKLIST.md) y [revisión de Firebase/QR](FIREBASE_QR_STATIC_REVIEW.md). Sin publicación automática.
+
+> Prioridad vigente: [UX_PRESENTATION_READINESS.md](UX_PRESENTATION_READINESS.md). Presentación con cuentas de prueba existentes; modo invitado pospuesto y desconectado de la interfaz.
+
+> Extensión escolar opcional: [SCHOOL_FEATURES.md](SCHOOL_FEATURES.md) documenta
+> vigilancia por zona, QR, devolución bilateral y estadísticas. Código preparado;
+> migración y scheduler **no aplicados remotamente** por esta ejecución.
+
 <div align="center">
 <img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
 </div>
 
 # BuscAG
 
+**Objetivo actual: presentación con las cuentas de prueba existentes**, con la
+interfaz en español e inglés y español predeterminado. El modo invitado queda
+pospuesto. Las guías anteriores de registro de visitantes y auditoría de invitados
+se conservan como antecedentes; no son requisitos para esta presentación.
+
 Aplicación comunitaria de objetos perdidos y encontrados. La app usa Supabase para autenticación, perfiles, publicaciones, mensajes, notificaciones, fotos y actualizaciones en tiempo real.
 
+## Estado de preparación para producción
+
+Consulta [PRODUCTION_READINESS.md](./PRODUCTION_READINESS.md) para cambios locales,
+pruebas y bloqueos, y [SUPABASE_MIGRATION_PLAN.md](./SUPABASE_MIGRATION_PLAN.md) para el
+diagnóstico único de sólo lectura, respaldo y aplicación condicionada al esquema real.
+Los cambios de código no aplican migraciones ni despliegan Firebase automáticamente.
+
 ## Preparar Supabase
+
+Antes de aplicar la corrección de seguridad de noviembre, revisa
+[SECURITY_ROLLOUT.md](./SECURITY_ROLLOUT.md). Incluye el orden de despliegue,
+las cuatro migraciones nuevas, pruebas locales y reversión. En proyectos existentes,
+compara primero el esquema y el historial; no vuelvas a ejecutar migraciones antiguas
+sin revisar sus políticas.
 
 1. Crea un proyecto en Supabase.
 2. En **SQL Editor**, ejecuta en orden los archivos de `supabase/migrations`: [`20261014000000_dynamic_database.sql`](./supabase/migrations/20261014000000_dynamic_database.sql), [`20261015000000_push_notifications.sql`](./supabase/migrations/20261015000000_push_notifications.sql) y [`20261016000000_notification_permissions.sql`](./supabase/migrations/20261016000000_notification_permissions.sql).

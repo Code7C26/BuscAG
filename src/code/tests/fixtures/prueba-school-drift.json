@@ -1,0 +1,466 @@
+{
+  "source_plan_fingerprint": "536f8f2268a44689f693a56e94e52f6f0861df99411d85c96564ff3958924708",
+  "source": "Operator supplied Prueba plan, 2026-11-07; only catalog delta, no rows or credentials. All other fields exactly match the school reference.",
+  "functions": [
+    {
+      "name": "can_send_item_message",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "result": "boolean",
+      "schema": "public",
+      "strict": false,
+      "language": "sql",
+      "parallel": "u",
+      "arguments": "p_item_id uuid, p_recipient_id uuid",
+      "body_hash": "2ede6ee8df5fa17f866d26b43a18fc94",
+      "leakproof": false,
+      "volatility": "s",
+      "anon_execute": false,
+      "auth_execute": true,
+      "defaults_hash": null,
+      "service_execute": true,
+      "security_definer": true
+    },
+    {
+      "name": "canonicalize_message_display",
+      "owner": "postgres",
+      "config": [
+        "search_path=\"\""
+      ],
+      "result": "trigger",
+      "schema": "public",
+      "strict": false,
+      "language": "plpgsql",
+      "parallel": "u",
+      "arguments": "",
+      "body_hash": "8648246f336b278b00cc2b74fa3d7940",
+      "leakproof": false,
+      "volatility": "v",
+      "anon_execute": false,
+      "auth_execute": false,
+      "defaults_hash": null,
+      "service_execute": true,
+      "security_definer": true
+    }
+  ],
+  "constraints": [
+    {
+      "name": "alert_preferences_pkey",
+      "table": "alert_preferences",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "0a0db78b5fb70bf8475b3bd434e6842b"
+    },
+    {
+      "name": "alert_preferences_user_id_fkey",
+      "table": "alert_preferences",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "85d8b2f5f0c0f6b4dcb854efb61a8cb1"
+    },
+    {
+      "name": "item_watches_item_id_fkey",
+      "table": "item_watches",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "a1913a824a810534af611061a3101615"
+    },
+    {
+      "name": "item_watches_lat_check",
+      "table": "item_watches",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "0a91f924367301ca7619e77176dcb7e8"
+    },
+    {
+      "name": "item_watches_lng_check",
+      "table": "item_watches",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "b17a20b4376e70ff04b692209bd887f9"
+    },
+    {
+      "name": "item_watches_pkey",
+      "table": "item_watches",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "2bdf35d63e4ea94b6c4a8705996b807d"
+    },
+    {
+      "name": "item_watches_radius_km_check",
+      "table": "item_watches",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "e9181bfe14a0a2be1e952a1a61c4ca50"
+    },
+    {
+      "name": "item_watches_user_id_fkey",
+      "table": "item_watches",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "85d8b2f5f0c0f6b4dcb854efb61a8cb1"
+    },
+    {
+      "name": "match_control_pkey",
+      "table": "match_control",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "7511e9a8e50c073e1d6eff73afcc0f24"
+    },
+    {
+      "name": "match_control_singleton_check",
+      "table": "match_control",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "ae6f6dfbe38290d5bfa8f3e96d1aff91"
+    },
+    {
+      "name": "match_jobs_item_id_fkey",
+      "table": "match_jobs",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "a1913a824a810534af611061a3101615"
+    },
+    {
+      "name": "match_jobs_pkey",
+      "table": "match_jobs",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "2bdf35d63e4ea94b6c4a8705996b807d"
+    },
+    {
+      "name": "match_notices_found_id_fkey",
+      "table": "match_notices",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "bd6a5497f8ad491b626e8d0d56dd2107"
+    },
+    {
+      "name": "match_notices_lost_id_fkey",
+      "table": "match_notices",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "b1df6e184feeea4e832d37e1f4838f02"
+    },
+    {
+      "name": "match_notices_notification_id_fkey",
+      "table": "match_notices",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "3f0129646e8bcca3c09d743b73e67353"
+    },
+    {
+      "name": "match_notices_pkey",
+      "table": "match_notices",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "472a68e658486d9100e1ca469b7a7bdf"
+    },
+    {
+      "name": "match_notices_recipient_id_fkey",
+      "table": "match_notices",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "b783e2b63a15b1475f9c889bf1180cf2"
+    },
+    {
+      "name": "message_receipts_actor_id_fkey",
+      "table": "message_receipts",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "8cf8875c6d7b5df3011e13ada1f2b7f5"
+    },
+    {
+      "name": "message_receipts_message_id_fkey",
+      "table": "message_receipts",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "78aaaf08cb1b95f5fe5942761f820f87"
+    },
+    {
+      "name": "message_receipts_pkey",
+      "table": "message_receipts",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "4a208db41d63e85e81505a7f53e0878a"
+    },
+    {
+      "name": "object_tags_item_id_fkey",
+      "table": "object_tags",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "a1913a824a810534af611061a3101615"
+    },
+    {
+      "name": "object_tags_pkey",
+      "table": "object_tags",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "2bdf35d63e4ea94b6c4a8705996b807d"
+    },
+    {
+      "name": "object_tags_token_key",
+      "table": "object_tags",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "fa62bcb1c4fbdd8cb0e433bffb56c693"
+    },
+    {
+      "name": "publication_receipts_actor_id_fkey",
+      "table": "publication_receipts",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "8cf8875c6d7b5df3011e13ada1f2b7f5"
+    },
+    {
+      "name": "publication_receipts_item_id_fkey",
+      "table": "publication_receipts",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "82efa6567d97c523e53f04ad04597f0c"
+    },
+    {
+      "name": "publication_receipts_pkey",
+      "table": "publication_receipts",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "4a208db41d63e85e81505a7f53e0878a"
+    },
+    {
+      "name": "recovery_confirmations_check",
+      "table": "recovery_confirmations",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "94f0555e44fb2c59351157bd836aeea8"
+    },
+    {
+      "name": "recovery_confirmations_item_id_fkey",
+      "table": "recovery_confirmations",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "a1913a824a810534af611061a3101615"
+    },
+    {
+      "name": "recovery_confirmations_owner_id_fkey",
+      "table": "recovery_confirmations",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "70b9289e2a39c27efd4e724f74f04ccd"
+    },
+    {
+      "name": "recovery_confirmations_partner_id_fkey",
+      "table": "recovery_confirmations",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "7235db213f3d511a03a611bae3d77182"
+    },
+    {
+      "name": "recovery_confirmations_pkey",
+      "table": "recovery_confirmations",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "4c6419b3704337bbfe50f018842a9ad3"
+    },
+    {
+      "name": "recovery_confirmations_state_check",
+      "table": "recovery_confirmations",
+      "schema": "buscag_private",
+      "validated": true,
+      "definition_hash": "4315e7da76fd28cbe2134916d193498f"
+    },
+    {
+      "name": "items_category_check",
+      "table": "items",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "de986cae29f02c46ebc05326cef49054"
+    },
+    {
+      "name": "items_owner_id_fkey",
+      "table": "items",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "ace83fb10286383cd6e80417859b44a6"
+    },
+    {
+      "name": "items_pkey",
+      "table": "items",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "4c6419b3704337bbfe50f018842a9ad3"
+    },
+    {
+      "name": "items_status_check",
+      "table": "items",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "0aac543e892eb1c18a0d6fb158b0fdbb"
+    },
+    {
+      "name": "messages_distinct_participants",
+      "table": "messages",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "bee1e153ee65c168c3f26e40a4f8d5d9"
+    },
+    {
+      "name": "messages_item_id_fkey",
+      "table": "messages",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "a1913a824a810534af611061a3101615"
+    },
+    {
+      "name": "messages_pkey",
+      "table": "messages",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "4c6419b3704337bbfe50f018842a9ad3"
+    },
+    {
+      "name": "messages_recipient_id_fkey",
+      "table": "messages",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "cd566b2ea934a271afdd0c340ae15576"
+    },
+    {
+      "name": "messages_sender_id_fkey",
+      "table": "messages",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "81c6800e005f375ca2216a5bd6af860b"
+    },
+    {
+      "name": "messages_text_check",
+      "table": "messages",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "603b598e3b1da6bb49000a5a31e5f480"
+    },
+    {
+      "name": "notifications_pkey",
+      "table": "notifications",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "4c6419b3704337bbfe50f018842a9ad3"
+    },
+    {
+      "name": "notifications_related_item_id_fkey",
+      "table": "notifications",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "b04485485f191adab6d961466fe61607"
+    },
+    {
+      "name": "notifications_related_user_id_fkey",
+      "table": "notifications",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "05d88f66b1b370026a84a57a4f19ca58"
+    },
+    {
+      "name": "notifications_type_check",
+      "table": "notifications",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "d713cb63413dbd9b7f7cda68226283ff"
+    },
+    {
+      "name": "notifications_user_id_fkey",
+      "table": "notifications",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "f52ea365e97de6e8cafd675b03a940e4"
+    },
+    {
+      "name": "profiles_id_fkey",
+      "table": "profiles",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "0061c9fb3a9abcf2edbcd4a42467a9c3"
+    },
+    {
+      "name": "profiles_pkey",
+      "table": "profiles",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "4c6419b3704337bbfe50f018842a9ad3"
+    },
+    {
+      "name": "push_subscriptions_endpoint_key",
+      "table": "push_subscriptions",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "c54f4973b348bd674601debb2cbe6df3"
+    },
+    {
+      "name": "push_subscriptions_pkey",
+      "table": "push_subscriptions",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "4c6419b3704337bbfe50f018842a9ad3"
+    },
+    {
+      "name": "push_subscriptions_user_id_fkey",
+      "table": "push_subscriptions",
+      "schema": "public",
+      "validated": true,
+      "definition_hash": "f52ea365e97de6e8cafd675b03a940e4"
+    }
+  ],
+  "event_triggers": [
+    {
+      "name": "issue_graphql_placeholder",
+      "tags": [
+        "DROP EXTENSION"
+      ],
+      "event": "sql_drop",
+      "enabled": "O",
+      "function": "extensions.set_graphql_placeholder()"
+    },
+    {
+      "name": "issue_pg_cron_access",
+      "tags": [
+        "CREATE EXTENSION"
+      ],
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "extensions.grant_pg_cron_access()"
+    },
+    {
+      "name": "issue_pg_graphql_access",
+      "tags": [
+        "CREATE EXTENSION"
+      ],
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "extensions.grant_pg_graphql_access()"
+    },
+    {
+      "name": "issue_pg_net_access",
+      "tags": [
+        "CREATE EXTENSION"
+      ],
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "extensions.grant_pg_net_access()"
+    },
+    {
+      "name": "pgrst_ddl_watch",
+      "tags": null,
+      "event": "ddl_command_end",
+      "enabled": "O",
+      "function": "extensions.pgrst_ddl_watch()"
+    },
+    {
+      "name": "pgrst_drop_watch",
+      "tags": null,
+      "event": "sql_drop",
+      "enabled": "O",
+      "function": "extensions.pgrst_drop_watch()"
+    }
+  ]
+}

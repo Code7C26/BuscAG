@@ -1,0 +1,136 @@
+{
+  "version": "1.0.0-rc.1",
+  "validated_code_commit": "cc12f86a05794ae3c112eefe2e865e59ba99b0c7",
+  "branch": "Alexis",
+  "services": "simulated_or_disposable_except_public_read_only_preflight",
+  "production": "not_contacted",
+  "remote_migrations": "not_executed",
+  "firebase": "not_deployed",
+  "local_qa": [
+    {
+      "step": "test",
+      "passed": true,
+      "elapsed_ms": 11289
+    },
+    {
+      "step": "lint",
+      "passed": true,
+      "elapsed_ms": 15897
+    },
+    {
+      "step": "test:v1",
+      "passed": true,
+      "elapsed_ms": 5013
+    },
+    {
+      "step": "test:staging-frontend",
+      "passed": true,
+      "elapsed_ms": 2000
+    },
+    {
+      "step": "test:staging-tls",
+      "passed": true,
+      "elapsed_ms": 824
+    },
+    {
+      "step": "test:release",
+      "passed": true,
+      "elapsed_ms": 962
+    },
+    {
+      "step": "test:staging-live-tools",
+      "passed": true,
+      "elapsed_ms": 10308
+    },
+    {
+      "step": "test:visitors",
+      "passed": true,
+      "elapsed_ms": 282
+    },
+    {
+      "step": "test:staging-worker-tools",
+      "passed": true,
+      "elapsed_ms": 240
+    },
+    {
+      "step": "test:presentation",
+      "passed": true,
+      "elapsed_ms": 823
+    },
+    {
+      "step": "test:staging-tools",
+      "passed": true,
+      "elapsed_ms": 32711
+    },
+    {
+      "step": "test:backend",
+      "passed": true,
+      "elapsed_ms": 39198
+    },
+    {
+      "step": "build",
+      "passed": true,
+      "elapsed_ms": 3567
+    },
+    {
+      "step": "test:e2e",
+      "passed": true,
+      "elapsed_ms": 253510
+    },
+    {
+      "step": "test:pwa-browser",
+      "passed": true,
+      "elapsed_ms": 5979
+    },
+    {
+      "step": "test:presentation-browser",
+      "passed": true,
+      "elapsed_ms": 7678
+    },
+    {
+      "step": "client-security",
+      "passed": true
+    }
+  ],
+  "checks": {
+    "application_tests": 133,
+    "candidate_tests": 11,
+    "e2e_desktop_mobile": 90,
+    "client_security_checks": 18,
+    "typecheck": "passed",
+    "build": "passed",
+    "pwa_browser": "passed",
+    "presentation_browser": "passed"
+  },
+  "staging_public_read_only": {
+    "project": "https://yiarlhpbgkofhhipkfha.supabase.co",
+    "auth_settings": "reachable",
+    "auth_settings_complete": true,
+    "email_enabled": true,
+    "signup_disabled": false,
+    "email_autoconfirm": false,
+    "anonymous_access_denied": [
+      "profiles",
+      "items",
+      "messages",
+      "notifications",
+      "push_subscriptions"
+    ],
+    "rpc_authenticated": "pending",
+    "signup_login_email": "pending",
+    "storage_upload": "pending",
+    "realtime": "pending",
+    "push": "pending"
+  },
+  "pending": [
+    "real_email_delivery_and_redirects",
+    "real_storage_upload",
+    "two_session_chat_realtime_and_notifications",
+    "explicit_deploy_authorization"
+  ],
+  "optional_unavailable_until_migrations": [
+    "secure_recovery",
+    "community_safety"
+  ],
+  "approval": "REQUIRES_LIVE_REHEARSAL_AND_DEPLOY_AUTHORIZATION"
+}

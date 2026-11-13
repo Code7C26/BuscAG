@@ -1,0 +1,35 @@
+{
+  "name": "buscag-the-experiment",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server/index.mjs --dev",
+    "build": "tsc --noEmit && vite build",
+    "start": "node server/index.mjs",
+    "setup": "node server/setup.mjs",
+    "test": "node --import tsx --test tests/*.test.mjs tests/*.test.tsx",
+    "test:portable": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "idb-keyval": "^6.2.2",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "qrcode": "^1.5.4",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "vite": "^6.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "fake-indexeddb": "^6.2.8",
+    "jsdom": "^26.1.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.8.2"
+  }
+}

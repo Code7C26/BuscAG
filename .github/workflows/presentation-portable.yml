@@ -30,9 +30,15 @@ jobs:
       - run: npm run test:portable
       - run: npx playwright install --with-deps chromium
       - run: npm run pack:windows
-      - name: Extract the newly generated ZIP
+        env:
+          BUSCAG_PACKAGE_OUTPUT: generated
+      - name: Verify and extract the published ZIP exactly as downloaded
         shell: pwsh
-        run: Expand-Archive -LiteralPath descargas/BuscAG-Windows-completo.zip -DestinationPath packaged
+        run: |
+          $expected = ((Get-Content descargas/SHA256.txt) -split '\s+')[0].ToLowerInvariant()
+          $actual = (Get-FileHash descargas/BuscAG-Windows-completo.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "Published ZIP checksum mismatch" }
+          Expand-Archive -LiteralPath descargas/BuscAG-Windows-completo.zip -DestinationPath packaged
       - name: Browser QA uses the extracted package, without rebuilding it
         shell: pwsh
         run: |

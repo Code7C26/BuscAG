@@ -1,0 +1,5 @@
+{
+  "path": "src/code/src/utils/matcher.ts",
+  "commit": "cfdca4af4155e0a24c11255286913ad7a55ddbbf",
+  "code": "  // 1. REGLA FUNDAMENTAL: Ambos deben pertenecer a la misma categoría\n  if (!lostItem.category.trim() || lostItem.category !== foundItem.category) {\n    return null;\n  }\n\n  // Si alguno está recuperado o ambos tienen el mismo estado, no hacemos match\n  if (lostItem.status !== 'perdido' || foundItem.status !== 'encontrado') {\n    return null;\n  }"
+}

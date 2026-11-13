@@ -68,20 +68,25 @@ try {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
-  assert.deepEqual(await page.evaluate(()=>caches.keys()),['buscag-offline-v2']);
+  assert.deepEqual(await page.evaluate(()=>caches.keys()),['buscag-offline-v3']);
   const paths = await page.evaluate(async () => {
-    const cache = await caches.open("buscag-offline-v2");
+    const cache = await caches.open("buscag-offline-v3");
     return (await cache.keys()).map((request) => new URL(request.url).pathname);
   });
-  assert.deepEqual(paths, ["/offline.html"]);
+  assert.deepEqual(paths.sort(), ["/offline.html", "/offline.js"]);
   await context.setOffline(true);
   await page.goto("http://127.0.0.1:3002/?code=synthetic-sensitive-callback");
   assert.match(await page.locator("h1").innerText(), /conexión/);
   const persisted = await page.evaluate(async () => {
-    const cache = await caches.open("buscag-offline-v2");
+    const cache = await caches.open("buscag-offline-v3");
     return (await cache.keys()).map((r) => r.url);
   });
-  assert.ok(persisted.every((url) => url.endsWith("/offline.html")));
+  assert.ok(persisted.every((url) => ["/offline.html", "/offline.js"].some(path => url.endsWith(path))));
+  await page.evaluate(() => localStorage.setItem("buscag.language", "en"));
+  await page.reload();
+  assert.equal(await page.locator("html").getAttribute("lang"), "en");
+  assert.match(await page.locator("h1").innerText(), /connection/);
+  assert.equal(await page.locator("a").innerText(), "Try again");
   console.log(
     "PASS: 1 production-mode PWA browser test; offline fallback only, no callback/private caching, no remote requests.",
   );

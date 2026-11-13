@@ -47,11 +47,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
+    "i18next": "^27.1.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.546.0",
     "qrcode": "^1.5.4",
     "react": "^19.0.1",
-    "react-dom": "^19.0.1"
+    "react-dom": "^19.0.1",
+    "react-i18next": "^18.0.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.1",

@@ -1,3 +1,4 @@
+import {t, useLanguage} from "../i18n";
 import {UserFollowButton} from './UserFollowButton';
 import React, { useEffect, useState, useRef } from "react";
 import { communityCall, REPORT_REASONS, ServiceUnavailableError } from "../../lib/community";
@@ -10,6 +11,7 @@ export function SafetyActions({
   targetUserId: string;
   itemId?: string;
 }) {
+  useLanguage();
   const pending=useRef(false);
   const [blocked, setBlocked] = useState(false),
     [following, setFollowing] = useState(false),
@@ -37,14 +39,14 @@ export function SafetyActions({
         setReady(true);
       })
       .catch(error => {if(active)setNotice(error instanceof ServiceUnavailableError
-        ? 'Seguimiento, bloqueos y denuncias todavía no están habilitados. Podés contactar por chat.'
-        : 'No se pudo consultar la disponibilidad de estas opciones. Revisá la conexión.');});
+        ? t("Seguimiento, bloqueos y denuncias todavía no están habilitados. Podés contactar por chat.")
+        : t("No se pudo consultar la disponibilidad de estas opciones. Revisá la conexión."));});
     return () => {
       active = false;
     };
   }, [userId, targetUserId, itemId,revision]);
   if (!targetUserId || targetUserId === userId) return null;
-  if(!ready)return <section aria-label="Seguridad y seguimiento" className="community-tools"><p role="status">{notice||'Consultando opciones de seguridad…'}</p>{notice&&<button onClick={()=>setRevision(v=>v+1)}>Comprobar disponibilidad</button>}</section>;
+  if(!ready)return <section aria-label={t("Seguridad y seguimiento")} className="community-tools"><p role="status">{notice||t("Consultando opciones de seguridad…")}</p>{notice&&<button onClick={()=>setRevision(v=>v+1)}>{t("Comprobar disponibilidad")}</button>}</section>;
   const run = async (action: () => Promise<void>) => {
     if (pending.current) return;
     pending.current=true;
@@ -54,7 +56,7 @@ export function SafetyActions({
       await action();
     } catch {
       setNotice(
-        "No se pudo confirmar la operación. Intentá actualizar o reintentar.",
+        t("No se pudo confirmar la operación. Intentá actualizar o reintentar."),
       );
     } finally {
       pending.current=false;
@@ -63,7 +65,7 @@ export function SafetyActions({
   };
   return (
     <section
-      aria-label="Seguridad y seguimiento"
+      aria-label={t("Seguridad y seguimiento")}
       aria-busy={busy}
       className="community-tools space-y-3"
     >
@@ -81,13 +83,13 @@ export function SafetyActions({
                 setFollowing(next);
                 setNotice(
                   next
-                    ? "Publicación seguida."
-                    : "Dejaste de seguir la publicación.",
+                    ? t("Publicación seguida.")
+                    : t("Dejaste de seguir la publicación."),
                 );
               })
             }
           >
-            {following ? "Dejar de seguir" : "Seguir publicación"}
+            {following ? t("Dejar de seguir") : t("Seguir publicación")}
           </button>
         )}
         <button
@@ -96,8 +98,8 @@ export function SafetyActions({
             if (
               !window.confirm(
                 blocked
-                  ? "¿Desbloquear a esta persona?"
-                  : "¿Bloquear a esta persona? Se conserva el historial y no podrán enviarse mensajes nuevos.",
+                  ? t("¿Desbloquear a esta persona?")
+                  : t("¿Bloquear a esta persona? Se conserva el historial y no podrán enviarse mensajes nuevos."),
               )
             )
               return;
@@ -107,11 +109,11 @@ export function SafetyActions({
                 p_block: !blocked,
               });
               setBlocked(next);
-              setNotice(next ? "Usuario bloqueado." : "Usuario desbloqueado.");
+              setNotice(next ? t("Usuario bloqueado.") : t("Usuario desbloqueado."));
             });
           }}
         >
-          {blocked ? "Desbloquear usuario" : "Bloquear usuario"}
+          {blocked ? t("Desbloquear usuario") : t("Bloquear usuario")}
         </button>
       </div>
       {following && itemId && (
@@ -136,36 +138,28 @@ export function SafetyActions({
                 }
               });
             }}
-          />
-          Avisarme cuando cambie el estado
-        </label>
+          />{t("Avisarme cuando cambie el estado")}</label>
       )}
       <UserFollowButton key={userId+targetUserId} userId={userId} targetId={targetUserId} blocked={blocked}/>
       <details>
-        <summary>Denunciar</summary>
+        <summary>{t("Denunciar")}</summary>
         <div className="space-y-2 mt-2">
           {itemId && (
-            <label className="block">
-              Qué querés denunciar
-              <select value={kind} onChange={(e) => setKind(e.target.value)}>
-                <option value="item">Esta publicación</option>
-                <option value="user">A esta persona</option>
+            <label className="block"> {t("Qué querés denunciar")} <select value={kind} onChange={(e) => setKind(e.target.value)}>
+                <option value="item">{t("Esta publicación")}</option>
+                <option value="user">{t("A esta persona")}</option>
               </select>
             </label>
           )}
-          <label className="block">
-            Motivo
-            <select value={reason} onChange={(e) => setReason(e.target.value)}>
+          <label className="block"> {t("Motivo")} <select value={reason} onChange={(e) => setReason(e.target.value)}>
               {Object.entries(REPORT_REASONS).map(([key, label]) => (
                 <option key={key} value={key}>
-                  {label}
+                  {t(label)}
                 </option>
               ))}
             </select>
           </label>
-          <label className="block">
-            Descripción opcional
-            <textarea
+          <label className="block"> {t("Descripción opcional")} <textarea
               maxLength={2000}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -182,22 +176,17 @@ export function SafetyActions({
                   p_description: description,
                 });
                 setNotice(
-                  "Denuncia registrada para revisión. No elimina automáticamente la publicación.",
+                  t("Denuncia registrada para revisión. No elimina automáticamente la publicación."),
                 );
               })
             }
-          >
-            Enviar denuncia
-          </button>
+          >{t("Enviar denuncia")}</button>
         </div>
       </details>
       {!ready && (
-        <p className="text-xs">
-          Los controles requieren conexión y el servicio de seguridad
-          disponible.
-        </p>
+        <p className="text-xs">{t("Los controles requieren conexión y el servicio de seguridad disponible.")}</p>
       )}
-      {busy ? <p role="status">Guardando cambio…</p> : notice && <p role="status">{notice}</p>}
+      {busy ? <p role="status">{t("Guardando cambio…")}</p> : notice && <p role="status">{t(notice)}</p>}
     </section>
   );
 }

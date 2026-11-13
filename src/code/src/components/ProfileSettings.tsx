@@ -1,3 +1,4 @@
+import {t, useLanguage, locale} from "../i18n";
 import { preparePhoto } from "../utils/preparePhoto";
 import React, { useEffect, useState, useRef } from "react";
 import { communityCall, normalizePhone, validPhone, ServiceUnavailableError } from "../../lib/community";
@@ -10,6 +11,7 @@ export function ProfileSettings({
   userId: string;
   onSaved?: () => void;
 }) {
+  useLanguage();
   const lifecycle = useRef(0);
   const [form, setForm] = useState({
       name: "",
@@ -56,12 +58,12 @@ export function ProfileSettings({
         setReports(reports);
         setRatings(ratings);
         setExtrasReady(true);
-      }catch{if(alive)setNotice('El perfil está disponible. No se pudieron cargar bloqueos, denuncias o valoraciones; no se muestran listados incompletos.');}
+      }catch{if(alive)setNotice(t("El perfil está disponible. No se pudieron cargar bloqueos, denuncias o valoraciones; no se muestran listados incompletos."));}
     };
     void load().catch(() => {
         if (alive)
           setNotice(
-            "No se pudo cargar el perfil. Revisá la conexión e intentá abrir la configuración nuevamente.",
+            t("No se pudo cargar el perfil. Revisá la conexión e intentá abrir la configuración nuevamente."),
           );
       });
     return () => {
@@ -78,7 +80,7 @@ export function ProfileSettings({
       await action();
     } catch {
       if(version===lifecycle.current)setNotice(
-        "No se pudo confirmar el cambio. Revisá los datos y la conexión.",
+        t("No se pudo confirmar el cambio. Revisá los datos y la conexión."),
       );
     } finally {
       if(version===lifecycle.current)setBusy(false);
@@ -89,13 +91,13 @@ export function ProfileSettings({
   return (
     <section
       className="community-tools space-y-4"
-      aria-label="Privacidad y perfil"
+      aria-label={t("Privacidad y perfil")}
     >
-      <h3>Tu perfil y privacidad</h3>
-      {mode==='basic'&&<p role="status">Perfil básico disponible. Compartir teléfono, bloqueos, denuncias y valoraciones todavía no están habilitados. Podés seguir usando el chat.</p>}
+      <h3>{t("Tu perfil y privacidad")}</h3>
+      {mode==='basic'&&<p role="status">{t("Perfil básico disponible. Compartir teléfono, bloqueos, denuncias y valoraciones todavía no están habilitados. Podés seguir usando el chat.")}</p>}
       {(mode==='basic'||(notice&&(!ready||!extrasReady)))&&<div>
-        <button type="button" disabled={busy||mode==='loading'&&!notice} onClick={()=>setRevision(v=>v+1)}>Volver a cargar perfil y funciones</button>
-        <p className="text-xs">Volver a cargar descarta cambios sin guardar.</p>
+        <button type="button" disabled={busy||mode==='loading'&&!notice} onClick={()=>setRevision(v=>v+1)}>{t("Volver a cargar perfil y funciones")}</button>
+        <p className="text-xs">{t("Volver a cargar descarta cambios sin guardar.")}</p>
       </div>}
       <form
         onSubmit={(event) => {
@@ -103,7 +105,7 @@ export function ProfileSettings({
           const phone = normalizePhone(form.phone);
           if (!validPhone(phone) || (form.share_phone && !phone)) {
             setNotice(
-              "Usá un teléfono internacional, por ejemplo +5491123456789, o dejalo vacío y privado.",
+              t("Usá un teléfono internacional, por ejemplo +5491123456789, o dejalo vacío y privado."),
             );
             return;
           }
@@ -125,15 +127,13 @@ export function ProfileSettings({
               p_location: form.location,
             });else throw Error();
             if(version!==lifecycle.current)return;
-            setNotice("Perfil guardado.");
+            setNotice(t("Perfil guardado."));
             onSaved?.();
           });
         }}
       >
         <fieldset disabled={!ready || busy} className="space-y-3">
-          <label className="block">
-            Nombre visible
-            <input
+          <label className="block"> {t("Nombre visible")} <input
               value={form.name}
               minLength={2}
               maxLength={100}
@@ -141,18 +141,14 @@ export function ProfileSettings({
               onChange={(e) => field("name", e.target.value)}
             />
           </label>
-          <label className="block">
-            Foto de perfil (URL HTTPS)
-            <input
+          <label className="block"> {t("Foto de perfil (URL HTTPS)")} <input
               type="url"
               value={form.avatar}
               maxLength={2048}
               onChange={(e) => field("avatar", e.target.value)}
             />
           </label>
-          <label className="block">
-            Subir foto de perfil (JPG, PNG o WebP, hasta 5 MB)
-            <input
+          <label className="block"> {t("Subir foto de perfil (JPG, PNG o WebP, hasta 5 MB)")} <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
               onChange={(event) => {
@@ -164,7 +160,7 @@ export function ProfileSettings({
                   ) ||
                   file.size > 5 * 1024 * 1024
                 ) {
-                  setNotice("Elegí JPG, PNG o WebP de hasta 5 MB.");
+                  setNotice(t("Elegí JPG, PNG o WebP de hasta 5 MB."));
                   return;
                 }
                 const version = lifecycle.current;
@@ -180,14 +176,12 @@ export function ProfileSettings({
                   );
                   if (lifecycle.current !== version) return;
                   field("avatar", url);
-                  setNotice("Foto subida. Guardá el perfil para usarla.");
+                  setNotice(t("Foto subida. Guardá el perfil para usarla."));
                 });
               }}
             />
           </label>
-          {mode==='community'&&<><label className="block">
-            Teléfono privado
-            <input
+          {mode==='community'&&<><label className="block"> {t("Teléfono privado")} <input
               type="tel"
               value={form.phone}
               maxLength={30}
@@ -200,31 +194,23 @@ export function ProfileSettings({
               type="checkbox"
               checked={form.share_phone}
               onChange={(e) => field("share_phone", e.target.checked)}
-            />
-            Compartir mi teléfono con personas con las que intercambié mensajes
-          </label>
-          <p className="text-xs">
-            Privado por defecto. Si autorizás compartirlo, la opción de llamada aparece
-            en el chat después de que ambos hayan enviado mensajes en una misma
-            publicación. No se muestra en el perfil público. Un bloqueo también lo oculta.
-          </p></>}
-          <label className="block">
-            Zona del perfil (privada)
-            <input
+            />{t("Compartir mi teléfono con personas con las que intercambié mensajes")}</label>
+          <p className="text-xs">{t("Privado por defecto. Si autorizás compartirlo, la opción de llamada aparece en el chat después de que ambos hayan enviado mensajes en una misma publicación. No se muestra en el perfil público. Un bloqueo también lo oculta.")}</p></>}
+          <label className="block"> {t("Zona del perfil (privada)")} <input
               value={form.location}
               maxLength={200}
               onChange={(e) => field("location", e.target.value)}
             />
           </label>
           <button type="submit">
-            {busy ? "Guardando…" : mode==='basic' ? 'Guardar perfil' : "Guardar perfil y privacidad"}
+            {busy ? t("Guardando…") : mode==='basic' ? t("Guardar perfil") : t("Guardar perfil y privacidad")}
           </button>
         </fieldset>
       </form>
       {extrasReady&&<><details>
-        <summary>Usuarios bloqueados ({blocks.length})</summary>
+        <summary>{t("Usuarios bloqueados (")}{blocks.length})</summary>
         {blocks.length === 0 ? (
-          <p>No tenés usuarios bloqueados.</p>
+          <p>{t("No tenés usuarios bloqueados.")}</p>
         ) : (
           blocks.map((b) => (
             <p key={b.id}>
@@ -240,18 +226,16 @@ export function ProfileSettings({
                     setBlocks((previous) =>
                       previous.filter((row) => row.id !== b.id),
                     );
-                    setNotice("Usuario desbloqueado.");
+                    setNotice(t("Usuario desbloqueado."));
                   })
                 }
-              >
-                Desbloquear
-              </button>
+              >{t("Desbloquear")}</button>
             </p>
           ))
         )}
       </details>
       <details>
-        <summary>{moderator ? "Moderación" : "Mis denuncias"}</summary>
+        <summary>{moderator ? t("Moderación") : t("Mis denuncias")}</summary>
         <button
           disabled={busy}
           onClick={() =>
@@ -259,14 +243,10 @@ export function ProfileSettings({
               setReports(await communityCall("list_reports")),
             )
           }
-        >
-          Actualizar denuncias
-        </button>
-        {!reports.length && <p>No hay denuncias para mostrar.</p>}
+        >{t("Actualizar denuncias")}</button>
+        {!reports.length && <p>{t("No hay denuncias para mostrar.")}</p>}
         {moderator && (
-          <label className="block">
-            Nota administrativa
-            <textarea
+          <label className="block"> {t("Nota administrativa")} <textarea
               value={note}
               maxLength={2000}
               onChange={(e) => setNote(e.target.value)}
@@ -276,14 +256,14 @@ export function ProfileSettings({
         {reports.map((r) => (
           <article key={r.id} className="border rounded p-2">
             <p>
-              {r.target_kind} · {r.reason} ·{" "}
+              {t(({user:'Persona',item:'Publicación',rating:'Valoración'} as Record<string,string>)[r.target_kind]??r.target_kind)} · {t(r.reason)} ·{" "}
               {
                 (
                   {
-                    open: "Pendiente",
-                    reviewing: "En revisión",
-                    resolved: "Resuelta",
-                    dismissed: "Desestimada",
+                    open: t("Pendiente"),
+                    reviewing: t("En revisión"),
+                    resolved: t("Resuelta"),
+                    dismissed: t("Desestimada"),
                   } as any
                 )[r.state]
               }
@@ -310,7 +290,7 @@ export function ProfileSettings({
                       })
                     }
                   >
-                    {label}
+                    {t(label)}
                   </button>
                 ))}
                 <button
@@ -321,25 +301,23 @@ export function ProfileSettings({
                       ),
                     )
                   }
-                >
-                  Ver auditoría
-                </button>
+                >{t("Ver auditoría")}</button>
               </>
             )}
           </article>
         ))}
         {audit.map((a) => (
           <p key={a.id}>
-            {a.created_at} · {a.from_state} → {a.to_state} · {a.note}
+            {a.created_at} · {t(({open:'Pendiente',reviewing:'En revisión',resolved:'Resuelta',dismissed:'Desestimada'} as Record<string,string>)[a.from_state]??a.from_state)} → {t(({open:'Pendiente',reviewing:'En revisión',resolved:'Resuelta',dismissed:'Desestimada'} as Record<string,string>)[a.to_state]??a.to_state)} · {a.note}
           </p>
         ))}
       </details>
       <details>
-        <summary>Valoraciones recibidas ({ratings.length})</summary>
-        {!ratings.length && <p>Sin valoraciones todavía.</p>}
+        <summary>{t("Valoraciones recibidas (")}{ratings.length})</summary>
+        {!ratings.length && <p>{t("Sin valoraciones todavía.")}</p>}
         {ratings.map((r) => (
           <p key={r.id}>
-            {r.stars}/5 · {new Date(r.created_at).toLocaleDateString()}{" "}
+            {r.stars}/5 · {new Date(r.created_at).toLocaleDateString(locale())}{" "}
             <button
               disabled={busy}
               onClick={() =>
@@ -350,17 +328,15 @@ export function ProfileSettings({
                     p_reason: "otro",
                     p_description: "Solicito revisión de esta valoración.",
                   });
-                  setNotice("Valoración denunciada para revisión.");
+                  setNotice(t("Valoración denunciada para revisión."));
                 })
               }
-            >
-              Denunciar valoración
-            </button>
+            >{t("Denunciar valoración")}</button>
           </p>
         ))}
       </details>
       </>}
-      {notice && <p role="status">{notice}</p>}
+      {notice && <p role="status">{t(notice)}</p>}
     </section>
   );
 }

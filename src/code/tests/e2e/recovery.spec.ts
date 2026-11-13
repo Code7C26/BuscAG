@@ -118,7 +118,7 @@ for (const accept of [true, false])
         .getByRole("button", { name: "Perfil", exact: true })
         .click();
       await expect(
-        second.getByText("Mochila de recuperación", { exact: true }),
+        second.getByText("Mochila de recuperación", { exact: true }).filter({visible:true}),
       ).toHaveCount(0);
       await second
         .getByRole("navigation")

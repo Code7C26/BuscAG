@@ -1,3 +1,4 @@
+import {t, useLanguage} from "../i18n";
 import {SafetyActions} from './SafetyActions';
 import React, { useRef } from "react";
 import { X, Users, Package, ArrowLeft, LockKeyhole } from "lucide-react";
@@ -19,6 +20,7 @@ export function PublicProfileModal({
   onClose: () => void;
   onViewItem: (item: Item) => void;
 }) {
+  useLanguage();
   const dialog = useRef<HTMLDivElement>(null);
   useDialogFocus(Boolean(user), dialog, onClose);
   if (!user) return null;
@@ -39,14 +41,12 @@ export function PublicProfileModal({
         className="public-profile-dialog"
       >
         <header>
-          <button onClick={onClose} aria-label="Volver al objeto">
+          <button onClick={onClose} aria-label={t("Volver al objeto")}>
             <ArrowLeft size={19} />
           </button>
           <span>
-            <Users size={17} />
-            Perfil público
-          </span>
-          <button onClick={onClose} aria-label="Cerrar perfil público">
+            <Users size={17} />{t("Perfil público")}</span>
+          <button onClick={onClose} aria-label={t("Cerrar perfil público")}>
             <X size={20} />
           </button>
         </header>
@@ -56,27 +56,20 @@ export function PublicProfileModal({
             name={user.name}
             className="account-avatar"
           />
-          <span className="eyebrow">UNA PERSONA DE TU COMUNIDAD</span>
+          <span className="eyebrow">{t("UNA PERSONA DE TU COMUNIDAD")}</span>
           <h2 id="public-profile-title">
-            {user.name || "Integrante de BuscAG"}
+            {user.name || t("Integrante de BuscAG")}
           </h2>
           <p>
-            {publications.length} publicaciones visibles ·{" "}
-            {publications.filter((item) => item.status === "recuperado").length}{" "}
-            objetos recuperados
-          </p>
+            {publications.length} {t("publicaciones visibles ·")}{" "}
+            {publications.filter((item) => item.status === "recuperado").length}{" "} {t("objetos recuperados")} </p>
         </div>
-        <p className="px-4 text-sm">{user.ratingCount ? `Valoración: ${user.rating}/5 · ${user.ratingCount} devoluciones valoradas` : 'Sin valoraciones verificadas todavía'}</p>
+        <p className="px-4 text-sm">{user.ratingCount ? t('Valoración: {{rating}}/5 · {{count}} devoluciones valoradas',{rating:user.rating,count:user.ratingCount}) : t("Sin valoraciones verificadas todavía")}</p>
         <p className="public-profile-privacy">
-          <LockKeyhole size={17} />
-          Este perfil muestra sólo información pública. Para contactar, abrí una
-          publicación y usá el chat. Si la persona autorizó compartir su teléfono y
-          ambos intercambiaron mensajes en la misma publicación, la opción de llamada
-          aparece en el chat, no en este perfil.
-        </p>
+          <LockKeyhole size={17} />{t("Este perfil muestra sólo información pública. Para contactar, abrí una publicación y usá el chat. Si la persona autorizó compartir su teléfono y ambos intercambiaron mensajes en la misma publicación, la opción de llamada aparece en el chat, no en este perfil.")}</p>
         <section
           className="public-profile-items"
-          aria-label="Publicaciones de este usuario"
+          aria-label={t("Publicaciones de este usuario")}
         >
           {publications.length ? (
             <div className="account-items">
@@ -87,7 +80,7 @@ export function PublicProfileModal({
           ) : (
             <div className="account-empty">
               <Package size={32} />
-              <p>No hay publicaciones visibles en este momento.</p>
+              <p>{t("No hay publicaciones visibles en este momento.")}</p>
             </div>
           )}
         {currentUserId&&<SafetyActions key={user.id+currentUserId} userId={currentUserId} targetUserId={user.id}/>}

@@ -1,5 +1,7 @@
+import {t, useLanguage} from "../i18n";
 import React, { useEffect, useState } from "react";
 export function ConnectionStatus() {
+  useLanguage();
   const [online, setOnline] = useState(() => navigator.onLine),
     [reconnected, setReconnected] = useState(false);
   useEffect(() => {
@@ -24,13 +26,8 @@ export function ConnectionStatus() {
     };
   }, []);
   return !online ? (
-    <aside role="status" className="connection-status">
-      Sin conexión. Lo que ves puede estar desactualizado. Los mensajes
-      pendientes se reintentarán al volver.
-    </aside>
+    <aside role="status" className="connection-status">{t("Sin conexión. Lo que ves puede estar desactualizado. Los mensajes pendientes se reintentarán al volver.")}</aside>
   ) : reconnected ? (
-    <aside role="status" className="connection-status">
-      Conexión recuperada. Sincronizando datos y mensajes pendientes…
-    </aside>
+    <aside role="status" className="connection-status">{t("Conexión recuperada. Sincronizando datos y mensajes pendientes…")}</aside>
   ) : null;
 }

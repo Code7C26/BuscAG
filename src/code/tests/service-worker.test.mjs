@@ -27,12 +27,14 @@ test('notification click preserves only same-origin links, rejecting invalid and
   }
 });
 
-test('offline worker caches only its public fallback and never handles API or non-navigation requests',async()=>{
+test('offline worker caches only its public fallback and language script and never handles API or other asset requests',async()=>{
  const handlers={},added=[],matched=[];
- const cache={add:async path=>added.push(path),match:async path=>{matched.push(path);return {offline:true};}};
+ const cache={addAll:async paths=>added.push(...paths),match:async path=>{matched.push(path);return {offline:true};}};
  vm.runInNewContext(code,{URL,fetch:async()=>{throw Error('offline');},caches:{open:async()=>cache,keys:async()=>[]},self:{location:{origin:'https://buscag.invalid'},addEventListener:(name,fn)=>handlers[name]=fn}});
- let pending;handlers.install({waitUntil:p=>pending=p});await pending;assert.deepEqual(added,['/offline.html']);
- for(const request of [{method:'POST',mode:'navigate',url:'https://buscag.invalid/'},{method:'GET',mode:'cors',url:'https://project.supabase.co/rest/v1/messages'}])handlers.fetch({request,respondWith(){assert.fail('must not intercept private/API data');}});
+ let pending;handlers.install({waitUntil:p=>pending=p});await pending;assert.deepEqual(added,['/offline.html','/offline.js']);
+ for(const request of [{method:'POST',mode:'navigate',url:'https://buscag.invalid/'},{method:'GET',mode:'cors',url:'https://project.supabase.co/rest/v1/messages'},{method:'GET',mode:'cors',url:'https://buscag.invalid/offline.js?token=private'},{method:'GET',mode:'cors',url:'https://foreign.invalid/offline.js'}])handlers.fetch({request,respondWith(){assert.fail('must not intercept private/API data');}});
  handlers.fetch({request:{method:'GET',mode:'navigate',url:'https://buscag.invalid/?code=private'},respondWith:p=>pending=p});
  assert.deepEqual(await pending,{offline:true});assert.deepEqual(matched,['/offline.html']);
+ handlers.fetch({request:{method:'GET',mode:'cors',url:'https://buscag.invalid/offline.js'},respondWith:p=>pending=p});
+ assert.deepEqual(await pending,{offline:true});assert.deepEqual(matched,['/offline.html','/offline.js']);
 });

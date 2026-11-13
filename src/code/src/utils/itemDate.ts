@@ -1,3 +1,4 @@
+import {t,locale} from '../i18n';
 /** DATE is a calendar day, not UTC midnight. Keep its day in local editors and
  * formatting; timestamp installations retain their original instant/precision. */
 const calendar=/^(\d{4})-(\d{2})-(\d{2})$/;
@@ -40,7 +41,7 @@ export function serializeItemDate(value:string):string {
   return value+(offset>=0?'+':'-')+String(Math.floor(absolute/60)).padStart(2,'0')+':'+String(absolute%60).padStart(2,'0');
 }
 export function formatItemDate(value:string):string {
-  return parseItemDate(value)?.toLocaleDateString('es-ES')??'Fecha no disponible';
+  return parseItemDate(value)?.toLocaleDateString(locale())??t('Fecha no disponible');
 }
 /** Comparable elapsed hours: day-only values have no claimed hour or time zone. */
 export function itemDateTime(value:string):number {

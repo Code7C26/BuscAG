@@ -271,7 +271,7 @@ test("moderator tools record review notes and show a restricted audit trail", as
     .getByLabel("Nota administrativa", { exact: true })
     .fill("Revisión documentada");
   await settings.getByRole("button", { name: "Revisar", exact: true }).click();
-  await expect(settings.getByText(/item · spam · En revisión/)).toBeVisible();
+  await expect(settings.getByText(/Publicación · spam · En revisión/)).toBeVisible();
   await settings
     .getByRole("button", { name: "Ver auditoría", exact: true })
     .click();
@@ -279,6 +279,8 @@ test("moderator tools record review notes and show a restricted audit trail", as
     settings.locator("p").filter({ hasText: "Revisión documentada" }),
   ).toBeVisible();
   expect(actions).toHaveLength(1);
+  expect(actions[0].to_state).toBe("reviewing");
+  expect(actions[0].note).toBe("Revisión documentada");
 });
 test("a linked owner can declare independent recovery only after the pending handover is resolved", async ({
   page,

@@ -1,7 +1,9 @@
+import {t, useLanguage} from "../i18n";
 import React, { useState, useRef } from "react";
 import { supabase } from "../../lib/supabase";
 import { CommunityStats as Stats } from "../../lib/schoolFeatures";
 export function CommunityStats() {
+  useLanguage();
   const revision=useRef(0);
   const [stats, setStats] = useState<Stats | null>(null),
     [error, setError] = useState(""),
@@ -26,7 +28,7 @@ export function CommunityStats() {
       if(version===revision.current)setStats(r.data);
     } catch {
       if(version===revision.current)setError(
-        "Estadísticas no disponibles. Revisá la conexión o intentá más tarde.",
+        t("Estadísticas no disponibles. Revisá la conexión o intentá más tarde."),
       );
     } finally {
       if(version===revision.current)setBusy(false);
@@ -35,29 +37,29 @@ export function CommunityStats() {
   return (
     <section
       className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3"
-      aria-label="Impacto de la comunidad"
+      aria-label={t("Impacto de la comunidad")}
     >
-      <p className="text-xs font-semibold">Estadísticas de la comunidad</p>
+      <p className="text-xs font-semibold">{t("Estadísticas de la comunidad")}</p>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-bold">Cada encuentro cuenta</h2>
+        <h2 className="font-bold">{t("Cada encuentro cuenta")}</h2>
         <button
           className="text-sm font-semibold text-blue-700"
           disabled={busy}
           onClick={load}
         >
           {busy
-            ? "Consultando…"
+            ? t("Consultando…")
             : stats
-              ? "Actualizar estadísticas"
-              : "Ver estadísticas reales"}
+              ? t("Actualizar estadísticas")
+              : t("Ver estadísticas reales")}
         </button>
       </div>
       {error && (
         <p role="status" className="text-sm text-slate-600">
-          {error}
+          {t(error)}
         </p>
       )}
-      {(stats||busy)&&<button className="underline text-sm" onClick={()=>{++revision.current;setStats(null);setBusy(false);setError('');}}>Cerrar estadísticas</button>}
+      {(stats||busy)&&<button className="underline text-sm" onClick={()=>{++revision.current;setStats(null);setBusy(false);setError('');}}>{t("Cerrar estadísticas")}</button>}
       {stats && (
         <>
           <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -68,13 +70,13 @@ export function CommunityStats() {
               ["Recuperados", stats.recovered],
             ].map(([label, value]) => (
               <div key={label} className="rounded-xl bg-slate-50 p-3">
-                <dt className="text-xs text-slate-600">{label}</dt>
+                <dt className="text-xs text-slate-600">{t(String(label))}</dt>
                 <dd className="text-2xl font-bold">{value}</dd>
               </div>
             ))}
           </dl>
-          {stats.publications>stats.lost+stats.found+stats.recovered&&<p className="text-xs">Sin estado informado: {stats.publications-stats.lost-stats.found-stats.recovered}</p>}
-          <p className="text-xs text-slate-500">Publicaciones visibles para tu cuenta; {stats.mine} son tuyas. Los recuperados incluyen declaraciones individuales y devoluciones confirmadas entre personas.</p>
+          {stats.publications>stats.lost+stats.found+stats.recovered&&<p className="text-xs">{t("Sin estado informado:")} {stats.publications-stats.lost-stats.found-stats.recovered}</p>}
+          <p className="text-xs text-slate-500">{t("Publicaciones visibles para tu cuenta;")} {stats.mine} {t("son tuyas. Los recuperados incluyen declaraciones individuales y devoluciones confirmadas entre personas.")}</p>
         </>
       )}
     </section>

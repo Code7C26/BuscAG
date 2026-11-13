@@ -1,3 +1,4 @@
+import {t, useLanguage} from "../i18n";
 /**
  * COMPONENTE DE MAPA INTERACTIVO (MapView.tsx)
  * Renderiza un mapa geográfico interactivo con la librería Leaflet y mosaicos de OpenStreetMap.
@@ -29,6 +30,7 @@ export const MapView: React.FC<MapViewProps> = ({
   userLng,
   onLocateMe
 }) => {
+  const languageRevision=useLanguage();
   const viewportRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     window.scrollTo({top:0,behavior:'instant'});
@@ -50,6 +52,8 @@ export const MapView: React.FC<MapViewProps> = ({
 
   // Objeto seleccionado al pulsar un pin en el mapa (para mostrar la tarjeta flotante inferior)
   const [selectedMapItem, setSelectedMapItem] = useState<Item | null>(null);
+
+  useEffect(()=>{setSelectedMapItem(previous=>previous?items.find(item=>item.id===previous.id)??null:null);},[items]);
 
   // Posición actual del usuario
   const currentLocation = useMemo(() => isValidCoordinates(userLat, userLng)
@@ -95,7 +99,7 @@ export const MapView: React.FC<MapViewProps> = ({
       }).addTo(map);
 
       // 3. Colocamos los botones de zoom (+/-) en la esquina inferior derecha
-      L.control.zoom({ position: 'bottomright' }).addTo(map);
+      L.control.zoom({ position: 'bottomright',zoomInTitle:t('Acercar'),zoomOutTitle:t('Alejar') }).addTo(map);
 
       // Guardamos la referencia del mapa y creamos el grupo donde vivirán los marcadores
       leafletMapRef.current = map;
@@ -117,7 +121,7 @@ export const MapView: React.FC<MapViewProps> = ({
 
   useEffect(() => {
     if (isValidCoordinates(userLat, userLng)) {
-      leafletMapRef.current?.setView([userLat!, userLng!], 15, { animate: true });
+      leafletMapRef.current?.setView([userLat!, userLng!], 15, { animate: !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches });
     }
   }, [userLat, userLng]);
 
@@ -207,12 +211,12 @@ export const MapView: React.FC<MapViewProps> = ({
     // Recorremos los objetos filtrados y creamos un marcador para cada uno
     filteredItems.forEach(item => {
       const icon = createCustomIcon(item);
-      const marker = L.marker([item.lat, item.lng], { icon, title: `${item.title || 'Objeto sin título'} · ${item.status}`, keyboard: true });
+      const marker = L.marker([item.lat, item.lng], { icon, title: `${item.title || t("Objeto sin título")} · ${t(item.status ?? '')}`, keyboard: true });
 
       // Evento de clic en el marcador: selecciona el objeto y desplaza suavemente el mapa
       marker.on('click', () => {
         setSelectedMapItem(item);
-        leafletMapRef.current?.panTo([item.lat, item.lng], { animate: true });
+        leafletMapRef.current?.panTo([item.lat, item.lng], { animate: !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches });
       });
 
       // Añadimos el marcador al grupo
@@ -237,11 +241,11 @@ export const MapView: React.FC<MapViewProps> = ({
         iconAnchor: [10, 10]
       });
 
-      const userMarker = L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon, interactive: false, keyboard: false, title: 'Tu ubicación aproximada' });
-      userMarker.bindTooltip('Mi Ubicación', { permanent: false, direction: 'top' });
+      const userMarker = L.marker([currentLocation.lat, currentLocation.lng], { icon: userIcon, interactive: false, keyboard: false, title: t('Tu ubicación aproximada') });
+      userMarker.bindTooltip(t("Mi Ubicación"), { permanent: false, direction: 'top' });
       markersGroupRef.current?.addLayer(userMarker);
     }
-  }, [items, searchQuery, activeFilter, selectedCategory, currentLocation]);
+  }, [items, searchQuery, activeFilter, selectedCategory, currentLocation,languageRevision]);
 
   /**
    * Manejador del botón "Mi Ubicación":
@@ -252,9 +256,9 @@ export const MapView: React.FC<MapViewProps> = ({
     setLocationError(null);
     try {
       const location = await onLocateMe();
-      leafletMapRef.current?.setView([location.lat, location.lng], 15, { animate: true });
+      leafletMapRef.current?.setView([location.lat, location.lng], 15, { animate: !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'No se pudo obtener la ubicación actual.';
+      const message = error instanceof Error ? error.message : t("No se pudo obtener la ubicación actual.");
       setLocationError(message);
     } finally {
       setLocating(false);
@@ -272,14 +276,14 @@ export const MapView: React.FC<MapViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar objeto en el mapa..."
+            placeholder={t("Buscar objeto en el mapa...")}
             className="w-full bg-transparent text-sm font-medium text-slate-800 placeholder-slate-400 focus:outline-none"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
               className="p-1 hover:bg-slate-100 rounded-full text-slate-400"
-              title="Borrar búsqueda"
+              title={t("Borrar búsqueda")}
             >
               <X className="w-4 h-4" />
             </button>
@@ -295,9 +299,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 ? 'bg-blue-600 text-white'
                 : 'bg-white/95 text-slate-700 hover:bg-white border border-slate-200'
             }`}
-          >
-            Todos
-          </button>
+          >{t("Todos")}</button>
           <button
             onClick={() => setActiveFilter('encontrados')}
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition cursor-pointer ${
@@ -305,9 +307,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 ? 'bg-green-600 text-white'
                 : 'bg-white/95 text-slate-700 hover:bg-white border border-slate-200'
             }`}
-          >
-            🟢 Encontrados
-          </button>
+          >{t("🟢 Encontrados")}</button>
           <button
             onClick={() => setActiveFilter('perdidos')}
             className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shadow-sm transition cursor-pointer ${
@@ -315,9 +315,7 @@ export const MapView: React.FC<MapViewProps> = ({
                 ? 'bg-red-600 text-white'
                 : 'bg-white/95 text-slate-700 hover:bg-white border border-slate-200'
             }`}
-          >
-            🔴 Perdidos
-          </button>
+          >{t("🔴 Perdidos")}</button>
           <button
             onClick={() => {
               setActiveFilter('cerca');
@@ -328,15 +326,13 @@ export const MapView: React.FC<MapViewProps> = ({
                 ? 'bg-blue-600 text-white'
                 : 'bg-white/95 text-slate-700 hover:bg-white border border-slate-200'
             }`}
-          >
-            📍 Cerca de mí
-          </button>
+          >{t("📍 Cerca de mí")}</button>
         </div>
       </div>
 
       {locationError && (
         <div role="alert" className="absolute top-28 left-3 right-3 z-20 mx-auto max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 shadow">
-          {locationError}
+          {t(locationError)}
         </div>
       )}
 
@@ -348,10 +344,10 @@ export const MapView: React.FC<MapViewProps> = ({
         onClick={handleLocateMe}
         disabled={locating}
         className="absolute bottom-6 right-4 z-20 flex items-center gap-2 px-4 py-2.5 bg-white text-blue-600 hover:bg-blue-50 font-bold text-xs rounded-full shadow-lg border border-slate-200 transition active:scale-95 cursor-pointer"
-        title="Centrar en mi ubicación actual"
+        title={t("Centrar en mi ubicación actual")}
       >
         <Navigation className={`w-4 h-4 ${locating ? 'animate-spin text-blue-600' : 'fill-blue-600'}`} />
-        <span className="hidden sm:inline">{locating ? 'Ubicando...' : 'Mi ubicación'}</span>
+        <span className="hidden sm:inline">{locating ? t("Ubicando...") : t("Mi ubicación")}</span>
       </button>
 
       {/* Tarjeta flotante con vista previa del objeto seleccionado al hacer clic en un pin */}
@@ -362,7 +358,7 @@ export const MapView: React.FC<MapViewProps> = ({
             <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100 border border-slate-200">
               <img
                 src={selectedMapItem.imageUrl}
-                alt={selectedMapItem.title||'Publicación sin título'}
+                alt={selectedMapItem.title||t("Publicación sin título")}
                 className="w-full h-full object-cover"
               />
               <span className={`absolute top-1 left-1 w-2.5 h-2.5 rounded-full ${
@@ -376,19 +372,19 @@ export const MapView: React.FC<MapViewProps> = ({
                 <span className={`text-[10px] font-bold uppercase tracking-wider ${
                   selectedMapItem.status === 'perdido' ? 'text-red-600' : 'text-green-600'
                 }`}>
-                  {selectedMapItem.status === 'perdido' ? 'Perdido' : selectedMapItem.status==='encontrado'?'Encontrado':selectedMapItem.status==='recuperado'?'Recuperado':'Estado sin informar'}
+                  {selectedMapItem.status === 'perdido' ? t("Perdido") : selectedMapItem.status==='encontrado'?t("Encontrado"):selectedMapItem.status==='recuperado'?t("Recuperado"):t("Estado sin informar")}
                 </span>
                 <button
                   onClick={() => setSelectedMapItem(null)}
                   className="p-1 hover:bg-slate-100 rounded-full text-slate-400 cursor-pointer"
-                  title="Cerrar vista previa"
+                  title={t("Cerrar vista previa")}
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
 
               <h4 className="font-bold text-slate-900 text-xs truncate leading-snug">
-                {selectedMapItem.title||'Publicación sin título'}
+                {selectedMapItem.title||t("Publicación sin título")}
               </h4>
               <p className="text-[11px] text-slate-500 truncate mt-0.5">
                 📍 {selectedMapItem.locationName}
@@ -398,9 +394,7 @@ export const MapView: React.FC<MapViewProps> = ({
               <button
                 onClick={() => onSelectPublication(selectedMapItem)}
                 className="mt-2 w-full flex items-center justify-center gap-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition cursor-pointer"
-              >
-                Ver publicación
-                <ChevronRight className="w-3.5 h-3.5" />
+              > {t("Ver publicación")} <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

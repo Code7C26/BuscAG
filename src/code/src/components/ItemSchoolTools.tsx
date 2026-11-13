@@ -1,3 +1,4 @@
+import {t, useLanguage, locale} from "../i18n";
 import { SearchZoneMap } from "./SearchZoneMap";
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
@@ -15,6 +16,7 @@ export function ItemSchoolTools({
   item: Item;
   userId: string;
 }) {
+  useLanguage();
   const [open, setOpen] = useState(false),
     [ready, setReady] = useState(false),
     [worker, setWorker] = useState(false),
@@ -77,7 +79,7 @@ export function ItemSchoolTools({
     run(async () => {
       const zone = watchZoneError(Number(lat), Number(lng), Number(radius));
       if (!lat.trim() || !lng.trim() || !radius.trim() || zone) {
-        setNotice(zone || "Completá la zona de búsqueda.");
+        setNotice(zone || t("Completá la zona de búsqueda."));
         return;
       }
       const r = await supabase!.rpc("set_item_watch", {
@@ -92,8 +94,8 @@ export function ItemSchoolTools({
         setWatch(r.data);
         setNotice(
           enabled
-            ? "Vigilancia guardada. La recepción de avisos depende de la disponibilidad del servicio."
-            : "Vigilancia desactivada.",
+            ? t("Vigilancia guardada. La recepción de avisos depende de la disponibilidad del servicio.")
+            : t("Vigilancia desactivada."),
         );
       }
     });
@@ -102,7 +104,7 @@ export function ItemSchoolTools({
       if (
         rotate &&
         !window.confirm(
-          "¿Reemplazar el QR? El código anterior dejará de funcionar.",
+          t("¿Reemplazar el QR? El código anterior dejará de funcionar."),
         )
       )
         return;
@@ -116,7 +118,7 @@ export function ItemSchoolTools({
       if (!enabled) {
         setQr("");
         setUrl("");
-        setNotice("Etiqueta revocada.");
+        setNotice(t("Etiqueta revocada."));
         return;
       }
       const link = objectTagUrl(window.location.origin, r.data.token);
@@ -130,14 +132,14 @@ export function ItemSchoolTools({
         setUrl(link);
         setQr(image);
         setNotice(
-          "Etiqueta lista para compartir. El código anterior deja de funcionar si lo reemplazás.",
+          t("Etiqueta lista para compartir. El código anterior deja de funcionar si lo reemplazás."),
         );
       }
     });
   return (
     <section
       className="rounded-2xl border border-slate-200 p-4 space-y-4"
-      aria-label="Herramientas del objeto"
+      aria-label={t("Herramientas del objeto")}
     >
       <button
         type="button"
@@ -147,23 +149,17 @@ export function ItemSchoolTools({
           setOpen(!open);
           if (!open && !ready) void load();
         }}
-      >
-        Alertas y QR
-      </button>
+      >{t("Alertas y QR")}</button>
       {open && (
         <>
-          <p className="text-xs text-slate-600">
-            Administrá las alertas de este objeto y su etiqueta de contacto.
-          </p>
+          <p className="text-xs text-slate-600">{t("Administrá las alertas de este objeto y su etiqueta de contacto.")}</p>
           {notice && (
             <p role="status" className="text-sm">
-              {notice}
+              {t(notice)}
             </p>
           )}
           {!ready && !busy && (
-            <button onClick={load} className="underline text-sm">
-              Reintentar disponibilidad
-            </button>
+            <button onClick={load} className="underline text-sm">{t("Reintentar disponibilidad")}</button>
           )}
           {ready && (
             <>
@@ -188,21 +184,14 @@ export function ItemSchoolTools({
                       }
                     });
                   }}
-                />
-                Recibir avisos internos de coincidencias en mi cuenta
-              </label>
-              <p className="text-xs text-slate-600">
-                Avisos de coincidencias:{" "}
+                />{t("Recibir avisos internos de coincidencias en mi cuenta")}</label>
+              <p className="text-xs text-slate-600"> {t("Avisos de coincidencias:")}{" "}
                 {worker
-                  ? "habilitados; la recepción puede demorar"
-                  : "todavía no habilitados"}
-                . La zona no hace seguimiento continuo de GPS.
-              </p>
+                  ? t("habilitados; la recepción puede demorar")
+                  : t("todavía no habilitados")} {t(". La zona no hace seguimiento continuo de GPS.")} </p>
               {owner && item.status === "perdido" && (
                 <fieldset disabled={busy} className="space-y-3">
-                  <legend className="font-semibold text-sm">
-                    Modo alerta y zona de búsqueda
-                  </legend>
+                  <legend className="font-semibold text-sm">{t("Modo alerta y zona de búsqueda")}</legend>
                   <SearchZoneMap
                     lat={Number(lat)}
                     lng={Number(lng)}
@@ -216,16 +205,14 @@ export function ItemSchoolTools({
                   <p className="text-xs">
                     {watch
                       ? watch.enabled
-                        ? "Vigilancia activada"
-                        : "Vigilancia desactivada"
-                      : "Sin zona personalizada: se conserva el matching general existente."}
+                        ? t("Vigilancia activada")
+                        : t("Vigilancia desactivada")
+                      : t("Sin zona personalizada: se conserva el matching general existente.")}
                   </p>
-                  {watch&&<p className="text-xs">Radio: {watch.radius_km} km · Centro: {watch.lat.toFixed(4)}, {watch.lng.toFixed(4)}{watch.updated_at&&` · Actualización: ${new Date(watch.updated_at).toLocaleString()}`}</p>}
-                  <p className="text-xs">La zona filtra los avisos de coincidencias compatibles. No es una alerta GPS continua ni un aviso de proximidad independiente.</p>
+                  {watch&&<p className="text-xs">{t("Radio:")} {watch.radius_km} {t("km · Centro:")} {watch.lat.toFixed(4)}, {watch.lng.toFixed(4)}{watch.updated_at&&t(' · Actualización: {{date}}',{date:new Date(watch.updated_at).toLocaleString(locale())})}</p>}
+                  <p className="text-xs">{t("La zona filtra los avisos de coincidencias compatibles. No es una alerta GPS continua ni un aviso de proximidad independiente.")}</p>
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="text-sm">
-                      Latitud
-                      <input
+                    <label className="text-sm"> {t("Latitud")} <input
                         type="number"
                         step="any"
                         min="-90"
@@ -235,9 +222,7 @@ export function ItemSchoolTools({
                         className="w-full border rounded-lg p-2"
                       />
                     </label>
-                    <label className="text-sm">
-                      Longitud
-                      <input
+                    <label className="text-sm"> {t("Longitud")} <input
                         type="number"
                         step="any"
                         min="-180"
@@ -248,9 +233,7 @@ export function ItemSchoolTools({
                       />
                     </label>
                   </div>
-                  <label className="block text-sm">
-                    Radio de búsqueda (km)
-                    <input
+                  <label className="block text-sm"> {t("Radio de búsqueda (km)")} <input
                       type="number"
                       min="0.1"
                       max="100"
@@ -266,71 +249,53 @@ export function ItemSchoolTools({
                       setLat(String(item.lat));
                       setLng(String(item.lng));
                     }}
-                  >
-                    Usar ubicación de esta publicación
-                  </button>
+                  >{t("Usar ubicación de esta publicación")}</button>
                   <div className="flex flex-wrap gap-3">
                     <button
                       className="rounded-xl bg-blue-600 px-3 py-2 text-sm text-white"
                       onClick={() => updateWatch(true)}
-                    >
-                      Activar o actualizar vigilancia
-                    </button>
-                    {watch?.enabled&&<button className="rounded-xl border px-3 py-2 text-sm" onClick={()=>updateWatch(false)}>Desactivar vigilancia</button>}
+                    >{t("Activar o actualizar vigilancia")}</button>
+                    {watch?.enabled&&<button className="rounded-xl border px-3 py-2 text-sm" onClick={()=>updateWatch(false)}>{t("Desactivar vigilancia")}</button>}
                   </div>
                 </fieldset>
               )}
               {owner && (
                 <div className="space-y-3">
-                  <h3 className="font-semibold">Etiqueta QR privada</h3>
-                  <p className="text-xs text-slate-600">
-                    La página pública sólo muestra categoría y estado. Para
-                    contactar se necesita una cuenta. No pegues el QR en un
-                    lugar que revele información sensible.
-                  </p>
+                  <h3 className="font-semibold">{t("Etiqueta QR privada")}</h3>
+                  <p className="text-xs text-slate-600">{t("La página pública sólo muestra categoría y estado. Para contactar se necesita una cuenta. No pegues el QR en un lugar que revele información sensible.")}</p>
                   <div className="flex flex-wrap gap-3">
                     <button
                       disabled={busy}
                       onClick={() => tag(true)}
                       className="underline text-sm"
-                    >
-                      Generar QR
-                    </button>
+                    >{t("Generar QR")}</button>
                     <button
                       disabled={busy}
                       onClick={() => tag(true, true)}
                       className="underline text-sm"
-                    >
-                      Reemplazar QR
-                    </button>
+                    >{t("Reemplazar QR")}</button>
                     <button
                       disabled={busy}
                       onClick={() => tag(false)}
                       className="underline text-sm"
-                    >
-                      Revocar QR
-                    </button>
+                    >{t("Revocar QR")}</button>
                   </div>
                   {qr && (
                     <>
                       <img
                         src={qr}
-                        alt="Código QR para contactar por este objeto"
+                        alt={t("Código QR para contactar por este objeto")}
                         className="w-56 max-w-full"
                       />
                       <a
                         href={qr}
                         download="buscag-objeto-qr.png"
                         className="block underline text-sm"
-                      >
-                        Descargar QR
-                      </a>
+                      >{t("Descargar QR")}</a>
                       <a
                         href={url}
                         className="block underline text-sm break-all"
-                      >
-                        Abrir página de la etiqueta
-                      </a>
+                      >{t("Abrir página de la etiqueta")}</a>
                     </>
                   )}
                 </div>
@@ -338,9 +303,7 @@ export function ItemSchoolTools({
             </>
           )}
           {busy && (
-            <p role="status" className="text-sm">
-              Consultando Supabase…
-            </p>
+            <p role="status" className="text-sm">{t("Consultando Supabase…")}</p>
           )}
         </>
       )}

@@ -1,3 +1,4 @@
+import {t,locale} from '../i18n';
 import { parseItemDate } from './itemDate';
 /**
  * UTILIDADES GEOGRÁFICAS Y DE FORMATEO DE TIEMPO
@@ -60,34 +61,14 @@ function deg2rad(deg: number): number {
  * @returns Texto relativo en español
  */
 export function formatTimeAgo(dateString: string): string {
-  try {
-    const date = parseItemDate(dateString);
-    const now = new Date();
-    const diffInMs = now.getTime() - date.getTime(); // Diferencia en milisegundos
-    
-    // Si la fecha no es válida, retornamos el texto original
-    if (isNaN(diffInMs)) return dateString;
-
-    // Conversión a minutos, horas y días
-    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-
-    // Condiciones graduales de visualización
-    if (diffInMinutes < 1) return 'Hace un momento';
-    if (diffInMinutes < 60) return `Hace ${diffInMinutes} min`;
-    if (diffInHours < 24) return `Hace ${diffInHours} h`;
-    if (diffInDays === 1) return 'Ayer';
-    if (diffInDays < 7) return `Hace ${diffInDays} días`;
-
-    // Si tiene más de una semana, mostramos día y mes en español
-    return date.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short'
-    });
-  } catch {
-    return dateString;
-  }
+  const date=parseItemDate(dateString); if(!date) return t('Fecha no disponible');
+  const seconds=Math.round((date.getTime()-Date.now())/1000);
+  const relative=new Intl.RelativeTimeFormat(locale(),{numeric:'auto'});
+  if(Math.abs(seconds)<60) return t('Hace un momento');
+  if(Math.abs(seconds)<3600) return relative.format(Math.round(seconds/60),'minute');
+  if(Math.abs(seconds)<86400) return relative.format(Math.round(seconds/3600),'hour');
+  if(Math.abs(seconds)<604800) return relative.format(Math.round(seconds/86400),'day');
+  return date.toLocaleDateString(locale(),{day:'numeric',month:'short'});
 }
 
 /**

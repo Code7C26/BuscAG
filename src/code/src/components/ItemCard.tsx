@@ -1,3 +1,5 @@
+import {categoryLabel} from "../i18n";
+import {t, useLanguage} from "../i18n";
 import {Avatar} from './Avatar';
 /**
  * TARJETA DE PUBLICACIÓN EN LA PANTALLA PRINCIPAL (ItemCard.tsx)
@@ -24,6 +26,7 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore, currentUserId }) => {
+  useLanguage();
   // Banderas para simplificar la lógica condicional de colores y estados
   const [failedImage,setFailedImage]=useState<string|null>(null);
   const isLost = item.status === 'perdido';
@@ -44,27 +47,23 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore, currentUse
       <div className="item-card__image relative aspect-4/3 w-full overflow-hidden">
         {item.imageUrl&&failedImage!==item.imageUrl?(<img
           src={item.imageUrl||undefined}
-          alt={item.title||'Publicación sin título'}
+          alt={item.title||t("Publicación sin título")}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy" onError={()=>setFailedImage(item.imageUrl)}
-        />): <div className="image-placeholder"><Tag size={36} aria-hidden="true"/><span>Foto no disponible</span></div>}
+        />): <div className="image-placeholder"><Tag size={36} aria-hidden="true"/><span>{t("Foto no disponible")}</span></div>}
 
         {/* Insignias de Estado superiores: 🔴 Perdido / 🟢 Encontrado / 🟢 Recuperado */}
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
           {isLost ? (
             <span className="status-pill status-pill--lost inline-flex items-center text-white">
-              <AlertCircle className="w-3.5 h-3.5" />
-              Perdido
-            </span>
+              <AlertCircle className="w-3.5 h-3.5" />{t("Perdido")}</span>
           ) : isRecovered ? (
             <span className="status-pill status-pill--recovered inline-flex items-center text-white">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Recuperado
-            </span>
+              <CheckCircle2 className="w-3.5 h-3.5" />{t("Recuperado")}</span>
           ) : (
             <span className="status-pill status-pill--found inline-flex items-center text-white">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              {item.status==='encontrado'?'Encontrado':'Estado sin informar'}
+              {item.status==='encontrado'?t("Encontrado"):t("Estado sin informar")}
             </span>
           )}
 
@@ -80,7 +79,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore, currentUse
         <div className="absolute top-3 right-3">
           <span className="item-card__category inline-flex items-center gap-1 px-2.5 py-1 text-[11px] text-white">
             <Tag className="w-3 h-3" />
-            {item.category||'Categoría sin informar'}
+            {categoryLabel(item.category)||t("Categoría sin informar")}
           </span>
         </div>
       </div>
@@ -88,10 +87,10 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore, currentUse
       {/* Cuerpo de la tarjeta con título, descripción y metadatos */}
       <div className="item-card__content flex-1 flex flex-col justify-between gap-3">
         <div>
-          {currentUserId && <p className="text-xs font-semibold">{item.user.id === currentUserId ? 'Tu publicación' : 'Publicación de otra persona'}</p>}
+          {currentUserId && <p className="text-xs font-semibold">{item.user.id === currentUserId ? t("Tu publicación") : t("Publicación de otra persona")}</p>}
           {/* Nombre / Título del objeto */}
           <h3 className="item-card__title text-base leading-snug line-clamp-1 group-hover:text-blue-700 transition-colors">
-            {item.title||'Publicación sin título'}
+            {item.title||t("Publicación sin título")}
           </h3>
 
           {/* Fragmento de la descripción (truncado a 2 líneas para mantener uniformidad) */}
@@ -106,8 +105,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore, currentUse
               <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <span className="truncate">{item.locationName}</span>
               {item.distanceKm !== undefined && (
-                <span className="ml-auto text-[11px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                  a {item.distanceKm} km
+                <span className="ml-auto text-[11px] font-semibold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded"> {t("a")} {item.distanceKm} km
                 </span>
               )}
             </div>
@@ -129,18 +127,17 @@ export const ItemCard: React.FC<ItemCardProps> = ({ item, onViewMore, currentUse
               <span className="text-xs font-semibold text-slate-800 truncate block leading-tight flex items-center gap-1">
                 {item.user.name}
                 {item.user.verified && (
-                  <ShieldCheck className="w-3 h-3 text-blue-500 inline shrink-0" aria-label="Usuario verificado" />
+                  <ShieldCheck className="w-3 h-3 text-blue-500 inline shrink-0" aria-label={t("Usuario verificado")} />
                 )}
               </span>
               <span className="text-[10px] text-slate-500 block leading-tight">
-                {item.user.ratingCount ? `⭐ ${item.user.rating}/5` : 'Sin valoraciones'}
+                {item.user.ratingCount ? `⭐ ${item.user.rating}/5` : t("Sin valoraciones")}
               </span>
             </div>
           </div>
 
           {/* Botón de acción 'Ver más' */}
-          <span aria-hidden="true" className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition shrink-0">
-            Ver más <ChevronRight className="w-3.5 h-3.5" />
+          <span aria-hidden="true" className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition shrink-0"> {t("Ver más")} <ChevronRight className="w-3.5 h-3.5" />
           </span>
         </div>
       </div>

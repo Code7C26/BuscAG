@@ -40,7 +40,7 @@ async function bundle(entry, app = false) {
       if (app) {
         p.onResolve({ filter: /\/lib\/database$/ }, () => ({ path: 'data', namespace: 'mock' }));
         p.onResolve({ filter: /\/lib\/push$/ }, () => ({ path: 'push', namespace: 'mock' }));
-        p.onResolve({ filter: /^\.\/components\// }, args => ({ path: args.path.split('/').pop(), namespace: 'view' }));
+        p.onResolve({ filter: /^\.\/components\// }, args => args.path.endsWith('/Section') ? undefined : ({ path: args.path.split('/').pop(), namespace: 'view' }));
       }
       p.onLoad({ filter: /.*/, namespace: 'mock' }, args => ({ contents: sources[args.path], loader: 'js' }));
       p.onLoad({ filter: /.*/, namespace: 'view' }, args => ({ contents: `import React from 'react';

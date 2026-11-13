@@ -1,3 +1,4 @@
+import {LanguageProvider} from './i18n';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
@@ -12,7 +13,7 @@ createRoot(document.getElementById('root')!, {
   onUncaughtError: () => reportError('app_uncaught_error'),
 }).render(
   <StrictMode>
-    <AppErrorBoundary><PresentationNotice enabled={import.meta.env.MODE==='presentation'}/><App /></AppErrorBoundary>
+    <LanguageProvider><AppErrorBoundary><PresentationNotice enabled={import.meta.env.MODE==='presentation'}/><App /></AppErrorBoundary></LanguageProvider>
   </StrictMode>,
 );
 

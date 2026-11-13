@@ -34,15 +34,19 @@ self.addEventListener('notificationclick', event => {
   }));
 });
 
-// One public document only; no API, image, HTML shell or private response caching.
-const OFFLINE_CACHE='buscag-offline-v2';
+// Only the public fallback and its language script; no API, image, app shell or private response caching.
+const OFFLINE_CACHE='buscag-offline-v3';
 self.addEventListener('install',event=>{
-  event.waitUntil(caches.open(OFFLINE_CACHE).then(cache=>cache.add('/offline.html')));
+  event.waitUntil(caches.open(OFFLINE_CACHE).then(cache=>cache.addAll(['/offline.html','/offline.js'])));
 });
 self.addEventListener('activate',event=>{
   event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('buscag-offline-')&&key!==OFFLINE_CACHE).map(key=>caches.delete(key)))));
 });
 self.addEventListener('fetch',event=>{
+  if(event.request.method==='GET'&&event.request.url===new URL('/offline.js',self.location.origin).href){
+    event.respondWith(caches.open(OFFLINE_CACHE).then(cache=>cache.match('/offline.js')).then(response=>response||fetch(event.request)));
+    return;
+  }
   if(event.request.method!=='GET'||event.request.mode!=='navigate'||new URL(event.request.url).origin!==self.location.origin)return;
   // Do not preserve callback tokens, paths or requests in a cache.
   event.respondWith(fetch(event.request).catch(()=>caches.open(OFFLINE_CACHE).then(cache=>cache.match('/offline.html'))));

@@ -1,3 +1,4 @@
+import {t, useLanguage, locale} from "../i18n";
 import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import type { Recovery } from "../../lib/schoolFeatures";
@@ -21,6 +22,7 @@ export function RecoveryPanel({
   userId: string;
   onChanged: () => void;
 }) {
+  useLanguage();
   const [context, setContext] = useState<Context | null>(null);
   const [partner, setPartner] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,7 +69,7 @@ export function RecoveryPanel({
           setContext(null);
           setLoading(false);
           setNotice(
-            unavailable.current?'Recuperación segura no disponible todavía. La confirmación requiere la actualización pendiente del servicio. No se cambió el estado.':"Recuperación segura no disponible. Revisá la conexión o intentá más tarde. No se cambió el estado.",
+            unavailable.current?t("Recuperación segura no disponible todavía. La confirmación requiere la actualización pendiente del servicio. No se cambió el estado."):t("Recuperación segura no disponible. Revisá la conexión o intentá más tarde. No se cambió el estado."),
           );
         }
       });
@@ -98,7 +100,7 @@ export function RecoveryPanel({
     } catch {
       if (lifecycle === epoch.current)
         setNotice(
-          "No se pudo confirmar el resultado. Actualizá para consultar el estado; reintentar no duplica una confirmación completada.",
+          t("No se pudo confirmar el resultado. Actualizá para consultar el estado; reintentar no duplica una confirmación completada."),
         );
     } finally {
       pending.current = false;
@@ -111,53 +113,48 @@ export function RecoveryPanel({
   const waiting = context?.requests.some((r) => r.state === "pending");
   return (
     <section
-      aria-label="Recuperación segura"
+      aria-label={t("Recuperación segura")}
       aria-busy={busy||loading}
       className="recovery-tools rounded-2xl border p-4"
     >
-      <h3 className="font-bold">Recuperación segura</h3>
+      <h3 className="font-bold">{t("Recuperación segura")}</h3>
       <p className="text-sm" role="status">
-        {loading ? "Consultando recuperación…" : context?.requests.some((r) => r.disputed)
-          ? "Devolución disputada"
+        {loading ? t("Consultando recuperación…") : context?.requests.some((r) => r.disputed)
+          ? t("Devolución disputada")
           : context?.status === "recuperado"
-            ? "Recuperado"
+            ? t("Recuperado")
             : waiting
-              ? "Pendiente de confirmación"
+              ? t("Pendiente de confirmación")
               : request?.state === "cancelled"
-                ? "Confirmación rechazada"
-              : context ? "La publicación sigue activa hasta confirmar la recuperación." : item.status==='recuperado' ? 'Recuperado · estado registrado en la publicación' : 'La publicación conserva su estado. No hay una nueva confirmación registrada.'}
+                ? t("Confirmación rechazada")
+              : context ? t("La publicación sigue activa hasta confirmar la recuperación.") : item.status==='recuperado' ? t("Recuperado · estado registrado en la publicación") : t("La publicación conserva su estado. No hay una nueva confirmación registrada.")}
       </p>
       {notice && (
         <p role="alert" className="text-sm">
-          {notice}
+          {t(notice)}
         </p>
       )}
       {request && (
         <p className="text-xs">
           {request.mode === "individual"
-            ? "Recuperación declarada por el propietario, sin confirmación bilateral."
-            : `${request.owner_name || "El propietario"} solicita la confirmación a ${request.partner_name || "la contraparte vinculada"}.`}
+            ? t("Recuperación declarada por el propietario, sin confirmación bilateral.")
+            : t('{{owner}} solicita la confirmación a {{partner}}.',{owner:request.owner_name||t('El propietario'),partner:request.partner_name||t('Contraparte')})}
         </p>
       )}
       {context?.requests.some((r) => r.disputed) && (
-        <p className="text-xs">
-          Hay un problema informado para revisión. Se conserva el historial y el
-          estado previamente confirmado.
-        </p>
+        <p className="text-xs">{t("Hay un problema informado para revisión. Se conserva el historial y el estado previamente confirmado.")}</p>
       )}
       {owner && active && !waiting && context && (
         <>
           {context.partners.length > 0 ? (
             <>
-              <label className="block text-sm">
-                Contraparte vinculada
-                <select
+              <label className="block text-sm"> {t("Contraparte vinculada")} <select
                   className="block border rounded p-2"
                   value={partner}
                   disabled={busy}
                   onChange={(e) => setPartner(e.target.value)}
                 >
-                  <option value="">Elegí una persona</option>
+                  <option value="">{t("Elegí una persona")}</option>
                   {context.partners.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -165,17 +162,14 @@ export function RecoveryPanel({
                   ))}
                 </select>
               </label>
-              <p className="text-xs">
-                Tu solicitud confirma tu parte. La otra persona debe aceptar
-                después de la entrega. Esto afecta sólo a esta publicación.
-              </p>
+              <p className="text-xs">{t("Tu solicitud confirma tu parte. La otra persona debe aceptar después de la entrega. Esto afecta sólo a esta publicación.")}</p>
               <button
                 disabled={busy || !partner}
                 className="underline"
                 onClick={() => {
                   if (
                     !window.confirm(
-                      "¿Confirmás que la devolución ocurrió y querés solicitar la confirmación de esta persona?",
+                      t("¿Confirmás que la devolución ocurrió y querés solicitar la confirmación de esta persona?"),
                     )
                   )
                     return;
@@ -187,29 +181,20 @@ export function RecoveryPanel({
                     if (r.error) throw r.error;
                   });
                 }}
-              >
-                Solicitar confirmación de devolución
-              </button>
+              >{t("Solicitar confirmación de devolución")}</button>
             </>
           ) : context.requests.some((r) => r.mode !== "individual") ? (
-            <p className="text-sm">
-              Hay historial bilateral sin contraparte disponible. Podés
-              registrar una recuperación por cuenta propia, diferenciada de la
-              devolución bilateral.
-            </p>
+            <p className="text-sm">{t("Hay historial bilateral sin contraparte disponible. Podés registrar una recuperación por cuenta propia, diferenciada de la devolución bilateral.")}</p>
           ) : (
             <>
-              <p className="text-xs">
-                Sin contraparte vinculada. La recuperación será declarada por
-                vos, sin confirmación bilateral.
-              </p>
+              <p className="text-xs">{t("Sin contraparte vinculada. La recuperación será declarada por vos, sin confirmación bilateral.")}</p>
               <button
                 disabled={busy}
                 className="underline"
                 onClick={() => {
                   if (
                     !window.confirm(
-                      "¿Confirmás explícitamente que recuperaste el objeto sin contraparte? Esta declaración no es una confirmación bilateral.",
+                      t("¿Confirmás explícitamente que recuperaste el objeto sin contraparte? Esta declaración no es una confirmación bilateral."),
                     )
                   )
                     return;
@@ -221,9 +206,7 @@ export function RecoveryPanel({
                     if (r.error) throw r.error;
                   });
                 }}
-              >
-                Confirmar recuperación sin contraparte
-              </button>
+              >{t("Confirmar recuperación sin contraparte")}</button>
             </>
           )}
         </>
@@ -235,15 +218,9 @@ export function RecoveryPanel({
         (context.partners.length > 0 ||
           context.requests.some((r) => r.mode === "bilateral")) && (
           <details>
-            <summary>Lo recuperé por mi cuenta</summary>
-            <p className="text-xs">
-              Esta declaración no confirma una devolución entre personas ni
-              permite valorar a la contraparte. El historial anterior se
-              conserva.
-            </p>
-            <label className="block text-sm">
-              Cómo lo recuperaste sin una devolución bilateral
-              <textarea
+            <summary>{t("Lo recuperé por mi cuenta")}</summary>
+            <p className="text-xs">{t("Esta declaración no confirma una devolución entre personas ni permite valorar a la contraparte. El historial anterior se conserva.")}</p>
+            <label className="block text-sm"> {t("Cómo lo recuperaste sin una devolución bilateral")} <textarea
                 minLength={20}
                 maxLength={500}
                 className="w-full border rounded p-2"
@@ -256,7 +233,7 @@ export function RecoveryPanel({
               onClick={() => {
                 if (
                   !window.confirm(
-                    "¿Confirmás que recuperaste el objeto por tu cuenta, sin una devolución bilateral? Se registrará tu declaración explícita.",
+                    t("¿Confirmás que recuperaste el objeto por tu cuenta, sin una devolución bilateral? Se registrará tu declaración explícita."),
                   )
                 )
                   return;
@@ -267,9 +244,7 @@ export function RecoveryPanel({
                   });
                 });
               }}
-            >
-              Confirmar recuperación por cuenta propia
-            </button>
+            >{t("Confirmar recuperación por cuenta propia")}</button>
           </details>
         )}
       {context?.requests
@@ -281,7 +256,7 @@ export function RecoveryPanel({
                 disabled={busy}
                 className="underline"
                 onClick={() => {
-                  if (!window.confirm("¿Confirmás que la entrega ya ocurrió?"))
+                  if (!window.confirm(t("¿Confirmás que la entrega ya ocurrió?")))
                     return;
                   void run(async () => {
                     const result = await supabase!.rpc(
@@ -291,9 +266,7 @@ export function RecoveryPanel({
                     if (result.error) throw result.error;
                   });
                 }}
-              >
-                Confirmar entrega realizada
-              </button>
+              >{t("Confirmar entrega realizada")}</button>
             )}
             <button
               disabled={busy}
@@ -301,7 +274,7 @@ export function RecoveryPanel({
               onClick={() => {
                 if (
                   !window.confirm(
-                    "¿Rechazar o cancelar esta solicitud? La publicación seguirá activa.",
+                    t("¿Rechazar o cancelar esta solicitud? La publicación seguirá activa."),
                   )
                 )
                   return;
@@ -315,61 +288,59 @@ export function RecoveryPanel({
               }}
             >
               {r.partner_id === userId
-                ? "Rechazar confirmación"
-                : "Cancelar solicitud"}
+                ? t("Rechazar confirmación")
+                : t("Cancelar solicitud")}
             </button>
           </div>
         ))}
       {request && (
         <details>
-          <summary>Historial, valoración y problemas</summary>
+          <summary>{t("Historial, valoración y problemas")}</summary>
           {context?.requests.map((r) => (
             <article key={r.id} className="recovery-history-entry border rounded text-sm">
               <p>
-                {r.owner_name || "Propietario"} →{" "}
+                {r.owner_name || t("Propietario")} →{" "}
                 {r.partner_name ||
                   (r.mode === "individual"
-                    ? "Recuperación individual"
-                    : "Contraparte")}{" "}
+                    ? t("Recuperación individual")
+                    : t("Contraparte"))}{" "}
                 ·{" "}
                 {r.state === "confirmed"
-                  ? "Confirmada"
+                  ? t("Confirmada")
                   : r.state === "cancelled"
-                    ? "Rechazada o cancelada"
-                    : "Pendiente"}
+                    ? t("Rechazada o cancelada")
+                    : t("Pendiente")}
               </p>
               {r.resolved_name && (
-                <p>Resolución registrada por {r.resolved_name}</p>
+                <p>{t("Resolución registrada por")} {r.resolved_name}</p>
               )}
               {r.owner_statement && (
-                <p>Declaración del propietario: {r.owner_statement}</p>
+                <p>{t("Declaración del propietario:")} {r.owner_statement}</p>
               )}
-              <p>
-                Solicitud:{" "}
+              <p> {t("Solicitud:")}{" "}
                 {r.created_at
-                  ? new Date(r.created_at).toLocaleString()
-                  : "Fecha no disponible"}
+                  ? new Date(r.created_at).toLocaleString(locale())
+                  : t("Fecha no disponible")}
                 {r.resolved_at &&
-                  ` · Resolución: ${new Date(r.resolved_at).toLocaleString()}`}
+                  t(' · Resolución: {{date}}',{date:new Date(r.resolved_at).toLocaleString(locale())})}
               </p>
               {r.state === "confirmed" &&
                 r.mode === "bilateral" &&
                 (r.my_rating ? (
-                  <p>Tu valoración: {r.my_rating}/5</p>
+                  <p>{t("Tu valoración:")} {r.my_rating}/5</p>
                 ) : (
                   <>
                     <label className="recovery-rating-field">
-                      <span>Calificación</span>
+                      <span>{t("Calificación")}</span>
                       <select
-                        aria-label="Calificación de la devolución"
+                        aria-label={t("Calificación de la devolución")}
                         value={stars}
                         onChange={(e) => setStars(e.target.value)}
                       >
-                        <option value="">Elegí de 1 a 5 estrellas</option>
+                        <option value="">{t("Elegí de 1 a 5 estrellas")}</option>
                         {[1, 2, 3, 4, 5].map((n) => (
                           <option key={n} value={n}>
-                            {n} estrellas
-                          </option>
+                            {n} {t("estrellas")} </option>
                         ))}
                       </select>
                     </label>
@@ -383,9 +354,7 @@ export function RecoveryPanel({
                           });
                         })
                       }
-                    >
-                      Confirmar valoración
-                    </button>
+                    >{t("Confirmar valoración")}</button>
                   </>
                 ))}
               {r.mode === "bilateral" && (
@@ -393,7 +362,7 @@ export function RecoveryPanel({
                   disabled={busy || r.disputed}
                   onClick={() => {
                     const description = window.prompt(
-                      "Describí el problema de la devolución (hasta 2000 caracteres).",
+                      t("Describí el problema de la devolución (hasta 2000 caracteres)."),
                     );
                     if (!description?.trim()) return;
                     void run(async () => {
@@ -405,9 +374,7 @@ export function RecoveryPanel({
                       });
                     });
                   }}
-                >
-                  Informar un problema
-                </button>
+                >{t("Informar un problema")}</button>
               )}
             </article>
           ))}
@@ -418,7 +385,7 @@ export function RecoveryPanel({
         className="underline text-sm"
         onClick={() => context ? void run(() => refresh()) : setRevision(v=>v+1)}
       >
-        {context ? 'Actualizar confirmaciones' : 'Volver a consultar recuperación'}
+        {context ? t("Actualizar confirmaciones") : t("Volver a consultar recuperación")}
       </button>
     </section>
   );

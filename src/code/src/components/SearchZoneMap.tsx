@@ -1,3 +1,4 @@
+import {t, useLanguage} from "../i18n";
 import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import { isValidCoordinates } from "../utils/geo";
@@ -12,6 +13,7 @@ export function SearchZoneMap({
   radius: number;
   onSelect: (lat: number, lng: number) => void;
 }) {
+  useLanguage();
   const container = useRef<HTMLDivElement>(null),
     map = useRef<L.Map | null>(null),
     marker = useRef<L.Circle | null>(null),
@@ -61,14 +63,11 @@ export function SearchZoneMap({
   }, [lat, lng, radius]);
   return (
     <div>
-      <p className="text-xs text-slate-600 mb-2">
-        Tocá el mapa para elegir el centro. También podés editar las coordenadas
-        con teclado.
-      </p>
+      <p className="text-xs text-slate-600 mb-2">{t("Tocá el mapa para elegir el centro. También podés editar las coordenadas con teclado.")}</p>
       <div
         ref={container}
         role="region"
-        aria-label="Mapa de la zona de búsqueda"
+        aria-label={t("Mapa de la zona de búsqueda")}
         className="h-48 rounded-xl relative z-0 border overflow-hidden"
       />
     </div>

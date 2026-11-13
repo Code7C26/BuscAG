@@ -1,3 +1,5 @@
+import {LanguageSelector} from '../i18n';
+import {t, useLanguage} from "../i18n";
 import {Avatar} from './Avatar';
 import React from 'react';
 import { Bell, Compass, Sparkles, MessageSquare } from 'lucide-react';
@@ -23,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectTab,
   activeTab
 }) => {
+  useLanguage();
   return (
     <header className="app-header sticky top-0 z-30 border-b">
       <div className="app-header__inner mx-auto px-4 flex items-center justify-between gap-3">
@@ -38,12 +41,12 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="font-semibold text-lg tracking-tight text-slate-900 block leading-none">
               Busc<span className="text-blue-800">AG</span>
             </span>
-            <span className="text-[11px] text-slate-500 font-medium tracking-wide">Encontrarnos hace la diferencia</span>
+            <span className="text-[11px] text-slate-500 font-medium tracking-wide">{t("Encontrarnos hace la diferencia")}</span>
           </div>
         </button>
 
         {/* Quick Navigation / Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2"><LanguageSelector/>
           {/* Matches quick link on header */}
           <button
             onClick={() => onSelectTab('matches')}
@@ -52,10 +55,10 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'bg-slate-800 text-white'
                 : 'bg-slate-100/80 hover:bg-slate-200 text-slate-700'
             }`}
-            title="Ver coincidencias automáticas"
+            title={t("Ver coincidencias automáticas")}
           >
             <Sparkles className={`w-3.5 h-3.5 ${activeTab === 'matches' ? 'text-amber-300 fill-amber-300' : 'text-blue-600'}`} />
-            <span>Coincidencias</span>
+            <span>{t("Coincidencias")}</span>
             {matchesCount > 0 && (
               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
                 activeTab === 'matches' ? 'bg-white/20 text-white' : 'bg-amber-500 text-white'
@@ -65,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </button>
 
-          <button className="hidden sm:flex gap-1 items-center text-xs font-bold p-2" onClick={()=>onSelectTab('messages')} aria-label="Abrir mensajes"><MessageSquare className="w-4 h-4"/>Mensajes</button>
+          <button className="hidden sm:flex gap-1 items-center text-xs font-bold p-2" onClick={()=>onSelectTab('messages')} aria-label={t("Abrir mensajes")}><MessageSquare className="w-4 h-4"/>{t("Mensajes")}</button>
           {/* Notifications button */}
           <button
             onClick={onOpenNotifications}
@@ -74,8 +77,8 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'bg-blue-50 text-blue-600 font-semibold'
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
-            title="Notificaciones"
-            aria-label="Notificaciones"
+            title={t("Notificaciones")}
+            aria-label={t("Abrir notificaciones")}
           >
             <Bell className="w-5 h-5" />
             {unreadNotificationsCount > 0 && (

@@ -119,7 +119,7 @@ test("real browser login, feed, filters, publish dialog and keyboard navigation 
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Notificaciones", exact: true })
+    .getByRole("button", { name: "Notificaciones", exact: true }).first()
     .click();
   await expect(page.locator(".notifications-view")).toBeVisible();
   await page.screenshot({
@@ -248,7 +248,7 @@ test("two isolated browser accounts exchange messages and update recipient read 
     await second.goto("/");
     await login(second, "second@example.invalid");
     await second
-      .getByRole("button", { name: "Notificaciones", exact: true })
+      .getByRole("button", { name: "Notificaciones", exact: true }).first()
       .click();
     await second.getByText("Nuevo mensaje de prueba", { exact: true }).click();
     await expect(

@@ -1,3 +1,4 @@
+import {t, useLanguage} from "../i18n";
 import React from "react";
 import { Bell, MessageSquare, MapPin, CheckCircle2 } from "lucide-react";
 import type { NotificationItem } from "../types";
@@ -13,26 +14,23 @@ export function NotificationsView({
   onSelectNotification: (notification: NotificationItem) => void;
   onMarkRead?: (notification: NotificationItem) => void;
 }) {
+  useLanguage();
   return (
     <section className="notifications-view max-w-2xl mx-auto px-4 py-6 pb-24 space-y-4">
       <header className="flex justify-between gap-3">
         <div>
-          <h1 className="font-bold text-xl">Notificaciones y alertas</h1>
-          <p className="text-xs text-slate-600">
-            Mensajes, coincidencias y novedades de tus publicaciones
-          </p>
+          <h1 className="font-bold text-xl">{t("Notificaciones y alertas")}</h1>
+          <p className="text-xs text-slate-600">{t("Mensajes, coincidencias y novedades de tus publicaciones")}</p>
         </div>
         {notifications.some((n) => !n.read) && (
-          <button className="text-sm underline" onClick={onMarkAllRead}>
-            Marcar leídas
-          </button>
+          <button className="text-sm underline" onClick={onMarkAllRead}>{t("Marcar leídas")}</button>
         )}
       </header>
       {!notifications.length ? (
         <div className="community-tools text-center">
           <Bell className="w-8 h-8 mx-auto" />
-          <p>No tienes notificaciones pendientes</p>
-          <p className="text-xs">Te avisaremos cuando haya novedades.</p>
+          <p>{t("No tienes notificaciones pendientes")}</p>
+          <p className="text-xs">{t("Te avisaremos cuando haya novedades.")}</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border divide-y overflow-hidden">
@@ -55,11 +53,11 @@ export function NotificationsView({
                   )}
                 </span>
                 <span className="flex-1 min-w-0">
-                  <strong className="block text-sm">{notice.title}</strong>
-                  <span className="block text-xs mt-1">{notice.message}</span>
+                  <strong className="block text-sm">{t(notice.title)}</strong>
+                  <span className="block text-xs mt-1">{t(notice.message)}</span>
                   <span className="block text-xs text-slate-500 mt-1">
                     {formatTimeAgo(notice.date)}
-                    {!notice.read ? " · Sin leer" : ""}
+                    {!notice.read ? t(" · Sin leer") : ""}
                   </span>
                 </span>
               </button>
@@ -67,10 +65,8 @@ export function NotificationsView({
                 <button
                   className="ml-14 mb-3 text-xs underline"
                   onClick={() => onMarkRead(notice)}
-                  aria-label={`Marcar como leída: ${notice.title}`}
-                >
-                  Marcar como leída
-                </button>
+                  aria-label={t('Marcar como leída: {{title}}',{title:notice.title})}
+                >{t("Marcar como leída")}</button>
               )}
             </article>
           ))}

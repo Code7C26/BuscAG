@@ -1,3 +1,5 @@
+import {categoryLabel} from "../i18n";
+import {t, useLanguage} from "../i18n";
 import {SafetyActions} from './SafetyActions';
 import { RecoveryPanel } from './RecoveryPanel';
 import {ItemSchoolTools} from './ItemSchoolTools';
@@ -49,6 +51,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
   allItems = [],
   onOpenMatchComparison
 }) => {
+  useLanguage();
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocus(Boolean(item), dialogRef, onClose);
 
@@ -133,23 +136,23 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
 
   return (
     <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Detalle de publicación" tabIndex={-1} className="modal-dialog w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={t("Detalle de publicación")} tabIndex={-1} className="modal-dialog w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200 relative">
         
 
         {/* Imagen principal superior con botón de cierre e insignias de estado */}
         <div className="relative aspect-16/10 max-h-[30vh] shrink-0 w-full bg-slate-900 overflow-hidden">
           {item.imageUrl&&failedImage!==item.imageUrl?<img
             src={item.imageUrl}
-            alt={item.title||'Publicación sin título'}
+            alt={item.title||t("Publicación sin título")}
             onError={()=>setFailedImage(item.imageUrl)}
             className="w-full h-full object-cover"
-          />:<div className="image-placeholder bg-slate-50"><Tag size={36} aria-hidden="true"/><span>Foto no disponible</span></div>}
+          />:<div className="image-placeholder bg-slate-50"><Tag size={36} aria-hidden="true"/><span>{t("Foto no disponible")}</span></div>}
 
           {/* Botón flotante para cerrar el modal */}
           <button
             onClick={onClose}
             className="absolute top-3 right-3 p-2 bg-slate-900/60 hover:bg-slate-900/80 text-white rounded-full backdrop-blur-md transition cursor-pointer"
-            title="Cerrar"
+            title={t("Cerrar")}
           >
             <X className="w-5 h-5" />
           </button>
@@ -158,25 +161,21 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           <div className="absolute bottom-3 left-3 flex gap-2">
             {isLost ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-red-600 text-white shadow-lg">
-                <AlertCircle className="w-4 h-4" />
-                Objeto Perdido
-              </span>
+                <AlertCircle className="w-4 h-4" />{t("Objeto Perdido")}</span>
             ) : isRecovered ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-600 text-white shadow-lg">
-                <CheckCircle2 className="w-4 h-4" />
-                Objeto Recuperado
-              </span>
+                <CheckCircle2 className="w-4 h-4" />{t("Objeto Recuperado")}</span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-green-600 text-white shadow-lg">
                 <CheckCircle2 className="w-4 h-4" />
-                {item.status==='encontrado'?'Objeto Encontrado':'Estado sin informar'}
+                {item.status==='encontrado'?t("Objeto Encontrado"):t("Estado sin informar")}
               </span>
             )}
 
             {/* Insignia de categoría */}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-slate-900/80 text-white backdrop-blur-md">
               <Tag className="w-3.5 h-3.5" />
-              {item.category||'Categoría sin informar'}
+              {categoryLabel(item.category)||t("Categoría sin informar")}
             </span>
           </div>
         </div>
@@ -186,7 +185,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           {/* Título y Recompensa */}
           <div>
             <h2 className="font-extrabold text-slate-900 text-xl sm:text-2xl leading-tight">
-              {item.title||'Publicación sin título'}
+              {item.title||t("Publicación sin título")}
             </h2>
 
             {item.reward && isLost && (
@@ -198,9 +197,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
 
           {/* Descripción */}
           <div>
-            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-              Descripción del Objeto
-            </h4>
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">{t("Descripción del Objeto")}</h4>
             <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-line font-normal bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
               {item.description}
             </p>
@@ -211,7 +208,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 flex items-start gap-2.5">
               <MapPin className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <span className="text-[11px] font-bold text-blue-700 block uppercase">Lugar</span>
+                <span className="text-[11px] font-bold text-blue-700 block uppercase">{t("Lugar")}</span>
                 <span className="text-xs font-semibold text-slate-800 block">{item.locationName}</span>
               </div>
             </div>
@@ -219,7 +216,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-start gap-2.5">
               <Clock className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
               <div>
-                <span className="text-[11px] font-bold text-slate-500 block uppercase">Fecha de reporte</span>
+                <span className="text-[11px] font-bold text-slate-500 block uppercase">{t("Fecha de reporte")}</span>
                 <span className="text-xs font-semibold text-slate-800 block">
                   {formatTimeAgo(item.date)} ({formatItemDate(item.date)})
                 </span>
@@ -230,8 +227,8 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           {/* Mini Mapa de Localización */}
           <div>
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-              <span>📍 Mapa de Ubicación</span>
-              <span className="text-[11px] text-blue-600 lowercase font-medium">Ubicación aproximada</span>
+              <span>{t("📍 Mapa de Ubicación")}</span>
+              <span className="text-[11px] text-blue-600 lowercase font-medium">{t("Ubicación aproximada")}</span>
             </h4>
             <div className="h-44 rounded-2xl overflow-hidden border border-slate-200 shadow-inner relative">
               <div ref={miniMapRef} className="w-full h-full z-0" />
@@ -247,14 +244,12 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                     <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                      Coincidencias Automáticas Sugeridas
-                      <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-600 text-white font-bold">
+                    <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-1.5"> {t("Coincidencias Automáticas Sugeridas")} <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-600 text-white font-bold">
                         {suggestedMatches.length}
                       </span>
                     </h4>
                     <p className="text-[11px] text-slate-500">
-                      {isLost ? 'Objetos encontrados de la misma categoría compatibles' : 'Reportes de pérdida de la misma categoría compatibles'}
+                      {isLost ? t("Objetos encontrados de la misma categoría compatibles") : t("Reportes de pérdida de la misma categoría compatibles")}
                     </p>
                   </div>
                 </div>
@@ -278,11 +273,10 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className={`px-2 py-0.2 rounded-full text-[10px] font-extrabold ${
                               match.score >= 75 ? 'bg-emerald-500 text-white' : 'bg-blue-600 text-white'
-                            }`}>
-                              Índice {match.score}/100
+                            }`}> {t("Índice")} {match.score}/100
                             </span>
                             <span className="text-[10px] font-semibold text-slate-500">
-                              {counterpart.status === 'encontrado' ? '🟢 Encontrado' : '🔴 Perdido'}
+                              {counterpart.status === 'encontrado' ? t("🟢 Encontrado") : t("🔴 Perdido")}
                             </span>
                           </div>
                           <p className="font-bold text-slate-900 text-xs truncate mt-0.5">
@@ -300,9 +294,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                           <button
                             onClick={() => onOpenMatchComparison(match)}
                             className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 transition cursor-pointer flex items-center gap-1"
-                          >
-                            Comparar
-                            <ChevronRight className="w-3.5 h-3.5" />
+                          > {t("Comparar")} <ChevronRight className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -322,17 +314,17 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               <Avatar src={item.user.avatar} name={item.user.name} className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs"/>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-900 text-sm">{item.user.name} · {isOwner ? 'Tu publicación' : 'Publicación de otra persona'}</span>
+                  <span className="font-bold text-slate-900 text-sm">{item.user.name} · {isOwner ? t("Tu publicación") : t("Publicación de otra persona")}</span>
                   {item.user.verified && (
-                    <ShieldCheck className="w-4 h-4 text-blue-600" aria-label="Usuario verificado" />
+                    <ShieldCheck className="w-4 h-4 text-blue-600" aria-label={t("Usuario verificado")} />
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
-                  <span>{item.user.ratingCount ? `⭐ ${item.user.rating}/5 (${item.user.ratingCount})` : 'Sin valoraciones'}</span>
+                  <span>{item.user.ratingCount ? `⭐ ${item.user.rating}/5 (${item.user.ratingCount})` : t("Sin valoraciones")}</span>
                   <span>•</span>
                   <span>{item.user.location}</span>
                 </div>
-                {onViewProfile&&item.user.id&&<button type="button" className="public-profile-link" onClick={()=>onViewProfile(item.user)}>Ver perfil público <ChevronRight size={14}/></button>}
+                {onViewProfile&&item.user.id&&<button type="button" className="public-profile-link" onClick={()=>onViewProfile(item.user)}>{t("Ver perfil público")} <ChevronRight size={14}/></button>}
               </div>
             </div>
 
@@ -346,15 +338,13 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
           {isOwner ? (
             <div className="w-full flex gap-2">
               {onEditItem && <button type="button" onClick={() => onEditItem(item)}
-                className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0">Editar</button>}
+                className="item-card__more inline-flex items-center gap-1 px-3 py-1.5 text-xs transition cursor-pointer shrink-0">{t("Editar")}</button>}
               {!isRecovered && (
                 <button
                   onClick={() => dialogRef.current?.querySelector('[aria-label="Recuperación segura"]')?.scrollIntoView({ behavior: 'smooth' })}
                   className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl font-bold text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  Gestionar recuperación
-                </button>
+                  <CheckCircle2 className="w-4 h-4" />{t("Gestionar recuperación")}</button>
               )}
 
               {onDeleteItem && (
@@ -366,14 +356,12 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
                   }}
                   className="px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5"
                 >
-                  <Trash2 className="w-4 h-4" />
-                  Eliminar
-                </button>
+                  <Trash2 className="w-4 h-4" />{t("Eliminar")}</button>
               )}
             </div>
           ) : (
             <>
-            {isRecovered&&!messages.some(message=>message.itemId===item.id&&((message.senderId===currentUser.id&&message.receiverId===item.user.id)||(message.receiverId===currentUser.id&&message.senderId===item.user.id))) ? <p className="text-sm font-semibold">Objeto recuperado · se conserva en el historial</p> : (<button
+            {isRecovered&&!messages.some(message=>message.itemId===item.id&&((message.senderId===currentUser.id&&message.receiverId===item.user.id)||(message.receiverId===currentUser.id&&message.senderId===item.user.id))) ? <p className="text-sm font-semibold">{t("Objeto recuperado · se conserva en el historial")}</p> : (<button
               onClick={() => {
                 onClose();
                 onContact(item);
@@ -381,7 +369,7 @@ export const ItemDetailModal: React.FC<ItemDetailModalProps> = ({
               className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white rounded-2xl font-extrabold text-sm sm:text-base shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2 cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 fill-current" />
-              {isRecovered?'Abrir conversación existente':'Contactar al Publicador'}
+              {isRecovered?t("Abrir conversación existente"):t("Contactar al Publicador")}
             </button>)}
             </>
           )}

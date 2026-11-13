@@ -1,3 +1,5 @@
+import {LanguageSelector} from '../i18n';
+import {t, useLanguage} from "../i18n";
 import React, { useState, useRef, useEffect } from "react";
 import { Compass, LoaderCircle, ArrowUpRight } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -15,6 +17,7 @@ export const AuthView: React.FC<{
   onRecovered?: () => void;
   notice?: string;
 }> = ({ recovery = false, onRecovered, notice = "" }) => {
+  useLanguage();
   const mailDeadlines = useRef(new Map<string, number>());
   const [clock, setClock] = useState(Date.now());
   const ticking = [...mailDeadlines.current.values()].some(
@@ -51,17 +54,17 @@ export const AuthView: React.FC<{
     if (busy.current) return;
     if (!supabase) {
       setErrorMessage(
-        "Falta configurar VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY.",
+        t("Falta configurar VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY."),
       );
       return;
     }
 
     if ((mode === "signup" || mode === "update") && password.length < 8) {
-      setErrorMessage("La nueva contraseña debe tener al menos 8 caracteres.");
+      setErrorMessage(t("La nueva contraseña debe tener al menos 8 caracteres."));
       return;
     }
     if (mode === "signup" && !name.trim()) {
-      setErrorMessage("Completa tu nombre.");
+      setErrorMessage(t("Completa tu nombre."));
       return;
     }
     const mailKey = mode + ":" + email.trim().toLowerCase();
@@ -181,52 +184,46 @@ export const AuthView: React.FC<{
     : 0;
   const label =
     mode === "signin"
-      ? "Iniciar sesión"
+      ? t("Iniciar sesión")
       : mode === "signup"
-        ? "Crear cuenta"
+        ? t("Crear cuenta")
         : mode === "update"
-          ? "Guardar nueva contraseña"
+          ? t("Guardar nueva contraseña")
           : mode === "reset"
-            ? "Recuperar contraseña"
-            : "Reenviar confirmación";
+            ? t("Recuperar contraseña")
+            : t("Reenviar confirmación");
 
   return (
     <main className="auth-view min-h-screen flex items-center justify-center px-4 py-10">
-      <aside className="auth-story" aria-label="Comunidad BuscAG">
+      <aside className="auth-story" aria-label={t("Comunidad BuscAG")}>
         <span className="brand-wordmark">
           BuscAG
           <span>
             <ArrowUpRight size={25} aria-hidden="true" />
           </span>
         </span>
-        <span className="eyebrow">OBJETOS PERDIDOS. PERSONAS CONECTADAS.</span>
-        <h2>
-          Las cosas vuelven.
-          <br />
-          <em>Cuando nos encontramos.</em>
+        <span className="eyebrow">{t("OBJETOS PERDIDOS. PERSONAS CONECTADAS.")}</span>
+        <h2> {t("Las cosas vuelven.")} <br />
+          <em>{t("Cuando nos encontramos.")}</em>
         </h2>
-        <p>
-          Un pequeño gesto puede cambiar el día de alguien. Publicá, conectá y
-          ayudá a que cada objeto vuelva a casa.
-        </p>
+        <p>{t("Un pequeño gesto puede cambiar el día de alguien. Publicá, conectá y ayudá a que cada objeto vuelva a casa.")}</p>
         <div className="auth-story__note">
           <Compass aria-hidden="true" />
-          <span>Tu comunidad, más cerca.</span>
+          <span>{t("Tu comunidad, más cerca.")}</span>
         </div>
       </aside>
       <section className="auth-card w-full max-w-md border p-7 sm:p-9">
-        <div className="flex flex-col items-center text-center mb-7">
+        <LanguageSelector/><div className="flex flex-col items-center text-center mb-7">
           <div className="auth-brand-mark w-14 h-14 rounded-2xl text-white flex items-center justify-center mb-4">
             <Compass className="w-7 h-7" />
           </div>
-          <h1 className="font-semibold text-2xl text-slate-900">
-            Bienvenido a <span className="text-blue-800">BuscAG</span>
+          <h1 className="font-semibold text-2xl text-slate-900"> {t("Bienvenido a")} <span className="text-blue-800">BuscAG</span>
           </h1>
           <p className="text-sm text-slate-500 mt-2">
             {mode === "signin"
-              ? "Inicia sesión para continuar"
+              ? t("Inicia sesión para continuar")
               : mode === "signup"
-                ? "Crea tu cuenta comunitaria"
+                ? t("Crea tu cuenta comunitaria")
                 : label}
           </p>
         </div>
@@ -234,9 +231,7 @@ export const AuthView: React.FC<{
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (
             <>
-              <label className="block text-sm font-semibold text-slate-700">
-                Nombre completo
-                <input
+              <label className="block text-sm font-semibold text-slate-700"> {t("Nombre completo")} <input
                   required
                   autoComplete="name"
                   value={name}
@@ -244,9 +239,7 @@ export const AuthView: React.FC<{
                   className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
                 />
               </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                Teléfono de contacto (visible al contactar tus publicaciones)
-                <input
+              <label className="block text-sm font-semibold text-slate-700"> {t("Teléfono de contacto (visible al contactar tus publicaciones)")} <input
                   type="tel"
                   autoComplete="tel"
                   value={phone}
@@ -254,9 +247,7 @@ export const AuthView: React.FC<{
                   className="auth-input mt-1.5 w-full border px-3.5 py-2.5 font-normal outline-none"
                 />
               </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                Barrio o localidad
-                <input
+              <label className="block text-sm font-semibold text-slate-700"> {t("Barrio o localidad")} <input
                   autoComplete="address-level2"
                   value={location}
                   onChange={(event) => setLocation(event.target.value)}
@@ -266,9 +257,7 @@ export const AuthView: React.FC<{
             </>
           )}
           {mode !== "update" && (
-            <label className="block text-sm font-semibold text-slate-700">
-              Correo electrónico
-              <input
+            <label className="block text-sm font-semibold text-slate-700"> {t("Correo electrónico")} <input
                 required
                 type="email"
                 autoComplete="email"
@@ -280,7 +269,7 @@ export const AuthView: React.FC<{
           )}
           {(mode === "signin" || mode === "signup" || mode === "update") && (
             <label className="block text-sm font-semibold text-slate-700">
-              {mode === "update" ? "Nueva contraseña" : "Contraseña"}
+              {mode === "update" ? t("Nueva contraseña") : t("Contraseña")}
               <input
                 required
                 type="password"
@@ -300,7 +289,7 @@ export const AuthView: React.FC<{
               role="alert"
               className="rounded-xl bg-red-50 px-3.5 py-3 text-sm text-red-700"
             >
-              {errorMessage || notice}
+              {t(errorMessage || notice || '')}
             </p>
           )}
           {successMessage && (
@@ -308,7 +297,7 @@ export const AuthView: React.FC<{
               role="status"
               className="rounded-xl bg-emerald-50 px-3.5 py-3 text-sm text-emerald-700"
             >
-              {successMessage}
+              {t(successMessage)}
             </p>
           )}
 
@@ -319,16 +308,16 @@ export const AuthView: React.FC<{
           >
             {isSubmitting && <LoaderCircle className="w-4 h-4 animate-spin" />}
             {retrySeconds > 0
-              ? `Volver a solicitar en ${retrySeconds}s`
+              ? t('Volver a solicitar en {{seconds}}s',{seconds:retrySeconds})
               : label}
           </button>
         </form>
 
         <p className="text-center text-sm text-slate-500 mt-6">
           {mode === "signin"
-            ? "¿Todavía no tienes cuenta?"
+            ? t("¿Todavía no tienes cuenta?")
             : mode === "signup"
-              ? "¿Ya tienes una cuenta?"
+              ? t("¿Ya tienes una cuenta?")
               : ""}{" "}
           <button
             type="button"
@@ -341,10 +330,10 @@ export const AuthView: React.FC<{
             className="font-bold text-blue-600 hover:text-blue-700"
           >
             {mode === "signin"
-              ? "Regístrate"
+              ? t("Regístrate")
               : mode === "update"
-                ? "Volver a la aplicación"
-                : "Inicia sesión"}
+                ? t("Volver a la aplicación")
+                : t("Inicia sesión")}
           </button>
         </p>
         {(mode === "signin" || mode === "signup") && (
@@ -354,18 +343,14 @@ export const AuthView: React.FC<{
               disabled={isSubmitting}
               onClick={() => changeMode("reset")}
               className="font-bold text-blue-600 hover:text-blue-700"
-            >
-              Recuperar contraseña
-            </button>
+            >{t("Recuperar contraseña")}</button>
             {" · "}
             <button
               type="button"
               disabled={isSubmitting}
               onClick={() => changeMode("resend")}
               className="font-bold text-blue-600 hover:text-blue-700"
-            >
-              Reenviar confirmación
-            </button>
+            >{t("Reenviar confirmación")}</button>
           </p>
         )}
       </section>

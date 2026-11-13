@@ -1,3 +1,7 @@
+> Presentación final: [ensayo real con cuentas existentes](PRESENTATION_STAGING_CHECKLIST.md) y [revisión de Firebase/QR](FIREBASE_QR_STATIC_REVIEW.md). Sin publicación automática.
+
+> Prioridad vigente: [UX_PRESENTATION_READINESS.md](UX_PRESENTATION_READINESS.md). Presentación con cuentas de prueba existentes; modo invitado pospuesto y desconectado de la interfaz.
+
 > Extensión escolar opcional: [SCHOOL_FEATURES.md](SCHOOL_FEATURES.md) documenta
 > vigilancia por zona, QR, devolución bilateral y estadísticas. Código preparado;
 > migración y scheduler **no aplicados remotamente** por esta ejecución.
@@ -8,11 +12,10 @@
 
 # BuscAG
 
-**Objetivo actual: visitantes reales en la presentación escolar**, con registro por
-su propio correo y confirmación activa, usando exclusivamente staging. Ver
-[VISITOR_REGISTRATION.md](VISITOR_REGISTRATION.md) para SMTP gratuito sin dominio,
-callbacks públicos y pruebas pendientes. SCHOOL_PRESENTATION.md conserva el build
-separado; las cuentas preconfirmadas ahora son contingencia, no aceptación del alta.
+**Objetivo actual: presentación con las cuentas de prueba existentes**, con la
+interfaz en español e inglés y español predeterminado. El modo invitado queda
+pospuesto. Las guías anteriores de registro de visitantes y auditoría de invitados
+se conservan como antecedentes; no son requisitos para esta presentación.
 
 Aplicación comunitaria de objetos perdidos y encontrados. La app usa Supabase para autenticación, perfiles, publicaciones, mensajes, notificaciones, fotos y actualizaciones en tiempo real.
 

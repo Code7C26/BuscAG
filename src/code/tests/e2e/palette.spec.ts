@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mockBackend, login } from "./fixtures";
-test("five-color identity remains readable across main views and modal forms", async ({
+test("blue identity remains readable across main views and modal forms", async ({
   page,
 }, info) => {
   test.setTimeout(90000);
@@ -18,11 +18,11 @@ test("five-color identity remains readable across main views and modal forms", a
     );
   });
   expect(tokens).toEqual([
-    "#031926",
-    "#468189",
-    "#77aca2",
-    "#9dbebb",
-    "#f4e9cd",
+    "#081a33",
+    "#248dff",
+    "#60c8ff",
+    "#b9d9fa",
+    "#e4f1ff",
   ]);
   async function audit(name: string) {
     await page.evaluate(() =>

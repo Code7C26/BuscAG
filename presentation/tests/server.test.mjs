@@ -219,6 +219,7 @@ test("multimedia binaria y rangos de video sobreviven al guardado", async () =>
     });
     assert.equal(upload.status, 200);
     const full = await fetch(origin + "/media/test-video");
+    assert.equal(full.headers.get("content-type"), "video/mp4");
     assert.deepEqual(Buffer.from(await full.arrayBuffer()), bytes);
     const range = await fetch(origin + "/media/test-video", {
       headers: { range: "bytes=2-5" },

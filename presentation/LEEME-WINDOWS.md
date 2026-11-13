@@ -1,3 +1,5 @@
+**Versión 1.0.1: corregido el rechazo 403 de recursos estáticos en Windows. Ver CORRECCION-WINDOWS-1.0.1.md. Cerrar el servidor viejo antes de abrir esta copia.**
+
 # Abrir BuscAG en Windows, paso a paso
 
 ## Descarga y primer arranque

@@ -1,6 +1,6 @@
 {
   "name": "buscag-the-experiment",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,9 @@
     "start": "node server/index.mjs",
     "setup": "node server/setup.mjs",
     "test": "node --import tsx --test tests/*.test.mjs tests/*.test.tsx",
-    "test:portable": "node scripts/smoke.mjs"
+    "test:portable": "node scripts/smoke.mjs",
+    "test:browser": "node scripts/browser-qa.mjs",
+    "pack:windows": "node scripts/pack-windows.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",
@@ -30,6 +32,7 @@
     "fake-indexeddb": "^6.2.8",
     "jsdom": "^26.1.0",
     "tsx": "^4.23.15",
-    "typescript": "~5.8.2"
+    "typescript": "~5.8.2",
+    "@playwright/test": "1.58.2"
   }
 }

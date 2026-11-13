@@ -5,6 +5,7 @@ import {
   mkdir,
   rename,
   stat,
+  realpath,
   link,
   unlink,
 } from "node:fs/promises";
@@ -19,6 +20,7 @@ import {
 } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { validateProject, publicProject, timing } from "./model.mjs";
+import {isInsideDirectory, resolvePublicPath} from "./static-paths.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export async function createApp({
   dataDir = process.env.PRESENTATION_DATA_DIR || join(root, "data"),
@@ -129,6 +131,15 @@ export async function createApp({
     ".css": "text/css",
     ".svg": "image/svg+xml",
     ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+    ".mp3": "audio/mpeg",
+    ".ogg": "audio/ogg",
+    ".m4a": "audio/mp4",
+    ".txt": "text/plain; charset=utf-8",
     ".woff2": "font/woff2",
     ".wav": "audio/wav",
     ".md": "text/plain; charset=utf-8",
@@ -482,26 +493,36 @@ export async function createApp({
       if (dev && /seed\.json|server\/|\/@fs\//.test(path))
         return send(res, 403, { error: "Archivo privado." });
       if (dev) return vite.middlewares(req, res);
-      const decoded = decodeURIComponent(path),
-        base = join(root, "dist"),
-        file = resolve(base, "." + decoded);
-      if (file !== base && !file.startsWith(base + "/")) return send(res, 403, {});
-      let target = file;
+      if (!['GET', 'HEAD'].includes(req.method)) return send(res, 405, {error: 'Método no permitido.'});
+      const base = join(root, 'dist');
+      const requested = resolvePublicPath(base, path);
+      const spaRoutes = new Set(['/', '/presenter', '/studio', '/admin', '/vote']);
+      const target = spaRoutes.has(path) ? join(base, 'index.html') : requested;
+      let info, canonical;
       try {
-        if (!(await stat(target)).isFile()) target = join(base, "index.html");
-      } catch {
-        target = join(base, "index.html");
+        info = await stat(target);
+        if (!info.isFile()) return send(res, 404, {error: 'Recurso no encontrado.'});
+        canonical = await realpath(target);
+      } catch (error) {
+        if (error.code === 'ENOENT' || error.code === 'ENOTDIR') return send(res, 404, {error: 'Recurso no encontrado.'});
+        throw error;
       }
-      const info = await stat(target);
+      const canonicalBase = await realpath(base);
+      if (!isInsideDirectory(canonicalBase, canonical)) return send(res, 403, {error: 'Ruta fuera del directorio público.'});
+      const contentType = mime[extname(target).toLowerCase()];
+      if (!contentType) return send(res, 404, {error: 'Tipo de recurso no permitido.'});
       res.writeHead(200, {
-        "Content-Type": mime[extname(target)] || "application/octet-stream",
-        "Content-Length": info.size,
-        "Cache-Control": "no-cache",
+        'Content-Type': contentType,
+        'Content-Length': info.size,
+        'Cache-Control': 'no-cache',
       });
-      createReadStream(target).pipe(res);
+      if (req.method === 'HEAD') return res.end();
+      const stream = createReadStream(canonical);
+      stream.on('error', () => res.destroy());
+      stream.pipe(res);
     } catch (e) {
       if (!res.headersSent)
-        send(res, e.code === "ENOENT" ? 404 : 400, {
+        send(res, e.status || (e.code === "ENOENT" ? 404 : 400), {
           error:
             e.code === "ENOENT"
               ? "Recurso no encontrado."

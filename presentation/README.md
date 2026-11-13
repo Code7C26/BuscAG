@@ -1,3 +1,5 @@
+**Actualización 1.0.1:** corrección portable de rutas estáticas para Windows, regresiones HTTP/MIME y navegador sobre ZIP extraído. Ver CORRECCION-WINDOWS-1.0.1.md.
+
 # BuscAG — El experimento
 
 Presentación independiente en React + TypeScript + Vite + Motion. 24 escenas, plan nominal de **30:00**, video inglés reservado **25:00–26:00**, guion completo y modos público, presentador y Studio. No modifica `src/code/`, Firebase ni tablas de BuscAG.
@@ -35,8 +37,8 @@ En Studio → Encuestas configurar **el origen de la PC en la red**, por ejemplo
 ```sh
 npm ci
 npm run dev
-npm test
 npm run build
+npm test
 npm start
 ```
 

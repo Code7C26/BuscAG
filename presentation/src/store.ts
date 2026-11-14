@@ -16,6 +16,7 @@ export type Project = Omit<typeof seed, "assets"> & {
 export type Scene = Project["scenes"][number];
 export type Poll = {
   id: string;
+  source?: string;
   question: string;
   options: string[];
   open: boolean;
@@ -26,10 +27,16 @@ export type Poll = {
 };
 export type Live = {
   sceneId: string;
+  projectRevision?: number;
   running: boolean;
   elapsed: number;
   at: number;
   rehearsal: boolean;
+  legacyProject?: boolean;
+  inputSource?: "online"|"hands";
+  handCounts?: Record<string,number[]>;
+  remoteCloseUnconfirmed?: boolean;
+  voting?: {configured:boolean;origin:string;connected:boolean;lastAt:number;error:string};
   connection: boolean;
   polls: Poll[];
   rehearsalCounts: Record<string, number[]>;
@@ -89,6 +96,7 @@ const builtins = [
   "/brand/manrope.woff2",
   "/brand/Manrope-OFL.txt",
   "/captures/home-desktop.png",
+  "/captures/publish.png",
   "/captures/home-phone.png",
   "/captures/map.png",
   "/captures/comparison.png",

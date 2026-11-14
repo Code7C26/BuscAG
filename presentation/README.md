@@ -1,71 +1,33 @@
-**Actualización 1.0.1:** corrección portable de rutas estáticas para Windows, regresiones HTTP/MIME y navegador sobre ZIP extraído. Ver CORRECCION-WINDOWS-1.0.1.md.
+# BUSCAG — EL EXPERIMENTO · versión aula 2.0
 
-# BuscAG — El experimento
+Reconstrucción de 24 escenas en seis actos, 30:00 nominales y video original reservado 25:00–26:00. React/TypeScript/Vite/Motion, Canvas limitado y SVG/CSS. Fuente, imágenes, guion y recursos locales. Se conservan Studio, presentador, backups, IndexedDB, import/export y el iniciador Windows con la corrección de rutas estáticas 1.0.1.
 
-Presentación independiente en React + TypeScript + Vite + Motion. 24 escenas, plan nominal de **30:00**, video inglés reservado **25:00–26:00**, guion completo y modos público, presentador y Studio. No modifica `src/code/`, Firebase ni tablas de BuscAG.
+## Windows
 
-## Ejecutar en la PC de Germán
+Extraer el ZIP en una carpeta nueva, usar Node 24 LTS (24.13+ de la serie 24) y ejecutar INICIAR-WINDOWS.cmd. No abrir dist/index.html como archivo. / es el proyector; /presenter es privado; /studio edita. El ZIP compilado funciona sin npm install. Cerrar el servidor anterior antes de iniciar otra copia.
 
-Requiere **Node.js 24.13 o posterior de la serie 24** (incluye SQLite). La carpeta `dist/` viene compilada en el paquete portable. Para esa versión no hace falta instalar dependencias ni acceder a Internet:
+## Aula y votaciones
 
-```sh
-node server/setup.mjs
-node server/index.mjs
-```
+Leer AULA-OPERACION.md. La opción preferida es un servicio público HTTPS independiente para Android/iPhone con Wi-Fi o datos móviles. No se genera ningún QR de votación con localhost. Los QR no se habilitan hasta configurar un origen compatible mediante el panel privado. Su clave se guarda sólo en data/voting-private.json, excluida de Git/ZIP/exportaciones.
 
-Elegir una contraseña privada de al menos 12 caracteres en la terminal (entrada oculta). Abrir:
+El servicio está implementado en voting-service/; se guardó un borrador privado de Sites sin publicar. Su activación necesita autorización y configuración. Ver PENDIENTES.md. No se afirma funcionamiento en teléfonos físicos. El modo «Manos levantadas» funciona localmente y conserva resultados manuales separados de votos online. El ensayo usa ejemplos ficticios rotulados y nunca borra datos reales.
 
-- `http://127.0.0.1:4173/`: proyector, sin guion ni controles de edición.
-- `http://127.0.0.1:4173/presenter`: notas privadas, reloj, próxima escena y control de escena/votos.
-- `http://127.0.0.1:4173/studio`: editor protegido; `/admin` lleva al presentador.
-- `http://127.0.0.1:4173/vote?poll=search` y `?poll=object`: votación móvil.
+GitHub es privado; su QR requiere una cuenta con acceso. El dominio público confirmado por el titular es buscag-2677c.web.app. La demo usa el entorno de prueba documentado, buscag-prueba.web.app, y requiere ensayo con dos cuentas autorizadas. Ningún QR demuestra por sí solo que el MVP esté operativo.
 
-En Windows puede usarse `INICIAR-WINDOWS.cmd`. En macOS/Linux, `sh iniciar.sh`. El servidor abre sólo loopback por defecto. Para celulares, usar una LAN accesible por todos y cambiar el host:
-
-```sh
-# macOS/Linux
-HOST=0.0.0.0 node server/index.mjs
-# PowerShell
-$env:HOST='0.0.0.0'
-node server/index.mjs
-```
-
-En Studio → Encuestas configurar **el origen de la PC en la red**, por ejemplo `http://192.168.1.30:4173` (ejemplo, no dirección real). Guardar y escanear desde otro dispositivo. No usar localhost en los QR de teléfonos. Permitir el puerto en el firewall de esa PC. Una red escolar puede aislar clientes; usar una red propia autorizada si ocurre. El funcionamiento por LAN no necesita Internet; la demo real del MVP sí puede necesitarlo.
-
-## Desarrollo
+## Desarrollo y pruebas
 
 ```sh
 npm ci
-npm run dev
 npm run build
 npm test
-npm start
+npm run test:portable
+npm run verify:qr
+npm run test:classroom
+npm run pack:windows
 ```
 
-El modo desarrollo es sólo para trabajo local y no se publica: Vite sirve fuentes. El modo `start` sirve únicamente el build y las rutas autorizadas. No usa variables `VITE_*` ni claves de BuscAG. No copiar `.env` del MVP.
+Para las pruebas de navegador hace falta Chromium de Playwright o /usr/bin/chromium. test:classroom revisa 24 escenas, 1080p/720p, dos encuestas con Worker/SQL sintéticos, QR decodificados en pantalla, viewports Android/iPhone y conteo manual. Es emulación de red y dispositivos, no aceptación física. test:browser puede apuntar a un ZIP extraído mediante BUSCAG_TEST_PACKAGE_DIR. No reconstruye ese paquete.
 
-## Qué está implementado
+Servidor de producción de esta presentación local: node server/index.mjs. Desarrollo: npm run dev. No copiar variables o secretos del MVP. No se cambia src/code, Firebase, Supabase ni ramas principales.
 
-Escenas, movimientos reducidos, fuente local, ambiente original optativo, pantalla completa, teclado, vistas de presentador y edición protegidas con sesión HttpOnly. Studio permite editar textos/guion/expositor, escenas, orden, visibilidad, tiempos, layouts, fondo, colores, fuente, escala, posición, animación, multimedia y enlaces. Incluye guardado al servidor, borradores IndexedDB, deshacer/rehacer, respaldo y ZIP con recursos.
-
-Votos reales desde móviles por HTTP y resultados por SSE en la misma escena, persistidos en SQLite independiente. Abrir/cerrar y revelar/ocultar; empates y cero votos explícitos. Cookies aleatorias reducen repeticiones por navegador; no garantizan un voto por persona. Modo ensayo separado con datos ficticios rotulados y botones para agregar/restablecer ejemplos. No hay botón para borrar votos reales.
-
-Se eligió un servidor local independiente en lugar de otro Supabase para poder operar por LAN sin Internet ni crear servicios remotos o modificar tablas existentes. Es un límite de despliegue: **este paquete requiere un proceso Node persistente**, no funciona como sitio estático de Firebase o Sites. SSE puede necesitar desactivar buffering en un proxy.
-
-## Recursos y pendientes
-
-El video original inglés no fue aportado: su escena está terminada con placeholder. Se carga desde Studio → Medios, sin editar código. Se exige duración 60 s ±0,25 s por metadatos; no se recorta, subtitula ni modifica audio. El video debe revisarse auditivamente antes del evento. Los tráileres del repositorio usan backend sintético y **no se usan como video original ni evidencia de demo**.
-
-Ver [PENDIENTES.md](PENDIENTES.md), [OPERACION.md](OPERACION.md), [VALIDATION.md](VALIDATION.md), [GIT_AUDIT.md](GIT_AUDIT.md), [SCRIPT.md](SCRIPT.md), [STORYBOARD.md](STORYBOARD.md) y [MATRIZ_CUMPLIMIENTO.md](MATRIZ_CUMPLIMIENTO.md). No se declara aprobado el evento con requisitos todavía pendientes.
-
-## Límites concretos del editor
-
-Hay tres composiciones y presets de entrada; las posiciones afectan el bloque de texto con rangos limitados. No es un editor de formas vectoriales ni permite arrastrar cualquier elemento de cada visual. La velocidad cambia la duración de entrada (0,65/velocidad segundos); las animaciones de concepto conservan su composición. Las encuestas tienen 2–6 opciones y no se pueden redefinir tras recibir votos reales. Para otro evento, usar un directorio de datos nuevo y conservar el anterior como respaldo.
-
-Los recursos se conservan en servidor e IndexedDB; no se borran al deshacer ni al quitar de una escena. El ZIP incluye únicamente recursos vinculados al inventario del proyecto y recursos base. Importar nunca sobrescribe bytes distintos de un mismo identificador. Máximo 1 GB por recurso y 2 GB por ZIP expandido, aunque la memoria del navegador puede imponer límites mucho menores: se recomienda MP4 H.264/AAC de hasta 250 MB para el video de un minuto. Ensayar la transferencia en la PC real. Una prueba automatizada de ZIP no sustituye esa aceptación.
-
-## Publicar online, si después lo necesitan
-
-Preparar el build y ejecutar `node server/index.mjs` detrás de HTTPS con almacenamiento persistente para `data/`. Usar `HOST=127.0.0.1` detrás del proxy, `PORT` según alojamiento y `PRESENTATION_HTTPS=1` para cookies Secure. Desactivar buffering y aumentar tiempo de espera en `/api/events`. No publicar `data/`, fuentes privadas ni archivos de respaldo. Mantener un único proceso escritor; SQLite local no se comparte entre réplicas. Configurar el origen público de QR en Studio. `PRESENTATION_ADMIN_PASSWORD` es una alternativa de secreto de servidor; nunca se usa en frontend ni en URL. Las sesiones vencen a las 8 horas y se invalidan al reiniciar.
-
-No se realizó despliegue externo. La URL de prueba del MVP es la documentada en el repositorio; su disponibilidad y versión servida necesitan comprobación previa al evento.
+SCRIPT.md contiene el discurso nuevo y STORYBOARD.md el resumen escena por escena. docs/archive conserva el guion/storyboard anteriores y el proyecto original. Exportar antes de restaurar/importar otra versión. Un proyecto anterior puede conservar textos pero requerirá asignar actos y ajustar tiempos antes del ensayo nuevo.

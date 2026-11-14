@@ -6,7 +6,7 @@ import JSZip from 'jszip';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const output=resolve(process.env.BUSCAG_PACKAGE_OUTPUT||join(root,'descargas'));
 const zip=new JSZip();const folder=zip.folder('BuscAG-presentation');
-const excluded=new Set(['node_modules','data','.git','dist-e2e','descargas','test-results','playwright-report','__pycache__']);
+const excluded=new Set(['node_modules','data','.git','dist-e2e','descargas','test-results','playwright-report','__pycache__','generated','packaged']);
 async function walk(dir,prefix=''){
  for(const entry of await readdir(dir,{withFileTypes:true})){
   if(excluded.has(entry.name)||entry.name.startsWith('.env')||entry.name.endsWith('.log'))continue;

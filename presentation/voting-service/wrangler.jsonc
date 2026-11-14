@@ -1,0 +1,7 @@
+{
+  "name": "buscag-aula-votos",
+  "main": "worker/index.mjs",
+  "compatibility_date": "2026-11-13",
+  "d1_databases": [{"binding":"DB","database_name":"buscag-aula-votos","database_id":"PENDIENTE_CREAR_BASE_INDEPENDIENTE","migrations_dir":"migrations"}],
+  "vars": {"EVENT_ID":"PENDIENTE_IDENTIFICADOR_DEL_EVENTO"}
+}

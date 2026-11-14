@@ -39,7 +39,8 @@ test("24 escenas renderizan con títulos, estructura 16:9 y recursos identificad
     );
     assert.ok(html.includes("slide-header"));
     assert.ok(html.includes("slide-footer"));
-    assert.ok(html.includes(scene.title.replaceAll("&", "&amp;")));
+    const expected=scene.kind==="poll"?(live.polls.find(p=>p.id===(scene.pollId||"object"))?.question||scene.title):scene.title;
+    assert.ok(html.includes(expected.replaceAll("&", "&amp;")),scene.id);
     if (scene.kind === "reveal") assert.ok(html.includes("DATOS SINTÉTICOS"));
     if (scene.kind === "video")
       assert.ok(html.includes("pendiente de incorporar"));

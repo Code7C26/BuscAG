@@ -2,7 +2,7 @@ import QRCode from "qrcode";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 const out = new URL("../materials/", import.meta.url);
 await mkdir(out, { recursive: true });
-const web = "https://buscag-prueba.web.app",
+const web = "https://buscag-2677c.web.app",
   repo = "https://github.com/Code7C26/BuscAG";
 const q = await QRCode.toString(web, { type: "svg", margin: 2, width: 200 }),
   qr = await QRCode.toString(repo, { type: "svg", margin: 2, width: 200 });
@@ -28,7 +28,7 @@ await save(
   1123,
   210,
   297,
-  `<circle cx="730" cy="180" r="300" fill="#12365b"/>${logo(60, 70, 75)}${text(60, 330, "¿Lo perdiste?", 77)}${text(60, 430, "Conectemos.", 77, "#60c8ff")}${text(60, 535, "Publicá. Buscá. Encontrá una conexión.", 29)}${text(60, 590, "Encontrarnos hace la diferencia.", 27, "#a7bed9")}${embed(q, 60, 690, 220, 220)}${text(310, 765, "Conocé BuscAG", 34)}${text(310, 815, "Entorno de prueba previsto", 21, "#a7bed9")}${text(60, 1015, "buscag-prueba.web.app", 24, "#60c8ff")}${text(60, 1060, "PROPUESTA · Confirmar disponibilidad antes de imprimir", 16, "#a7bed9")}`,
+  `<circle cx="730" cy="180" r="300" fill="#12365b"/>${logo(60, 70, 75)}${text(60, 330, "¿Lo perdiste?", 77)}${text(60, 430, "Conectemos.", 77, "#60c8ff")}${text(60, 535, "Publicá. Buscá. Encontrá una conexión.", 29)}${text(60, 590, "Encontrarnos hace la diferencia.", 27, "#a7bed9")}${embed(q, 60, 690, 220, 220)}${text(310, 765, "Conocé BuscAG", 34)}${text(310, 815, "Web de BuscAG", 21, "#a7bed9")}${text(60, 1015, "buscag-2677c.web.app", 24, "#60c8ff")}${text(60, 1060, "PROPUESTA · Confirmar disponibilidad antes de imprimir", 16, "#a7bed9")}`,
 );
 await save(
   "sticker-QR-70mm",
@@ -36,7 +36,7 @@ await save(
   700,
   70,
   70,
-  `<circle cx="350" cy="350" r="330" fill="#f4e9cd"/>${embed(icon, 285, 65, 130, 130)}${text(350, 255, "¿Y si encontrarlo fuera", 33, "#031926", 'text-anchor="middle"')}${text(350, 300, "mucho más fácil?", 36, "#031926", 'text-anchor="middle"')}${embed(q, 215, 335, 270, 270)}${text(350, 643, "BuscAG · entorno de prueba", 24, "#031926", 'text-anchor="middle"')}`,
+  `<circle cx="350" cy="350" r="330" fill="#f4e9cd"/>${embed(icon, 285, 65, 130, 130)}${text(350, 255, "¿Y si encontrarlo fuera", 33, "#031926", 'text-anchor="middle"')}${text(350, 300, "mucho más fácil?", 36, "#031926", 'text-anchor="middle"')}${embed(q, 215, 335, 270, 270)}${text(350, 643, "BuscAG · web", 24, "#031926", 'text-anchor="middle"')}`,
 );
 for (const [name, role] of [
   ["Valentino Mamonde", "Desarrollo e investigación"],
@@ -56,7 +56,7 @@ await save(
   500,
   90,
   50,
-  `${logo(50, 50, 70)}${text(50, 230, "Encontrarnos hace", 40)}${text(50, 285, "la diferencia.", 40, "#60c8ff")}${text(50, 395, "Web de prueba prevista", 21, "#a7bed9")}${text(50, 435, "buscag-prueba.web.app", 22, "#a7bed9")}${embed(q, 590, 135, 250, 250)}`,
+  `${logo(50, 50, 70)}${text(50, 230, "Encontrarnos hace", 40)}${text(50, 285, "la diferencia.", 40, "#60c8ff")}${text(50, 395, "Web de BuscAG", 21, "#a7bed9")}${text(50, 435, "buscag-2677c.web.app", 22, "#a7bed9")}${embed(q, 590, 135, 250, 250)}`,
 );
 await save(
   "indumentaria-propuesta",
@@ -72,11 +72,11 @@ await save(
   1000,
   320,
   200,
-  `<rect x="180" y="70" width="1240" height="600" rx="12" fill="#12365b"/>${logo(260, 130, 100)}${text(260, 370, "¿Y si encontrarlo fuera", 72)}${text(260, 460, "mucho más fácil?", 72, "#60c8ff")}${embed(q, 1120, 220, 220, 220)}${text(1090, 490, "Web de prueba prevista", 22, "#a7bed9")}<rect x="330" y="590" width="940" height="280" rx="15" fill="#061327" stroke="#60c8ff"/>${logo(650, 665, 95)}${text(180, 945, "Propuesta de stand · QR, computadora para demo y materiales impresos", 30, "#a7bed9")}`,
+  `<rect x="180" y="70" width="1240" height="600" rx="12" fill="#12365b"/>${logo(260, 130, 100)}${text(260, 370, "¿Y si encontrarlo fuera", 72)}${text(260, 460, "mucho más fácil?", 72, "#60c8ff")}${embed(q, 1120, 220, 220, 220)}${text(1090, 490, "Web de BuscAG", 22, "#a7bed9")}<rect x="330" y="590" width="940" height="280" rx="15" fill="#061327" stroke="#60c8ff"/>${logo(650, 665, 95)}${text(180, 945, "Propuesta de stand · QR, computadora para demo y materiales impresos", 30, "#a7bed9")}`,
 );
 await save("tarjeta-reverso-90x50mm",900,500,90,50,`${logo(50,45,65)}${text(50,225,"Código abierto a revisión.",38)}${text(50,280,"Una conexión, con evidencia.",28,"#a7bed9")}${text(50,400,"GitHub · README · documentación",22,"#60c8ff")}${embed(qr,610,130,240,240)}`);
 await writeFile(
   new URL("README.md", out),
-  "# Identidad corporativa editable\n\nSVG vectoriales con textos editables en Inkscape/Figma/Illustrator. Sin datos de contacto inventados. Flyer A4, sticker 70 mm, credenciales 54×86 mm, tarjeta 90×50 mm, propuesta de indumentaria y stand.\n\nLos QR codifican el entorno de prueba previsto y el repositorio auténtico. Confirmar disponibilidad antes de imprimir. Regenerar: editar destinos en scripts/materials.mjs y ejecutar node scripts/materials.mjs. Para imprenta agregar sangrado y validar color y tamaño; son diseños editables, no una prueba de impresión aprobada. El símbolo original proviene del repositorio.\n",
+  "# Identidad corporativa editable\n\nSVG vectoriales con textos editables en Inkscape/Figma/Illustrator. Sin datos de contacto inventados. Flyer A4, sticker 70 mm, credenciales 54×86 mm, tarjeta 90×50 mm, propuesta de indumentaria y stand.\n\nLos QR codifican el dominio confirmado del proyecto y el repositorio auténtico. Confirmar disponibilidad antes de imprimir. Regenerar: editar destinos en scripts/materials.mjs y ejecutar node scripts/materials.mjs. Para imprenta agregar sangrado y validar color y tamaño; son diseños editables, no una prueba de impresión aprobada. El símbolo original proviene del repositorio.\n",
 );
 console.log("8 diseños SVG editables generados.");

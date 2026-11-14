@@ -14,6 +14,7 @@ import {
   Compass,
   Code2,
   Users,
+  Hand,
   Search,
   ShieldCheck,
   MapPin,
@@ -36,19 +37,26 @@ import {
 } from "./store";
 import { Studio } from "./studio";
 import codeEvidence from "./code-evidence.json";
+import {CinemaVisual} from "./cinema";
+import {voteUrl,safeLink} from "../server/public-links.mjs";
+import {VotingSettings} from "./voting-settings";
 function useLive() {
   const [live, setLive] = useState<Live | null>(null),
     [online, setOnline] = useState(false),
     [project, setProject] = useState<Project>(original());
   useEffect(() => {
     let active = true;
+    let revision:number|undefined;
     api<Project>("/api/project")
       .then((p) => active && setProject(p))
       .catch(() => {});
     const es = new EventSource("/api/events");
     es.onmessage = (e) => {
       setOnline(true);
-      setLive(JSON.parse(e.data));
+      const next=JSON.parse(e.data);
+      if(next.projectRevision!==revision){revision=next.projectRevision;api<Project>("/api/project").then(p=>active&&setProject(p)).catch(()=>{});}
+      setLive(next);
+      if(["/presenter","/studio","/admin"].includes(location.pathname))api<Live>("/api/admin/state").then(setLive).catch(()=>{});
     };
     es.onerror = () => setOnline(false);
     const timer = setInterval(
@@ -70,10 +78,11 @@ export function QR({ value, label }: { value: string; label?: string }) {
   const [url, setUrl] = useState("");
   useEffect(() => {
     let active = true;
-    if (value)
+    setUrl("");
+    if (safeLink(value))
       QRCode.toDataURL(value, {
-        width: 280,
-        margin: 2,
+        width: 560,
+        margin: 4,
         errorCorrectionLevel: "M",
         color: { dark: "#061327", light: "#ffffff" },
       }).then((v) => active && setUrl(v));
@@ -115,20 +124,21 @@ function VoteBars({
   samples?: number[];
 }) {
   if (!poll) return <p>Conectando encuesta…</p>;
-  const counts = rehearsal
+  const manual = poll.source === "hands";
+  const counts = rehearsal && !manual
       ? poll.options.map((_, i) => samples?.[i] || 0)
       : poll.counts,
-    total = rehearsal ? counts!.reduce((a, b) => a + b, 0) : poll.total;
+    total = rehearsal && !manual ? counts!.reduce((a, b) => a + b, 0) : poll.total;
   return (
     <div className="vote-bars">
       <div className="poll-status">
         <span className={poll.open ? "live-dot" : ""} />
-        {rehearsal
+        {manual ? "CONTEO MANUAL · MANOS LEVANTADAS" : rehearsal
           ? "ENSAYO · DATOS FICTICIOS"
           : poll.open
             ? "VOTACIÓN ABIERTA"
             : "VOTACIÓN CERRADA"}
-        <b>{rehearsal ? total + " ficticios" : total + " votos"}</b>
+        <b>{manual ? total + " manos contadas" : rehearsal ? total + " ficticios" : total + " votos"}</b>
       </div>
       {poll.options.map((o, i) => {
         const pct = counts && total ? Math.round((counts[i] / total) * 100) : 0;
@@ -341,7 +351,7 @@ export function Slide({
     window.addEventListener("buscag-start", play);
     return () => window.removeEventListener("buscag-start", play);
   }, [s.id, s.sound]);
-  const reduced = p.reducedMotion || s.animation === "none";
+  const reduced = p.reducedMotion || p.performanceMode === "low" || s.animation === "none";
   const index = p.scenes.findIndex((x) => x.id === s.id);
   const pollId =
     (s as any).pollId || (s.id === "scene-03" ? "search" : "object");
@@ -360,11 +370,11 @@ export function Slide({
       }
     >
       <p className="eyebrow">
-        <span /> {s.kicker}
+        <span /> {s.kind === "signal" ? "EXPERIMENTO 001" : s.kicker}
       </p>
-      <h1>{s.title}</h1>
+      <h1>{s.kind === "poll" ? poll?.question || s.title : s.title}</h1>
       <p className="subtitle">{s.subtitle}</p>
-      {!["signal", "poll", "video", "closing"].includes(s.kind) && (
+      {!["signal", "team", "audience", "poll", "video", "closing", "reveal", "vision", "viability", "architecture", "code", "challenge", "testing", "value", "management"].includes(s.kind) && (
         <div className="bullets">
           {s.bullets.map((b, i) => (
             <motion.div
@@ -406,26 +416,22 @@ export function Slide({
   else if (s.kind === "poll")
     visual = (
       <div className="poll-visual">
+        {!live?.rehearsal&&live?.inputSource!=="hands"&&!live?.voting?.connected&&<p className="poll-offline-warning">SIN CONEXIÓN · resultados detenidos. Podemos votar levantando la mano.</p>}
         <VoteBars
           poll={poll}
           rehearsal={live?.rehearsal ?? true}
           samples={live?.rehearsalCounts?.[pollId]}
         />
         <div className="poll-join">
-          <QR
-            value={
-              (p.links.voteOrigin || location.origin) + "/vote?poll=" + pollId
-            }
-            label="Escaneá para participar"
-          />
+          {live?.inputSource === "hands" ? <div className="hands-cue"><Hand/><strong>LEVANTÁ<br/>LA MANO</strong></div> : <QR value={voteUrl(live?.voting?.origin || "",pollId)} label="Escaneá para participar"/>}
           <p>
-            Tu respuesta.
+            {live?.inputSource === "hands" ? "Sin internet: elegimos en sala." : !live?.voting?.connected ? "Servicio HTTPS pendiente o desconectado." : "Tu respuesta."}
             <br />
             <strong>La próxima conexión.</strong>
             <small>
               Una respuesta por sesión.
               <br />
-              Sin datos personales.
+              Sin nombre ni correo.
             </small>
           </p>
         </div>
@@ -536,8 +542,8 @@ export function Slide({
   else if (s.kind === "invite" || s.kind === "closing")
     visual = (
       <div className="qr-pair">
-        <QR value={p.links.web} label="Web de prueba prevista" />
-        <QR value={p.links.github} label="Código y documentación" />
+        <QR value={p.links.web} label="Web de BuscAG" />
+        <QR value={p.links.github} label="GitHub · requiere acceso" />
         <nav className="audit-links">
           <a href={p.links.readme} target="_blank" rel="noreferrer">
             README técnico ↗
@@ -664,10 +670,11 @@ export function Slide({
         alt={media?.name || "Imagen de escena"}
       />
     );
+  visual = <CinemaVisual scene={s} p={p} live={live} fallback={visual}/>;
   return (
-    <MotionConfig reducedMotion={p.reducedMotion ? "always" : "user"}>
+    <MotionConfig reducedMotion={p.reducedMotion || p.performanceMode === "low" ? "always" : "user"}>
       <section
-        className={`slide kind-${s.kind} layout-${s.layout} ${preview ? "is-preview" : ""} ${reduced ? "no-motion" : ""}`}
+        className={`slide cinema-slide act-${s.act} kind-${s.kind} layout-${s.layout} ${preview ? "is-preview" : ""} ${reduced ? "no-motion" : ""}`}
         style={
           {
             background: s.background,
@@ -698,7 +705,7 @@ export function Slide({
           <span>
             THE EXPERIMENT <span className="header-line" /> PRESENTACIÓN FINAL
           </span>
-          <span>2026</span>
+          <span>ACTO {s.act} / 6</span>
         </header>
         <motion.div
           key={s.id}
@@ -721,10 +728,10 @@ export function Slide({
         <footer className="slide-footer">
           <span>ENCONTRARNOS HACE LA DIFERENCIA.</span>
           <div className="chapter-progress">
-            {Array.from({ length: 7 }, (_, i) => (
+            {Array.from({ length: 6 }, (_, i) => (
               <i
                 key={i}
-                className={i <= Math.floor(index / 4) ? "filled" : ""}
+                className={i < s.act ? "filled" : ""}
               />
             ))}
           </div>
@@ -735,8 +742,8 @@ export function Slide({
         </footer>
         {s.kind === "closing" && (
           <div className="closing-links">
-            <QR value={p.links.web} label="Probá BuscAG" />
-            <QR value={p.links.github} label="Auditá el código" />
+            <QR value={p.links.web} label="Abrí BuscAG" />
+            <QR value={p.links.github} label="GitHub · requiere acceso" />
           </div>
         )}
       </section>
@@ -932,7 +939,7 @@ function Presenter({
           Salir
         </button>
       </header>
-      <div className="presenter-grid">
+      {live.legacyProject&&<p className="warning panel">Proyecto anterior preservado. Exportalo desde Studio y restaurá el original nuevo para usar los seis actos; no se sobreescribió tu guion.</p>}<div className="presenter-grid">
         <div>
           <div className="preview-frame">
             <Slide scene={scene} p={privateP} live={live} preview />
@@ -1005,6 +1012,9 @@ function Presenter({
           </div>
           <div className="panel">
             <p className="eyebrow">VOTACIONES</p>
+            <div className="vote-source-controls"><button onClick={()=>act({action:'input-source',value:'online'})}>HTTPS</button><button onClick={()=>act({action:'input-source',value:'hands'})}>Manos levantadas</button></div>
+            <p>{live.inputSource==='hands'?'Contando en sala · fuente separada de los votos online':live.voting?.connected?'HTTPS conectado · sincronización en vivo':'HTTPS pendiente o sin conexión'}</p>
+            {live.remoteCloseUnconfirmed&&<p className="warning">El servicio no confirmó el cierre online. No mezclar esos votos con las manos.</p>}
             <button
               className={live.rehearsal ? "rehearsal-tag" : "live-tag"}
               onClick={modeChange}
@@ -1016,7 +1026,8 @@ function Presenter({
             {live.polls.map((poll) => (
               <div className="poll-control" key={poll.id}>
                 <b>{poll.question}</b>
-                <p>{poll.total} votos reales almacenados</p>
+                <p>{poll.total} {poll.source==='hands'?'manos contadas':'votos recibidos'}</p>
+                {live.inputSource==='hands'&&poll.options.map((option,i)=><label key={option}>{option}<input type="number" min="0" max="5000" value={live.handCounts?.[poll.id]?.[i]||0} onChange={e=>act({action:'hands-count',id:poll.id,choice:i,count:Number(e.target.value)})}/></label>)}
                 <button
                   onClick={() =>
                     act({ action: "poll", id: poll.id, open: !poll.open })
@@ -1058,6 +1069,7 @@ function Presenter({
               Restablecer sólo ensayo
             </button>
           </div>
+          <VotingSettings live={live}/>
           <div className="panel">
             <button
               onClick={() => {

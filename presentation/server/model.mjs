@@ -141,6 +141,8 @@ export const publicProject = (p) => ({
   ...p,
   scenes: p.scenes.map(({ script, actions, ...rest }) => rest),
 });
+export const acts=[{id:1,title:'El experimento',start:0,end:240},{id:2,title:'El público decide',start:240,end:480},{id:3,title:'La sorpresa principal',start:480,end:900},{id:4,title:'Lo que el público no ve',start:900,end:1200},{id:5,title:'¿Y si esto fuera más grande?',start:1200,end:1620},{id:6,title:'El final inesperado',start:1620,end:1800}];
+export function actsValid(p){if(p.narrativeVersion!==2)return false;let clock=0;for(const act of acts){const list=p.scenes.filter(s=>!s.hidden&&s.act===act.id);if(!list.length||clock!==act.start)return false;clock+=list.reduce((a,s)=>a+s.duration,0);if(clock!==act.end)return false;}return p.scenes.filter(s=>!s.hidden).every((s,i,list)=>!i||s.act>=list[i-1].act);}
 export function timing(p) {
   let t = 0,
     video = null;
@@ -153,6 +155,7 @@ export function timing(p) {
     video,
     valid:
       t === 1800 &&
+      actsValid(p) &&
       video?.start === 1500 &&
       video?.duration === 60 &&
       p.scenes.filter((s) => !s.hidden && s.kind === "video").length === 1,

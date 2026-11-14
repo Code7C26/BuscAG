@@ -13,7 +13,7 @@ async function harness(fn) {
   const dir = await mkdtemp(join(tmpdir(), "buscag-pitch-"));
   let server;
   try {
-    server = await createApp({ dataDir: dir, password });
+    server = await createApp({ dataDir: dir, allowLocalVotes: true, password });
     await new Promise((r) => server.listen(0, "127.0.0.1", r));
     const origin = "http://127.0.0.1:" + server.address().port;
     let cookie = "";
@@ -242,7 +242,7 @@ test("al reiniciar se conservan votos y se impide repetir con la cookie previa",
   try {
     let voter;
     for (let i = 0; i < 2; i++) {
-      server = await createApp({ dataDir: dir, password });
+      server = await createApp({ dataDir: dir, allowLocalVotes: true, password });
       await new Promise((r) => server.listen(0, "127.0.0.1", r));
       const origin = "http://127.0.0.1:" + server.address().port;
       if (i === 0) {
@@ -331,3 +331,4 @@ test("reiniciar ensayo no borra votos reales y los ejemplos se pueden modificar"
   }));
 test('controles concurrentes se guardan ordenadamente sin perder cambios',async()=>harness(async({request,dir})=>{const results=await Promise.all([request('/api/admin/control','POST',{action:'poll',id:'search',open:true}),request('/api/admin/control','POST',{action:'poll',id:'object',open:true}),request('/api/admin/control','POST',{action:'connection',value:true})]);assert.ok(results.every(r=>r.status===200));const saved=JSON.parse(await readFile(join(dir,'state.json')));assert.equal(saved.polls.search.open,true);assert.equal(saved.polls.object.open,true);assert.equal(saved.connection,true);}));
 test('cero votos y empate no producen un ganador ficticio',async()=>harness(async({request,origin})=>{await request('/api/admin/control','POST',{action:'rehearsal',value:false});await request('/api/admin/control','POST',{action:'poll',id:'search',open:true,reveal:true});assert.deepEqual((await request('/api/state')).body.polls[0].winners,[]);for(const choice of [0,1])await fetch(origin+'/api/vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({poll:'search',choice})});assert.deepEqual((await request('/api/state')).body.polls[0].winners,[0,1]);}));
+test('aula: seis actos exactos, encuestas en actos II/III y video 25–26',()=>{assert.deepEqual([1,2,3,4,5,6].map(act=>seed.scenes.filter(s=>s.act===act).reduce((n,s)=>n+s.duration,0)),[240,240,420,300,420,180]);let at=0;const polls=[];for(const scene of seed.scenes){if(scene.kind==='poll')polls.push({id:scene.pollId,at,act:scene.act});at+=scene.duration;}assert.deepEqual(polls,[{id:'search',at:240,act:2},{id:'object',at:480,act:3}]);const broken=structuredClone(seed);broken.scenes[0].duration+=10;broken.scenes[3].duration-=10;assert.equal(timing(broken).total,1800);assert.equal(timing(broken).valid,false,'no alcanza sumar 30 min si se desplaza un acto');});

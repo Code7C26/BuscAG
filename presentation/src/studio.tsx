@@ -38,6 +38,8 @@ import {
   download,
 } from "./store";
 import { Slide, QR } from "./main";
+import {VotingSettings,LinkCheck} from "./voting-settings";
+import {voteUrl} from "../server/public-links.mjs";
 import { timing, validateProject, kinds } from "../server/model.mjs";
 export function Studio({ live }: { live: Live | null }) {
   const [p, setP] = useState<Project>(original()),
@@ -124,6 +126,7 @@ export function Studio({ live }: { live: Live | null }) {
       fresh.id = id;
       fresh.title = duplicate ? s.title + " (copia)" : "Nueva escena";
       fresh.duration = 60;
+      fresh.act = s.act;
       fresh.kind = duplicate ? s.kind : "audience";
       d.scenes.splice(index + 1, 0, fresh);
     });
@@ -190,43 +193,11 @@ export function Studio({ live }: { live: Live | null }) {
     });
     setMsg("Recurso cargado y almacenado. Guardá el proyecto para vincularlo.");
   }
-  function normalize() {
-    const video = p.scenes.filter((s) => !s.hidden && s.kind === "video");
-    if (video.length !== 1) {
-      setMsg("Debe quedar exactamente una escena de video visible.");
-      return;
-    }
-    const vi = p.scenes.indexOf(video[0]),
-      before = p.scenes.slice(0, vi).filter((s) => !s.hidden),
-      after = p.scenes.slice(vi + 1).filter((s) => !s.hidden);
-    if (after.length > 48) {
-      setMsg(
-        "Demasiadas escenas después del video: cada una necesita al menos 5 s.",
-      );
-      return;
-    }
-    if (!before.length || !after.length) {
-      setMsg("El video necesita escenas antes y después.");
-      return;
-    }
-    edit((d) => {
-      for (const [list, total] of [
-        [before, 1500],
-        [after, 240],
-      ] as const) {
-        const sum = list.reduce((v, s) => v + s.duration, 0);
-        let remaining = total;
-        list.forEach((s, i) => {
-          const dur =
-            i === list.length - 1
-              ? remaining
-              : Math.max(5, Math.round((s.duration / sum) * total));
-          d.scenes.find((x) => x.id === s.id)!.duration = dur;
-          remaining -= dur;
-        });
-      }
-      d.scenes.find((s) => s.id === video[0].id)!.duration = 60;
-    });
+  function normalize(){
+    const groups=[{act:1,total:240},{act:2,total:240},{act:3,total:420},{act:4,total:300},{act:5,total:300,before:true},{act:5,total:60,video:true},{act:5,total:60,after:true},{act:6,total:180}];
+    const videoIndex=p.scenes.findIndex(s=>!s.hidden&&s.kind==='video');
+    if(videoIndex<0||p.scenes.filter(s=>!s.hidden&&s.kind==='video').length!==1){setMsg('Se necesita un solo video en el acto V.');return;}
+    try{const next=structuredClone(p);for(const g of groups){const list=next.scenes.filter((s,i)=>!s.hidden&&s.act===g.act&&(!g.before||i<videoIndex)&&(!g.after||i>videoIndex)&&(!g.video||s.kind==='video')&&(!(g.before||g.after)||s.kind!=='video'));if(!list.length||list.length*5>g.total)throw Error('Faltan escenas o hay demasiadas dentro de un acto.');let remaining=g.total-list.length*5,sum=list.reduce((n,s)=>n+s.duration,0);list.forEach((s,i)=>{const extra=i===list.length-1?remaining:Math.floor((g.total-list.length*5)*s.duration/sum);s.duration=5+extra;remaining-=extra;});}edit(d=>Object.assign(d,next));}catch(e){setMsg((e as Error).message);}
   }
   function undo() {
     if (!past.length) return;
@@ -541,7 +512,7 @@ export function Studio({ live }: { live: Live | null }) {
             {tab === "scene" && (
               <>
                 <p className="eyebrow">ESCENA {index + 1}</p>
-                {input("Antetítulo", "kicker")}
+                <label>Acto<select value={s.act} onChange={e=>scenePatch({act:Number(e.target.value)})}>{[1,2,3,4,5,6].map(n=><option value={n} key={n}>Acto {n}</option>)}</select></label>{input("Antetítulo", "kicker")}
                 {input("Título", "title", true)}
                 {input("Bajada", "subtitle", true)}
                 <label>
@@ -737,7 +708,7 @@ export function Studio({ live }: { live: Live | null }) {
             )}
             {tab === "design" && (
               <>
-                <h3>Diseño y movimiento</h3>
+                <h3>Diseño y movimiento</h3><label>Rendimiento<select value={p.performanceMode} onChange={e=>edit(d=>{d.performanceMode=e.target.value;})}><option value="balanced">Equilibrado · partículas limitadas a 30 fps</option><option value="low">Reducido · sin partículas ni movimiento continuo</option></select></label>
                 <label>
                   Color de fondo
                   <input
@@ -879,9 +850,7 @@ export function Studio({ live }: { live: Live | null }) {
                     </label>
                     <QR
                       value={
-                        (p.links.voteOrigin || location.origin) +
-                        "/vote?poll=" +
-                        poll.id
+                        voteUrl(live?.voting?.origin || "",poll.id)
                       }
                       label="Participación móvil"
                     />
@@ -924,23 +893,8 @@ export function Studio({ live }: { live: Live | null }) {
                   votos reales. Los votos no están en el ZIP y no se borran
                   desde Studio.
                 </p>
-                <label>
-                  Origen público o LAN para QR
-                  <input
-                    placeholder="https://presentacion.example o http://192.168.x.x:4173"
-                    value={p.links.voteOrigin}
-                    onChange={(e) =>
-                      edit((d) => {
-                        d.links.voteOrigin = e.target.value.replace(/\/$/, "");
-                      })
-                    }
-                  />
-                </label>
-                <p>
-                  Servidor de votos propio por HTTP/SSE + SQLite, independiente
-                  de BuscAG. Todos los teléfonos deben acceder al mismo origen.
-                  No requiere claves Supabase.
-                </p>
+                <VotingSettings live={live}/>
+                <p>Android/iPhone y datos móviles necesitan el mismo servicio HTTPS público. El servidor del proyector guarda la clave administrativa; los teléfonos no la reciben. Si falla internet, usar manos levantadas desde presentador.</p>
                 <button
                   onClick={() => {
                     task(async () => {
@@ -958,7 +912,7 @@ export function Studio({ live }: { live: Live | null }) {
             {tab === "links" && (
               <>
                 <h3>Enlaces y QR</h3>
-                {Object.entries(p.links).map(([key, value]) => (
+                {Object.entries(p.links).filter(([key])=>key!=="voteOrigin").map(([key, value]) => (
                   <label key={key}>
                     {key}
                     <input
@@ -974,7 +928,7 @@ export function Studio({ live }: { live: Live | null }) {
                   </label>
                 ))}
                 <QR value={p.links.web} label="Web de prueba" />
-                <QR value={p.links.github} label="Repositorio" />
+                <QR value={p.links.github} label="GitHub · requiere acceso"/><LinkCheck value={p.links.github} label="Repositorio"/><LinkCheck value={p.links.web} label="Web"/>
                 <p>
                   Confirmar destinos antes de imprimir. Los enlaces vacíos
                   permanecen pendientes; no se inventan redes ni contactos.

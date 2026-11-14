@@ -20,7 +20,7 @@ try{
  await page.goto(origin);await page.getByRole('button',{name:'Entrar en presentación'}).click();await page.locator('.slide h1').waitFor({state:'visible'});
  assert.ok((await page.locator('.slide h1').textContent()).includes('Cuánto tardarías'));
  await presenter.goto(origin+'/presenter');await presenter.getByLabel('Contraseña',{exact:true}).fill(password);await presenter.getByRole('button',{name:'Ingresar'}).click();await presenter.locator('.presenter-grid').waitFor();
- await presenter.getByRole('button',{name:'Siguiente',exact:false}).click();await page.getByRole('heading',{name:'BuscAG. Encontrarnos hace la diferencia.',exact:true}).waitFor();
+ await presenter.getByRole('button',{name:'Siguiente',exact:false}).click();await page.getByRole('heading',{name:'Dos personas. Un mismo objetivo.',exact:true}).waitFor();
  await presenter.goto(origin+'/studio');await presenter.locator('.studio-header').waitFor();assert.equal(await presenter.locator('.scene-item').count(),24);
  await presenter.getByRole('button',{name:'Duplicar',exact:true}).click();assert.equal(await presenter.locator('.scene-item').count(),25);await presenter.getByTitle('Deshacer',{exact:true}).click();assert.equal(await presenter.locator('.scene-item').count(),24);
  await presenter.getByRole('button',{name:'Guardar',exact:true}).click();await presenter.getByRole('status').filter({hasText:'Guardado en servidor'}).waitFor();

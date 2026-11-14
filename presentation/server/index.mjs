@@ -20,12 +20,15 @@ import {
 } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { validateProject, publicProject, timing } from "./model.mjs";
+import {createVotingBridge} from "./voting-bridge.mjs";
 import {isInsideDirectory, resolvePublicPath} from "./static-paths.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export async function createApp({
   dataDir = process.env.PRESENTATION_DATA_DIR || join(root, "data"),
   password = process.env.PRESENTATION_ADMIN_PASSWORD,
   dev = false,
+  allowLocalVotes = false,
+  votingTransport = fetch,
 } = {}) {
   await mkdir(join(dataDir, "assets"), { recursive: true });
   let auth;
@@ -47,6 +50,7 @@ export async function createApp({
   db.exec(
     "PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS votes (poll TEXT NOT NULL, voter TEXT NOT NULL, choice INTEGER NOT NULL, at INTEGER NOT NULL, PRIMARY KEY(poll,voter));",
   );
+  let projectRevision=Date.now();
   let project = JSON.parse(await readFile(join(root, "src/seed.json"), "utf8"));
   try {
     project = validateProject(
@@ -63,6 +67,8 @@ export async function createApp({
     at: Date.now(),
     rehearsal: true,
     connection: false,
+    inputSource: "online",
+    handCounts: { search: [0,0,0], object: [0,0,0] },
     rehearsalCounts: { search: [8, 5, 3], object: [8, 5, 3] },
     polls: {
       search: { open: false, reveal: false },
@@ -110,17 +116,15 @@ export async function createApp({
           : [],
     };
   }
-  const snapshot = (admin = false) => ({
-    ...state,
-    elapsed: elapsed(),
-    at: Date.now(),
-    polls: project.polls.map((p) => stats(p.id, admin)),
-    timing: timing(project),
-  });
-  function emit() {
-    const msg = "data: " + JSON.stringify(snapshot()) + "\n\n";
-    for (const c of clients) c.write(msg);
+  let bridge;
+  function shownPolls(admin=false){
+    if(state.inputSource==='hands')return project.polls.map(p=>{const counts=p.options.map((_,i)=>state.handCounts[p.id]?.[i]||0),total=counts.reduce((a,b)=>a+b,0),max=Math.max(...counts);return{...p,...state.polls[p.id],open:false,source:'hands',total,counts:admin||state.polls[p.id].reveal?counts:null,winners:state.polls[p.id].reveal&&total?counts.flatMap((n,i)=>n===max?[i]:[]):[]};});
+    if(!state.rehearsal&&bridge?.status().configured)return (bridge.getPolls(admin)||project.polls.map(p=>({...p,open:false,reveal:false,total:0,counts:null,winners:[]}))).map(p=>({...p,source:'https'}));
+    return project.polls.map(p=>({...stats(p.id,admin),source:state.rehearsal?'rehearsal':allowLocalVotes?'local-test':'unconfigured'}));
   }
+  const snapshot = (admin = false) => ({...state,projectRevision,handCounts:admin?state.handCounts:undefined,elapsed:elapsed(),at:Date.now(),polls:shownPolls(admin),legacyProject:project.narrativeVersion!==2,voting:bridge?.status()||{configured:false,origin:'',connected:false,error:''},timing:timing(project)});
+  function emit(){const msg='data: '+JSON.stringify(snapshot())+'\n\n';for(const c of clients)c.write(msg);}
+  bridge=await createVotingBridge(dataDir,{transport:votingTransport,onUpdate:()=>emit()});
   const heartbeat = setInterval(() => {
     for (const c of clients) c.write(": alive\n\n");
   }, 15000);
@@ -259,6 +263,7 @@ export async function createApp({
       if (path === "/api/project" && req.method === "GET")
         return send(res, 200, publicProject(project));
       if (path === "/api/vote" && req.method === "POST") {
+        if(!allowLocalVotes)return send(res,409,{error:"Votá desde el servicio HTTPS indicado por el presentador. No hay votación pública en localhost."});
         const b = await jsonBody(req, 2048),
           p = project.polls.find((p) => p.id === b.poll);
         if (state.rehearsal)
@@ -301,6 +306,8 @@ export async function createApp({
           return send(res, 401, {
             error: "Se requiere acceso de presentador.",
           });
+        if(path==='/api/admin/voting'&&req.method==='GET')return send(res,200,bridge.status());
+        if(path==='/api/admin/voting'&&req.method==='PUT'){const b=await jsonBody(req,4096);await bridge.configure(b.origin,b.adminKey,project.polls);project.links.voteOrigin=bridge.status().origin;projectRevision++;await writeFile(join(dataDir,'project.json'),JSON.stringify(project));emit();return send(res,200,bridge.status());}
         if (path === "/api/admin/original" && req.method === "GET")
           return send(
             res,
@@ -328,6 +335,8 @@ export async function createApp({
                   "Una encuesta con votos reales no se puede redefinir. Crear otra sesión en un directorio de datos nuevo.",
               });
           }
+          await bridge.syncQuestions(next.polls);
+          next.links.voteOrigin=bridge.status().origin;
           await writeFile(
             join(dataDir, "project.backup.json"),
             JSON.stringify(project),
@@ -338,6 +347,7 @@ export async function createApp({
             join(dataDir, "project.json"),
           );
           project = next;
+          projectRevision++;
           if (!project.scenes.find((s) => s.id === state.sceneId && !s.hidden))
             state.sceneId = project.scenes.find((s) => !s.hidden).id;
           emit();
@@ -345,7 +355,16 @@ export async function createApp({
         }
         if (path === "/api/admin/control" && req.method === "POST") {
           const b = await jsonBody(req, 8192);
-          if (b.action === "scene") {
+          if(b.action==='input-source'){
+            if(!['online','hands'].includes(b.value))throw Error('Método de votación inválido.');
+            if(b.value==='online'&&!bridge.status().connected&&!allowLocalVotes)throw Error('Conectar el servicio HTTPS antes de volver a la votación online.');
+            if(b.value==='online'&&bridge.status().configured){for(const p of project.polls)await bridge.control(p.id,{open:false});}
+            state.inputSource=b.value;state.remoteCloseUnconfirmed=false;for(const p of Object.values(state.polls))p.open=false;
+            if(b.value==='hands'&&bridge.status().configured){emit();for(const p of project.polls){try{await bridge.control(p.id,{open:false});}catch{state.remoteCloseUnconfirmed=true;}}}
+          }else if(b.action==='hands-count'){
+            if(state.inputSource!=='hands'||!project.polls.find(p=>p.id===b.id)||!Number.isInteger(b.choice)||b.choice<0||b.choice>=project.polls.find(p=>p.id===b.id).options.length||!Number.isInteger(b.count)||b.count<0||b.count>5000)throw Error('Conteo manual inválido.');
+            state.handCounts[b.id][b.choice]=b.count;
+          }else if (b.action === "scene") {
             if (!project.scenes.find((s) => s.id === b.id && !s.hidden))
               throw Error("Escena no disponible.");
             state.sceneId = b.id;
@@ -353,13 +372,13 @@ export async function createApp({
           } else if (b.action === "timer") {
             if (b.running && !timing(project).valid)
               throw Error(
-                "Ajustar a 30:00 y video 25:00–26:00 antes de iniciar.",
+                "Revisar los seis actos (0–4, 4–8, 8–15, 15–20, 20–27, 27–30) y el video 25:00–26:00 antes de iniciar.",
               );
             state.elapsed = b.reset ? 0 : elapsed();
             state.running = !!b.running;
             state.at = Date.now();
           } else if (b.action === "rehearsal") {
-            if (state.polls.search.open || state.polls.object.open)
+            if (shownPolls().some(p=>p.open))
               throw Error("Cerrar encuestas antes de cambiar modo.");
             state.rehearsal = !!b.value;
           } else if (b.action === "reset-rehearsal") {
@@ -380,6 +399,7 @@ export async function createApp({
           } else if (b.action === "connection") state.connection = !!b.value;
           else if (b.action === "poll") {
             if (!state.polls[b.id]) throw Error("Encuesta no válida.");
+            if(state.inputSource!=='hands'&&!state.rehearsal){if(!bridge.status().configured&&!allowLocalVotes)throw Error('Falta configurar el servicio HTTPS. Usar manos levantadas como alternativa.');if(bridge.status().configured)await bridge.control(b.id,{...(typeof b.open==='boolean'?{open:b.open}:{}),...(typeof b.reveal==='boolean'?{reveal:b.reveal}:{})});}
             if (typeof b.open === "boolean") state.polls[b.id].open = b.open;
             if (typeof b.reveal === "boolean")
               state.polls[b.id].reveal = b.reveal;
@@ -534,6 +554,7 @@ export async function createApp({
   const originalClose = server.close.bind(server);
   server.close = function (cb) {
     clearInterval(heartbeat);
+    bridge.close();
     for (const c of clients) c.end();
     vite?.close();
     db.close();

@@ -1,16 +1,23 @@
 # Servicio HTTPS independiente — BuscAG Aula Votes
 
-Worker ESM + D1. No usa Supabase, Firebase, cuentas ni datos de BuscAG. Incluye página móvil de votación, dos encuestas, resultados, apertura/cierre y revelado protegidos. No está publicado por esta entrega sin autorización explícita.
+Worker ESM + D1 aislado. No usa Supabase, Firebase, cuentas ni datos de BuscAG. Servicio público publicado con autorización del operador:
 
-## Estado
+https://buscag-el-experimento-votos.reedyrook2.chatgpt.site
 
-Código y SQL probados con SQLite sintético y requests HTTPS de fixture. Navegadores con viewports Android/iPhone usan la implementación real interceptada hacia ese servicio de prueba. Eso no certifica conectividad pública, Safari físico ni datos móviles reales.
+## Estado verificado
 
-Se reservó un borrador privado de Sites, sin desplegar:
-- ID: appgprj_6af7922be62081919ce697143c808f30
-- Origen esperado del proveedor: https://buscag-el-experimento-votos.reedyrook2.chatgpt.site
+GitHub Actions comprobó desde una red externa: ambas páginas /vote, JavaScript, CSS, health y polls responden 200 con MIME correcto; administración anónima rechazada 401; votos con encuesta cerrada rechazados 409. La base independiente contiene sólo polls y votes. Las encuestas se entregan cerradas y sin votos.
 
-Este origen **no prueba publicación ni accesibilidad**. No se coloca en los QR mientras no exista un servicio compatible y comprobado. El borrador puede utilizarse para alojar el servicio con un binding D1 independiente después de revisar la configuración y autorizar publicación pública. La página móvil debe ser accesible anónimamente; un Site privado obliga a iniciar sesión y no sirve para el aula.
+El flujo completo abrir/votar/cerrar/revelar y puente al proyector pasó con el mismo Worker y SQLite aislado, incluyendo navegadores Android/iPhone emulados. El flujo remoto completo con la clave del operador, teléfonos físicos y datos móviles sigue pendiente.
+
+## Conectar en Windows sin distribuir secretos
+
+1. Abrir el servicio en Sites con la cuenta propietaria → configuración → variables de entorno. Cambiar ADMIN_KEY por una clave aleatoria privada de al menos 32 caracteres y volver a desplegar la versión guardada del servicio. Mantener EVENT_ID=buscag-aula-20261114 y DB; no usar claves del MVP. La clave inicial está guardada como secreto y no se puede recuperar desde el ZIP.
+2. Abrir /studio o /presenter local, ingresar el origen público anterior y esa clave en Servicio público HTTPS → Conectar y verificar. Guardado privado sólo en data/voting-private.json, excluido del ZIP/exportación/Git.
+3. Cerrar ambas encuestas, salir de ensayo y seleccionar HTTPS. Abrir una encuesta, votar desde un teléfono, comprobar conteo, cerrar y revelar. Repetir con la segunda. Esta prueba crea votos reales: usar un EVENT_ID de ensayo y luego uno definitivo nuevo si se necesita arrancar en cero; los registros existentes se conservan.
+4. Probar Wi-Fi y datos móviles. Sin esta verificación, usar el modo Manos levantadas y no afirmar que se probaron celulares físicos.
+
+ID de servicio independiente: appgprj_6af7922be62081919ce697143c808f30. Versión guardada 1, commit de servicio 8a8716dc9310c927fbf5f75923ecca758a38d8a7. No corresponde al main del repositorio BuscAG.
 
 ## Alternativa Cloudflare Workers con cuenta propia
 

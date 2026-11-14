@@ -26,7 +26,7 @@ El servidor local, las escenas, recursos cargados, fuente, ambiente y Studio fun
 
 El repositorio correcto es https://github.com/Code7C26/BuscAG y es privado: el público sin acceso verá una restricción/404. El QR se decodifica, pero no modifica permisos. Gestionar acceso del jurado o autorizar por separado una alternativa pública de auditoría. No se cambió la visibilidad del repositorio.
 
-La URL de prueba conocida es https://buscag-prueba.web.app. La configuración del proyecto también referencia https://buscag-2677c.web.app. Ver el resultado de preflight HTTP antes de elegir el QR final; un HTTP 200 no certifica login, publicaciones ni recuperaciones. La rama de presentación no despliega ninguno de esos sitios.
+La URL de prueba conocida es https://buscag-prueba.web.app. La configuración del proyecto también referencia https://buscag-2677c.web.app. El preflight externo comprobó HTTP 200 en ambas URLs; un HTTP 200 no certifica login, publicaciones ni recuperaciones. La rama de presentación no despliega ninguno de esos sitios.
 
 ## Transferencia y archivos anteriores
 

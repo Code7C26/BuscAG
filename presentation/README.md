@@ -10,7 +10,7 @@ Extraer el ZIP en una carpeta nueva, usar Node 24 LTS (24.13+ de la serie 24) y 
 
 Leer AULA-OPERACION.md. La opción preferida es un servicio público HTTPS independiente para Android/iPhone con Wi-Fi o datos móviles. No se genera ningún QR de votación con localhost. Los QR no se habilitan hasta configurar un origen compatible mediante el panel privado. Su clave se guarda sólo en data/voting-private.json, excluida de Git/ZIP/exportaciones.
 
-El servicio está implementado en voting-service/; se guardó un borrador privado de Sites sin publicar. Su activación necesita autorización y configuración. Ver PENDIENTES.md. No se afirma funcionamiento en teléfonos físicos. El modo «Manos levantadas» funciona localmente y conserva resultados manuales separados de votos online. El ensayo usa ejemplos ficticios rotulados y nunca borra datos reales.
+El servicio independiente está publicado en https://buscag-el-experimento-votos.reedyrook2.chatgpt.site y pasó preflight HTTP externo. Falta configurar la clave privada del operador siguiendo voting-service/README.md. Ver PENDIENTES.md. No se afirma funcionamiento en teléfonos físicos. El modo «Manos levantadas» funciona localmente y conserva resultados manuales separados de votos online. El ensayo usa ejemplos ficticios rotulados y nunca borra datos reales.
 
 GitHub es privado; su QR requiere una cuenta con acceso. El dominio público confirmado por el titular es buscag-2677c.web.app. La demo usa el entorno de prueba documentado, buscag-prueba.web.app, y requiere ensayo con dos cuentas autorizadas. Ningún QR demuestra por sí solo que el MVP esté operativo.
 

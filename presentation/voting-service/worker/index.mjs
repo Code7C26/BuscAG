@@ -8,7 +8,7 @@ export default {async fetch(request,env){const url=new URL(request.url);const he
  if(url.pathname==='/api/health')return json(200,{service:'buscag-aula-votes',version:2,storage:'independent',https:url.protocol==='https:',runtime:{nativeTimeout:typeof AbortSignal.timeout==='function'}});
  if(url.pathname==='/api/health/transport'&&request.method==='GET'){
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
-  try{const r=await fetch('https://buscag-el-experimento-votos.reedyrook2.chatgpt.site/api/health',{signal:controller.signal,redirect:'error'});return json(200,{nativeTimeout:typeof AbortSignal.timeout==='function',upstreamStatus:r.status});}
+  try{const r=await fetch('https://buscag-el-experimento-votos.reedyrook2.chatgpt.site/api/health',{signal:controller.signal,redirect:'manual'});return json(200,{nativeTimeout:typeof AbortSignal.timeout==='function',upstreamStatus:r.status});}
   catch(e){return json(200,{nativeTimeout:typeof AbortSignal.timeout==='function',failure:controller.signal.aborted?'TIMEOUT':'NETWORK',errorName:e.name,errorMessage:String(e.message).slice(0,200)});}finally{clearTimeout(timer);}
  }
  if(request.method!=='GET'&&request.method!=='HEAD'){const origin=request.headers.get('Origin');if(origin&&origin!==url.origin)return json(403,{error:'Origen rechazado.'});}

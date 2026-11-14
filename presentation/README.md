@@ -32,6 +32,8 @@ Servidor de producción de esta presentación local: node server/index.mjs. Desa
 
 SCRIPT.md contiene el discurso nuevo y STORYBOARD.md el resumen escena por escena. docs/archive conserva el guion/storyboard anteriores y el proyecto original. Exportar antes de restaurar/importar otra versión. Un proyecto anterior puede conservar textos pero requerirá asignar actos y ajustar tiempos antes del ensayo nuevo.
 
-## Conexión simplificada 2.1.0
+## Conexión simplificada 2.1.1
 
 La conexión manual de claves descrita en versiones anteriores queda reemplazada por **Conectar encuestas** → **Abrir autorización privada** → comparar código y autorizar con tu cuenta propietaria ChatGPT. No hace falta administrar ADMIN_KEY. Seguir CONECTAR-ENCUESTAS.md. La comprobación final con la sesión real del propietario y teléfonos físicos sigue pendiente del titular.
+
+La versión 2.1.1 corrige un rechazo real del runtime de Sites antes de mostrar el código. Ver CORRECCION-AUTORIZACION-2.1.1.md. Usar un enlace de conexión nuevo.

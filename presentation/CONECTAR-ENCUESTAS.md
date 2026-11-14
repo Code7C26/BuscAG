@@ -1,6 +1,6 @@
 # Conectar encuestas en Windows · sin copiar claves
 
-1. Cerrá la ventana del servidor anterior. Extraé el ZIP 2.1.0 en una carpeta nueva y ejecutá INICIAR-WINDOWS.cmd. Node 24 LTS (24.13 o superior dentro de 24.x).
+1. Cerrá la ventana del servidor anterior. Extraé el ZIP 2.1.1 en una carpeta nueva y ejecutá INICIAR-WINDOWS.cmd. Node 24 LTS (24.13 o superior dentro de 24.x).
 2. Abrí http://127.0.0.1:4173/presenter o /studio. Ingresá la contraseña local que creaste al iniciar esta copia.
 3. Buscá **Encuestas en vivo** y pulsá **Conectar encuestas**. Después pulsá **Abrir autorización privada**. No hace falta buscar Sites ni administrar ADMIN_KEY.
 4. En la página HTTPS privada, iniciá sesión con la misma cuenta de ChatGPT propietaria del servicio. Si tenés varias cuentas, usá la que creó BuscAG en esta conversación. Otras cuentas no tienen acceso.
@@ -30,3 +30,5 @@ Cada PC recibe una credencial propia de 90 días. Viaja cifrada; el servidor Nod
 Votación pública: https://buscag-el-experimento-votos.reedyrook2.chatgpt.site
 
 Autorización privada: https://buscag-autorizar-pc.reedyrook2.chatgpt.site — sólo propietaria; conservar privada y sin colaboradores. Su aislamiento lo aplica Sites, no un rol de propietario inventado dentro de la página pública.
+
+La versión 2.1.1 corrige un rechazo real del runtime de Sites antes de mostrar el código. Ver CORRECCION-AUTORIZACION-2.1.1.md. Usar un enlace de conexión nuevo.

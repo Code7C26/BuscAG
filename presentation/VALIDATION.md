@@ -15,3 +15,7 @@ No se probaron Android/iPhone físicos, proyector, sonido de aula ni datos móvi
 ## Conexión 2.1.0
 
 25 pruebas pasan, incluidas entrega RSA-OAEP cifrada de un uso, expiración, CSRF, vínculo a identidad, rechazo de token erróneo, credencial de PC sin facultad de autorizar, persistencia y revocación. El navegador recorre el botón y formulario con identidad fixture; no se presenta como un inicio de sesión real de ChatGPT. La aceptación real del propietario sigue pendiente de su cuenta.
+
+## Autorización 2.1.1
+
+Causa real reproducida en servicio publicado: Sites rechaza redirect:error. Corregido con manual y rechazo explícito de 3xx. Nuevas regresiones y diagnóstico HTTPS Worker→servicio publicados. Ver CORRECCION-AUTORIZACION-2.1.1.md para alcance y límites.

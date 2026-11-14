@@ -9,7 +9,8 @@ if(!subject)return page(401,'Iniciá sesión con tu cuenta propietaria','<p>Entr
 if(!env.ADMIN_KEY||env.ADMIN_KEY.length<32)return page(503,'Configuración pendiente','<p>No se pudo habilitar la autorización.</p>');
 async function remote(path,body){
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
- try{const r=await fetch(origin+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+env.ADMIN_KEY,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,redirect:'error',signal:controller.signal});
+ try{const r=await fetch(origin+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+env.ADMIN_KEY,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,redirect:'manual',signal:controller.signal});
+ if(r.status>=300&&r.status<400){const e=new Error('redirect');e.code='UPSTREAM_REDIRECT';e.upstreamStatus=r.status;throw e;}
  if(!r.ok){const e=new Error('upstream');e.code=r.status===410?'PAIR_EXPIRED':r.status===401?'UPSTREAM_AUTH':'UPSTREAM_HTTP';e.upstreamStatus=r.status;throw e;}
  try{return await r.json();}catch{const e=new Error('json');e.code='UPSTREAM_FORMAT';throw e;}
  }catch(e){if(!e.code)e.code=controller.signal.aborted?'UPSTREAM_TIMEOUT':'UPSTREAM_NETWORK';console.error(JSON.stringify({event:'authorization-upstream-failure',code:e.code,upstreamStatus:e.upstreamStatus||null,nativeTimeout:typeof AbortSignal.timeout==='function'}));throw e;}finally{clearTimeout(timer);}

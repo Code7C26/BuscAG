@@ -35,3 +35,18 @@ test('Windows bridge connects automatically, hides credentials and pairing from 
  await bridge.control('search',{open:true});const vote=await post(svc,'/api/vote',{poll:'search',choice:1});assert.equal(vote.status,200);await bridge.refresh();assert.equal(bridge.getPolls(true)[0].total,1);assert.equal(bridge.getPolls()[0].counts,null);await bridge.control('search',{open:false,reveal:true});assert.deepEqual(bridge.getPolls()[0].counts,[0,1,0]);
  bridge.close();bridge=await createVotingBridge(dir,{transport:svc.transport});assert.equal(bridge.status().connected,true);await bridge.disconnect();assert.equal(bridge.status().configured,false);assert.equal((await svc.fetch('/api/admin/state',{headers:{Authorization:'Bearer '+saved.adminKey}})).status,401);
 }finally{bridge?.close();svc.close();await rm(dir,{recursive:true,force:true});}});
+test('Sites regression: gateway works without AbortSignal.timeout and does not label upstream failures as expired links',async()=>{const svc=await service(),originalFetch=globalThis.fetch,originalTimeout=AbortSignal.timeout;try{
+ const p=await start(svc);AbortSignal.timeout=undefined;globalThis.fetch=(url,opts)=>svc.transport(url,opts);
+ const request=()=>new Request(owner+'/?id='+p.id,{headers:{'oai-authenticated-user-id':'owner-fixture'}});
+ const healthy=await gateway.fetch(request(),{ADMIN_KEY:root});assert.equal(healthy.status,200);assert.ok((await healthy.text()).includes(p.code));
+ globalThis.fetch=async()=>new Response('{}',{status:401});const denied=await gateway.fetch(request(),{ADMIN_KEY:root});assert.equal(denied.status,502);const text=await denied.text();assert.ok(text.includes('UPSTREAM_AUTH'));assert.ok(!text.includes('El enlace venció'));
+ globalThis.fetch=async()=>{throw new TypeError('fixture network error');};const network=await gateway.fetch(request(),{ADMIN_KEY:root});assert.equal(network.status,502);assert.ok((await network.text()).includes('UPSTREAM_NETWORK'));
+}finally{AbortSignal.timeout=originalTimeout;globalThis.fetch=originalFetch;svc.close();}});
+
+test('published Sites regression: manual redirects only; reject redirect before reading body or forwarding credential',async()=>{const svc=await service(),originalFetch=globalThis.fetch;try{
+ const p=await start(svc),request=()=>new Request(owner+'/?id='+p.id,{headers:{'oai-authenticated-user-id':'owner-fixture'}});let calls=0;
+ globalThis.fetch=(url,opts)=>{calls++;if(opts.redirect==='error')throw new TypeError('Invalid redirect value: error is unsupported by Sites');assert.equal(opts.redirect,'manual');return svc.transport(url,opts);};
+ const ok=await gateway.fetch(request(),{ADMIN_KEY:root});assert.equal(ok.status,200);assert.ok((await ok.text()).includes(p.code));assert.equal(calls,1);
+ globalThis.fetch=async(url,opts)=>{assert.equal(opts.redirect,'manual');return new Response(null,{status:302,headers:{Location:'https://evil.example/steal'}});};
+ const redirected=await gateway.fetch(request(),{ADMIN_KEY:root});assert.equal(redirected.status,502);assert.ok((await redirected.text()).includes('UPSTREAM_REDIRECT'));
+}finally{globalThis.fetch=originalFetch;svc.close();}});

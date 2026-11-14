@@ -1,4 +1,4 @@
-**Versión 2.1.1 · aula: seis actos, 30 minutos, encuestas HTTPS y alternativa con manos. Incluye la corrección 1.0.1: corregido el rechazo 403 de recursos estáticos en Windows. Ver CORRECCION-WINDOWS-1.0.1.md. Cerrar el servidor viejo antes de abrir esta copia.**
+**Versión 2.1.2 · aula: seis actos, 30 minutos, encuestas HTTPS y alternativa con manos. Incluye la corrección 1.0.1: corregido el rechazo 403 de recursos estáticos en Windows. Ver CORRECCION-WINDOWS-1.0.1.md. Cerrar el servidor viejo antes de abrir esta copia.**
 
 # Abrir BuscAG en Windows, paso a paso
 
@@ -54,3 +54,5 @@ Usar pantalla extendida: presentación en proyector 1920×1080 y /presenter sól
 La conexión manual de claves descrita en versiones anteriores queda reemplazada por **Conectar encuestas** → **Abrir autorización privada** → comparar código y autorizar con tu cuenta propietaria ChatGPT. No hace falta administrar ADMIN_KEY. Seguir CONECTAR-ENCUESTAS.md. La comprobación final con la sesión real del propietario y teléfonos físicos sigue pendiente del titular.
 
 La versión 2.1.1 corrige un rechazo real del runtime de Sites antes de mostrar el código. Ver CORRECCION-AUTORIZACION-2.1.1.md. Usar un enlace de conexión nuevo.
+
+2.1.2 distingue aperturas de ensayo y reales. Para votar desde celulares, pulsar Usar votos reales en celulares o HTTPS; después Abrir. Volver a pulsar HTTPS no cierra una encuesta online ya abierta.

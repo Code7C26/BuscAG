@@ -25,3 +25,7 @@ El acceso con la sesión real del propietario y la aprobación concreta de su PC
 Cerrar el servidor anterior, extraer este ZIP en otra carpeta, ejecutar INICIAR-WINDOWS.cmd, entrar en /presenter y pulsar Conectar encuestas. Abrir el enlace NUEVO, comparar los seis números y autorizar. Los enlaces anteriores pueden estar vencidos o cancelados. La corrección principal ya se aplica en el servicio remoto y también permite reintentar desde 2.1.0 mientras se descarga 2.1.1.
 
 No se modificaron la aplicación principal BuscAG, Firebase, Supabase ni main/Alexis/German.
+
+## Mejora incluida en Windows 2.1.2
+
+La apertura en ensayo estaba separada de la apertura online, pero el presentador no lo explicaba junto al control. Ahora se muestra ENSAYO: los celulares no pueden votar y la acción Usar votos reales en celulares. Seleccionar HTTPS cambia explícitamente a real; repetir esa selección conserva abiertas las encuestas online. La apertura muestra ABIERTA EN CELULARES o Abierta sólo en ensayo según la fuente. No se mezclan votos ficticios con votos reales.

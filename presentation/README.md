@@ -1,4 +1,4 @@
-# BUSCAG — EL EXPERIMENTO · versión aula 2.1
+# BUSCAG — EL EXPERIMENTO · versión aula 2.1.2
 
 Reconstrucción de 24 escenas en seis actos, 30:00 nominales y video original reservado 25:00–26:00. React/TypeScript/Vite/Motion, Canvas limitado y SVG/CSS. Fuente, imágenes, guion y recursos locales. Se conservan Studio, presentador, backups, IndexedDB, import/export y el iniciador Windows con la corrección de rutas estáticas 1.0.1.
 

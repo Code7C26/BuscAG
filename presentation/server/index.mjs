@@ -361,8 +361,10 @@ export async function createApp({
           if(b.action==='input-source'){
             if(!['online','hands'].includes(b.value))throw Error('Método de votación inválido.');
             if(b.value==='online'&&!bridge.status().connected&&!allowLocalVotes)throw Error('Conectar el servicio HTTPS antes de volver a la votación online.');
-            if(b.value==='online'&&bridge.status().configured){for(const p of project.polls)await bridge.control(p.id,{open:false});}
-            state.inputSource=b.value;state.remoteCloseUnconfirmed=false;for(const p of Object.values(state.polls))p.open=false;
+            const sourceChanged=state.inputSource!==b.value,leavingRehearsal=b.value==='online'&&b.real===true&&state.rehearsal;
+            if(b.value==='online'&&bridge.status().configured&&sourceChanged){for(const p of project.polls)await bridge.control(p.id,{open:false});}
+            if(b.value==='online'&&b.real===true)state.rehearsal=false;
+            state.inputSource=b.value;state.remoteCloseUnconfirmed=false;if(sourceChanged||leavingRehearsal)for(const p of Object.values(state.polls))p.open=false;
             if(b.value==='hands'&&bridge.status().configured){emit();for(const p of project.polls){try{await bridge.control(p.id,{open:false});}catch{state.remoteCloseUnconfirmed=true;}}}
           }else if(b.action==='hands-count'){
             if(state.inputSource!=='hands'||!project.polls.find(p=>p.id===b.id)||!Number.isInteger(b.choice)||b.choice<0||b.choice>=project.polls.find(p=>p.id===b.id).options.length||!Number.isInteger(b.count)||b.count<0||b.count>5000)throw Error('Conteo manual inválido.');

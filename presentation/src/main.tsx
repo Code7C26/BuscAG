@@ -1012,7 +1012,8 @@ function Presenter({
           </div>
           <div className="panel">
             <p className="eyebrow">VOTACIONES</p>
-            <div className="vote-source-controls"><button onClick={()=>act({action:'input-source',value:'online'})}>HTTPS</button><button onClick={()=>act({action:'input-source',value:'hands'})}>Manos levantadas</button></div>
+            <div className="vote-source-controls"><button onClick={()=>act({action:'input-source',value:'online',real:true})}>HTTPS</button><button onClick={()=>act({action:'input-source',value:'hands'})}>Manos levantadas</button></div>
+            {live.rehearsal&&live.inputSource!=='hands'&&<div className="warning" role="status"><strong>ENSAYO: los celulares no pueden votar.</strong><p>Abrir una encuesta aquí sólo inicia la simulación local.</p>{live.voting?.connected&&<button onClick={()=>act({action:'input-source',value:'online',real:true})}>Usar votos reales en celulares</button>}</div>}
             <p>{live.inputSource==='hands'?'Contando en sala · fuente separada de los votos online':live.voting?.connected?'HTTPS conectado · sincronización en vivo':'HTTPS pendiente o sin conexión'}</p>
             {live.remoteCloseUnconfirmed&&<p className="warning">El servicio no confirmó el cierre online. No mezclar esos votos con las manos.</p>}
             <button
@@ -1026,7 +1027,7 @@ function Presenter({
             {live.polls.map((poll) => (
               <div className="poll-control" key={poll.id}>
                 <b>{poll.question}</b>
-                <p>{poll.total} {poll.source==='hands'?'manos contadas':'votos recibidos'}</p>
+                <p>{poll.total} {poll.source==='hands'?'manos contadas':poll.source==='rehearsal'?'votos ficticios · sólo ensayo':'votos recibidos'}</p><p>{poll.source==='rehearsal'?(poll.open?'Abierta sólo en ensayo · celulares cerrados':'Ensayo local · celulares cerrados'):poll.source==='https'?(poll.open?'ABIERTA EN CELULARES':'CERRADA EN CELULARES'):''}</p>
                 {live.inputSource==='hands'&&poll.options.map((option,i)=><label key={option}>{option}<input type="number" min="0" max="5000" value={live.handCounts?.[poll.id]?.[i]||0} onChange={e=>act({action:'hands-count',id:poll.id,choice:i,count:Number(e.target.value)})}/></label>)}
                 <button
                   onClick={() =>

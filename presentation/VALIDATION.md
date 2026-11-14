@@ -19,3 +19,7 @@ No se probaron Android/iPhone físicos, proyector, sonido de aula ni datos móvi
 ## Autorización 2.1.1
 
 Causa real reproducida en servicio publicado: Sites rechaza redirect:error. Corregido con manual y rechazo explícito de 3xx. Nuevas regresiones y diagnóstico HTTPS Worker→servicio publicados. Ver CORRECCION-AUTORIZACION-2.1.1.md para alcance y límites.
+
+## Modo de votación 2.1.2
+
+HTTPS selecciona explícitamente votos reales y repetir la selección no cierra encuestas remotas. La prueba de navegador usa el botón Usar votos reales en celulares, abre, vuelve a seleccionar HTTPS, verifica que siga abierta y completa voto/conteo/cierre/revelado/revocación. El preflight externo sólo lee el estado de las encuestas y nunca envía votos de prueba al evento real, aunque haya encuestas abiertas.

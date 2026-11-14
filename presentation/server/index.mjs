@@ -122,7 +122,7 @@ export async function createApp({
     if(!state.rehearsal&&bridge?.status().configured)return (bridge.getPolls(admin)||project.polls.map(p=>({...p,open:false,reveal:false,total:0,counts:null,winners:[]}))).map(p=>({...p,source:'https'}));
     return project.polls.map(p=>({...stats(p.id,admin),source:state.rehearsal?'rehearsal':allowLocalVotes?'local-test':'unconfigured'}));
   }
-  const snapshot = (admin = false) => ({...state,projectRevision,handCounts:admin?state.handCounts:undefined,elapsed:elapsed(),at:Date.now(),polls:shownPolls(admin),legacyProject:project.narrativeVersion!==2,voting:bridge?.status()||{configured:false,origin:'',connected:false,error:''},timing:timing(project)});
+  const snapshot = (admin = false) => ({...state,projectRevision,handCounts:admin?state.handCounts:undefined,elapsed:elapsed(),at:Date.now(),polls:shownPolls(admin),legacyProject:project.narrativeVersion!==2,voting:bridge?.status(admin)||{configured:false,origin:'',connected:false,error:''},timing:timing(project)});
   function emit(){const msg='data: '+JSON.stringify(snapshot())+'\n\n';for(const c of clients)c.write(msg);}
   bridge=await createVotingBridge(dataDir,{transport:votingTransport,onUpdate:()=>emit()});
   const heartbeat = setInterval(() => {
@@ -306,7 +306,10 @@ export async function createApp({
           return send(res, 401, {
             error: "Se requiere acceso de presentador.",
           });
-        if(path==='/api/admin/voting'&&req.method==='GET')return send(res,200,bridge.status());
+        if(path==='/api/admin/voting'&&req.method==='GET')return send(res,200,bridge.status(true));
+        if(path==='/api/admin/voting/connect'&&req.method==='POST')return send(res,200,await bridge.beginPair(project.polls));
+        if(path==='/api/admin/voting/connect'&&req.method==='DELETE'){await bridge.cancelPair();return send(res,200,bridge.status(true));}
+        if(path==='/api/admin/voting/disconnect'&&req.method==='POST'){await bridge.disconnect();return send(res,200,bridge.status(true));}
         if(path==='/api/admin/voting'&&req.method==='PUT'){const b=await jsonBody(req,4096);await bridge.configure(b.origin,b.adminKey,project.polls);project.links.voteOrigin=bridge.status().origin;projectRevision++;await writeFile(join(dataDir,'project.json'),JSON.stringify(project));emit();return send(res,200,bridge.status());}
         if (path === "/api/admin/original" && req.method === "GET")
           return send(

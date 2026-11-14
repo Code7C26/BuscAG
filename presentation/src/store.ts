@@ -36,7 +36,7 @@ export type Live = {
   inputSource?: "online"|"hands";
   handCounts?: Record<string,number[]>;
   remoteCloseUnconfirmed?: boolean;
-  voting?: {configured:boolean;origin:string;connected:boolean;lastAt:number;error:string};
+  voting?: {configured:boolean;origin:string;connected:boolean;lastAt:number;error:string;pairing?:{phase:string;code?:string;url?:string;expiresAt?:number;error?:string}};
   connection: boolean;
   polls: Poll[];
   rehearsalCounts: Record<string, number[]>;

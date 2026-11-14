@@ -1,4 +1,4 @@
-# BUSCAG — EL EXPERIMENTO · versión aula 2.0
+# BUSCAG — EL EXPERIMENTO · versión aula 2.1
 
 Reconstrucción de 24 escenas en seis actos, 30:00 nominales y video original reservado 25:00–26:00. React/TypeScript/Vite/Motion, Canvas limitado y SVG/CSS. Fuente, imágenes, guion y recursos locales. Se conservan Studio, presentador, backups, IndexedDB, import/export y el iniciador Windows con la corrección de rutas estáticas 1.0.1.
 
@@ -10,7 +10,7 @@ Extraer el ZIP en una carpeta nueva, usar Node 24 LTS (24.13+ de la serie 24) y 
 
 Leer AULA-OPERACION.md. La opción preferida es un servicio público HTTPS independiente para Android/iPhone con Wi-Fi o datos móviles. No se genera ningún QR de votación con localhost. Los QR no se habilitan hasta configurar un origen compatible mediante el panel privado. Su clave se guarda sólo en data/voting-private.json, excluida de Git/ZIP/exportaciones.
 
-El servicio independiente está publicado en https://buscag-el-experimento-votos.reedyrook2.chatgpt.site y pasó preflight HTTP externo. Falta configurar la clave privada del operador siguiendo voting-service/README.md. Ver PENDIENTES.md. No se afirma funcionamiento en teléfonos físicos. El modo «Manos levantadas» funciona localmente y conserva resultados manuales separados de votos online. El ensayo usa ejemplos ficticios rotulados y nunca borra datos reales.
+El servicio independiente está publicado en https://buscag-el-experimento-votos.reedyrook2.chatgpt.site y pasó preflight HTTP externo. La PC se autoriza con el botón Conectar encuestas siguiendo CONECTAR-ENCUESTAS.md. Ver PENDIENTES.md. No se afirma funcionamiento en teléfonos físicos. El modo «Manos levantadas» funciona localmente y conserva resultados manuales separados de votos online. El ensayo usa ejemplos ficticios rotulados y nunca borra datos reales.
 
 GitHub es privado; su QR requiere una cuenta con acceso. El dominio público confirmado por el titular es buscag-2677c.web.app. La demo usa el entorno de prueba documentado, buscag-prueba.web.app, y requiere ensayo con dos cuentas autorizadas. Ningún QR demuestra por sí solo que el MVP esté operativo.
 
@@ -31,3 +31,7 @@ Para las pruebas de navegador hace falta Chromium de Playwright o /usr/bin/chrom
 Servidor de producción de esta presentación local: node server/index.mjs. Desarrollo: npm run dev. No copiar variables o secretos del MVP. No se cambia src/code, Firebase, Supabase ni ramas principales.
 
 SCRIPT.md contiene el discurso nuevo y STORYBOARD.md el resumen escena por escena. docs/archive conserva el guion/storyboard anteriores y el proyecto original. Exportar antes de restaurar/importar otra versión. Un proyecto anterior puede conservar textos pero requerirá asignar actos y ajustar tiempos antes del ensayo nuevo.
+
+## Conexión simplificada 2.1.0
+
+La conexión manual de claves descrita en versiones anteriores queda reemplazada por **Conectar encuestas** → **Abrir autorización privada** → comparar código y autorizar con tu cuenta propietaria ChatGPT. No hace falta administrar ADMIN_KEY. Seguir CONECTAR-ENCUESTAS.md. La comprobación final con la sesión real del propietario y teléfonos físicos sigue pendiente del titular.

@@ -1,0 +1,2 @@
+CREATE TABLE pairings(id TEXT PRIMARY KEY,poll_hash TEXT NOT NULL,public_key TEXT NOT NULL,code TEXT NOT NULL,expires_at INTEGER NOT NULL,status TEXT NOT NULL,ciphertext TEXT);
+CREATE TABLE devices(token_hash TEXT PRIMARY KEY,created_at INTEGER NOT NULL,expires_at INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0);

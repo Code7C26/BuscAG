@@ -11,3 +11,7 @@ El servicio independiente de votación se publicó en Sites por HTTPS. La red Cl
 La entrega conserva las protecciones contra traversal que corrigieron Windows 1.0.1. CI prueba el ZIP distribuido extraído, sin reconstruirlo, en Windows y Linux. Consultar el resultado de la ejecución asociada al commit antes de dar esos sistemas por aprobados.
 
 No se probaron Android/iPhone físicos, proyector, sonido de aula ni datos móviles. Pendientes también video original inglés de 60 segundos, demo auténtica con dos cuentas y ensayo oral. El repositorio de auditoría sigue privado y exige acceso; no se cambió su visibilidad. No hubo despliegue Firebase ni modificación Supabase.
+
+## Conexión 2.1.0
+
+25 pruebas pasan, incluidas entrega RSA-OAEP cifrada de un uso, expiración, CSRF, vínculo a identidad, rechazo de token erróneo, credencial de PC sin facultad de autorizar, persistencia y revocación. El navegador recorre el botón y formulario con identidad fixture; no se presenta como un inicio de sesión real de ChatGPT. La aceptación real del propietario sigue pendiente de su cuenta.

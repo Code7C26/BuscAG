@@ -1,43 +1,17 @@
-# Servicio HTTPS independiente — BuscAG Aula Votes
+# Servicio independiente · conexión 2.1.0
 
-Worker ESM + D1 aislado. No usa Supabase, Firebase, cuentas ni datos de BuscAG. Servicio público publicado con autorización del operador:
+El servicio público conserva votaciones y resultados en D1 independiente. Se añadió una segunda página privada de autorización, desplegada mediante Sites owner-only y verificada con una sola cuenta propietaria, sin grupos, visitantes ni editores. No compartirla: el permiso de propietario lo aplica el límite de acceso de Sites. El Worker además exige identidad ChatGPT autenticada; la identidad por sí sola no concede rol propietario dentro del servicio público.
 
-https://buscag-el-experimento-votos.reedyrook2.chatgpt.site
+El propietario abre un enlace generado por Studio, compara seis dígitos y aprueba mediante formulario firmado HMAC, ligado a la identidad, solicitud y vencimiento. La PC guarda una clave RSA-OAEP-SHA256 efímera sólo en memoria; el servicio cifra una credencial específica de 90 días con su clave pública. La consulta autenticada por un secreto aleatorio de 256 bits entrega el cifrado una sola vez mediante UPDATE RETURNING atómico. Ni el formulario ni el código temporal contienen ADMIN_KEY. Se guardan hashes de tokens en D1; los votos se conservan.
 
-## Estado verificado
+La credencial de dispositivo permite administrar las dos encuestas, pero no aprobar otras computadoras. Cancelación, vencimiento (5 minutos), deduplicación de aprobación y revocación están probados. Desconectar cierra las dos votaciones y revoca el token remoto; sin conexión no se declara revocado.
 
-GitHub Actions comprobó desde una red externa: ambas páginas /vote, JavaScript, CSS, health y polls responden 200 con MIME correcto; administración anónima rechazada 401; votos con encuesta cerrada rechazados 409. La base independiente contiene sólo polls y votes. Las encuestas se entregan cerradas y sin votos.
+ADMIN_KEY permanece sólo como secreto runtime de ambos servicios. Fue renovada para esta configuración, sin publicarla. El usuario no debe editarla. No se incluyen hosting IDs, secretos ni runtime data de la página privada en el ZIP; se incluye su código auditable sin credenciales. La migración 0002 sólo agrega pairings/devices a la D1 aislada y no modifica votos existentes.
 
-El flujo completo abrir/votar/cerrar/revelar y puente al proyector pasó con el mismo Worker y SQLite aislado, incluyendo navegadores Android/iPhone emulados. El flujo remoto completo con la clave del operador, teléfonos físicos y datos móviles sigue pendiente.
+## Operación
 
-## Conectar en Windows sin distribuir secretos
+Leer ../CONECTAR-ENCUESTAS.md. No configurar manualmente variables ni pegar claves en el navegador. Para PC perdida, revocar su hash en el servicio o renovar credenciales mediante el administrador; el panel local sólo revoca su propia PC.
 
-1. Abrir el servicio en Sites con la cuenta propietaria → configuración → variables de entorno. Cambiar ADMIN_KEY por una clave aleatoria privada de al menos 32 caracteres y volver a desplegar la versión guardada del servicio. Mantener EVENT_ID=buscag-aula-20261114 y DB; no usar claves del MVP. La clave inicial está guardada como secreto y no se puede recuperar desde el ZIP.
-2. Abrir /studio o /presenter local, ingresar el origen público anterior y esa clave en Servicio público HTTPS → Conectar y verificar. Guardado privado sólo en data/voting-private.json, excluido del ZIP/exportación/Git.
-3. Cerrar ambas encuestas, salir de ensayo y seleccionar HTTPS. Abrir una encuesta, votar desde un teléfono, comprobar conteo, cerrar y revelar. Repetir con la segunda. Esta prueba crea votos reales: usar un EVENT_ID de ensayo y luego uno definitivo nuevo si se necesita arrancar en cero; los registros existentes se conservan.
-4. Probar Wi-Fi y datos móviles. Sin esta verificación, usar el modo Manos levantadas y no afirmar que se probaron celulares físicos.
+## Verificación y límites
 
-ID de servicio independiente: appgprj_6af7922be62081919ce697143c808f30. Versión guardada 1, commit de servicio 8a8716dc9310c927fbf5f75923ecca758a38d8a7. No corresponde al main del repositorio BuscAG.
-
-## Alternativa Cloudflare Workers con cuenta propia
-
-1. Crear una base D1 nueva exclusiva para estas encuestas. Completar su ID real en wrangler.jsonc; no usar un proyecto Supabase.
-2. Elegir EVENT_ID nuevo para el evento. Los votos se separan por ese identificador y nunca se borran mediante la aplicación.
-3. Aplicar migrations/0001_voting.sql únicamente a esa base independiente, con autorización. La migración crea dos tablas, sin datos de BuscAG.
-4. Configurar ADMIN_KEY mediante el almacén de secretos del proveedor, mínimo 32 caracteres aleatorios. No guardarla en Git, .env del frontend, QR o chat.
-5. Publicar el Worker HTTPS sólo después de autorización. El archivo worker/index.mjs exporta fetch(request,env); espera env.DB y env.ADMIN_KEY. El cliente móvil se sirve desde el mismo origen, sin CORS ni sesión de ChatGPT.
-6. Comprobar /api/health: service=buscag-aula-votes, version=2, https=true. Comprobar /vote?poll=search y /vote?poll=object en una ventana sin sesión.
-7. En el presentador o Studio local de Windows, introducir origen HTTPS y ADMIN_KEY en «Servicio público HTTPS» → «Conectar y verificar». El servidor privado valida el servicio y registra las preguntas. La clave se conserva sólo en data/voting-private.json.
-8. El proyector consulta resultados por su servidor local; éste sincroniza HTTPS cada 1,5 s y emite SSE al público. Los teléfonos votan directamente al servicio HTTPS por Wi-Fi o datos móviles.
-
-## Contrato y privacidad
-
-GET /api/polls: opciones, contador y resultados sólo si se revelaron. POST /api/vote: cuerpo poll/choice. Cookie aleatoria Secure/HttpOnly/SameSite, digest SHA256 en base, unicidad por evento/encuesta/navegador. No se piden nombre, teléfono ni correo. Esto reduce repeticiones accidentales; borrar cookies o cambiar navegador permite repetir. No identifica personas ni promete prevención perfecta.
-
-POST /api/admin/control y /api/admin/config requieren Authorization: Bearer ADMIN_KEY. No se admiten claves por query string. Los endpoints de administración nunca aparecen en el proyector. No se pueden redefinir preguntas/opciones con votos ya recibidos. No hay endpoint de borrado o reinicio de votos reales.
-
-La apertura/cierre y la inserción usan consultas SQL acotadas; la inserción vuelve a comprobar que la encuesta siga abierta. Los resultados ocultos no incluyen conteos por opción. Votos, datos de ensayo y manos contadas son fuentes separadas.
-
-## Corte de internet
-
-El presentador activa «Manos levantadas». La pantalla deja de mostrar el QR y muestra el conteo manual, identificado. Se intenta cerrar las encuestas online; si el servicio no confirma el cierre, se avisa en privado porque usuarios con datos móviles podrían seguir enviando votos. Esos votos no se mezclan con las manos. Al reconectar, verificar cierre y elegir conscientemente la fuente.
+Pruebas automatizadas con Worker real/SQLite y navegador cubren protocolo y botones; el control de acceso de Sites se verifica externamente sin sesión y con encabezados falsificados. La aprobación real con la cuenta propietaria y teléfonos físicos debe validarla el titular. Un fixture de identidad no prueba un inicio de sesión ChatGPT real.

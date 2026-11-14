@@ -894,7 +894,7 @@ export function Studio({ live }: { live: Live | null }) {
                   desde Studio.
                 </p>
                 <VotingSettings live={live}/>
-                <p>Android/iPhone y datos móviles necesitan el mismo servicio HTTPS público. El servidor del proyector guarda la clave administrativa; los teléfonos no la reciben. Si falla internet, usar manos levantadas desde presentador.</p>
+                <p>Android/iPhone y datos móviles necesitan el mismo servicio HTTPS público. El servidor del proyector guarda una credencial privada de esta PC; los teléfonos no la reciben. Si falla internet, usar manos levantadas desde presentador.</p>
                 <button
                   onClick={() => {
                     task(async () => {

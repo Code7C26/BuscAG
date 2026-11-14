@@ -8,7 +8,7 @@ Las seis ventanas son 00–04, 04–08, 08–15, 15–20, 20–27 y 27–30. La 
 
 ## Encuestas: conexión del operador
 
-Servicio aislado publicado: https://buscag-el-experimento-votos.reedyrook2.chatgpt.site. Configurar su clave privada en Studio → Servicio público HTTPS. El propietario puede establecer una clave ADMIN_KEY propia de al menos 32 caracteres en Sites y volver a desplegar la versión guardada; después ingresarla solamente en el panel privado local. No compartirla en Git, el ZIP ni el proyector. Ver voting-service/README.md. No hay localhost en QR. Antes de verificar un origen real se muestra «Enlace pendiente» y hay modo de manos levantadas. No confundir datos ficticios rotulados del ensayo con votos reales.
+Servicio aislado publicado: https://buscag-el-experimento-votos.reedyrook2.chatgpt.site. En Studio o presentador pulsar **Conectar encuestas**, abrir autorización privada, iniciar sesión con la cuenta propietaria y comparar el código. No copiar ni administrar claves. Instrucciones completas: CONECTAR-ENCUESTAS.md. Antes de conectar se muestra «Enlace pendiente» y está disponible el modo de manos levantadas.
 
 Después de conectar: cerrar ambas encuestas, salir de ensayo, elegir HTTPS y abrir la correcta. Acto II: dónde buscarías. Acto III: objeto de demo. Esperar votos, cerrar, revelar. El mayor conteo elige objeto; empate/cero se explican en sala. El panel no redefine un ganador ni convierte muestras en resultados reales.
 
@@ -35,3 +35,7 @@ Extraer el ZIP nuevo en otra carpeta y cerrar el servidor anterior. No sobrescri
 ## Pendientes del evento
 
 Configuración privada del operador, pruebas con Android/iPhone físicos y datos móviles, proyector y audio reales, ensayo de 30 minutos, video publicitario original inglés de 60 s y grabación auténtica de respaldo de demo. No se fabricó ninguno de esos materiales ni resultados.
+
+## Conexión simplificada 2.1.0
+
+La conexión manual de claves descrita en versiones anteriores queda reemplazada por **Conectar encuestas** → **Abrir autorización privada** → comparar código y autorizar con tu cuenta propietaria ChatGPT. No hace falta administrar ADMIN_KEY. Seguir CONECTAR-ENCUESTAS.md. La comprobación final con la sesión real del propietario y teléfonos físicos sigue pendiente del titular.

@@ -25,3 +25,7 @@
 | Contingencia | Presentador → Manos levantadas | Conteo manual rotulado, QR retirado y sin mezclar/borrar votos online |
 | Android/iPhone y datos móviles | Viewports y sesiones emuladas, Worker con SQL de prueba | No se probaron teléfonos físicos. HTTPS público comprobado; red del aula requiere aceptación real |
 | Separación de producción | Rama de presentación y servicio Sites separados | No hay deploy de BuscAG, cambios de Supabase ni push a main/Alexis/German |
+
+## Conexión simplificada 2.1.0
+
+La conexión manual de claves descrita en versiones anteriores queda reemplazada por **Conectar encuestas** → **Abrir autorización privada** → comparar código y autorizar con tu cuenta propietaria ChatGPT. No hace falta administrar ADMIN_KEY. Seguir CONECTAR-ENCUESTAS.md. La comprobación final con la sesión real del propietario y teléfonos físicos sigue pendiente del titular.

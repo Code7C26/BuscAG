@@ -22,7 +22,9 @@ service worker ni configuración de producción. No necesita claves de Supabase.
 
 ## Qué es real y qué es demostración
 
-Se reutilizan el icono SVG sin cambios y los cinco tokens de color del proyecto.
+Se reutilizan el icono SVG sin cambios y la paleta histórica de V1 (base `#031926`).
+El rediseño posterior `cfdca4a` usa la paleta azul (base `#081a33`); las pruebas
+validan ambas paletas por separado, sin modificar la interfaz ni el video V1.
 Header, tarjetas, formulario, filtros, mapa Leaflet, comparador, chat y recuperación
 son capturas del React/Vite real; no se redibujaron controles como si fueran otra app.
 Las capturas se animan con perspectiva, zoom y profundidad en Remotion: no son una

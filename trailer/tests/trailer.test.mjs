@@ -9,9 +9,15 @@ test('90 second 1080p30 timeline covers every frame exactly and respects all fiv
  assert.equal(end,90);assert.equal(SCENES[0].to,12);assert.equal(SCENES.find(s=>s.id==='search').from,28);assert.equal(SCENES.find(s=>s.id==='chat').from,55);assert.equal(SCENES.at(-1).from,77);
  for(const [from,to,text] of NARRATION){assert.ok(from>=0&&to<=90&&to>from);assert.ok(text.length>4);}
 });
-test('logo is byte-identical to BuscAG and all five authentic brand tokens are preserved',async()=>{
+test('logo is byte-identical to BuscAG and V1 retains its historical palette',async()=>{
  const hash=b=>createHash('sha256').update(b).digest('hex');assert.equal(hash(await readFile('public/brand/icon.svg')),hash(await readFile('../src/code/public/icon.svg')));
- const css=await readFile('../src/code/src/index.css','utf8');for(const [key,color] of Object.entries(COLORS))assert.equal(css.match(new RegExp('--brand-'+key+':\\s*(#[0-9a-fA-F]{6})'))?.[1].toLowerCase(),color);
+ // V1 predates the blue redesign in cfdca4a; preserve its exported film and palette.
+ assert.deepEqual(COLORS,{petroleum:'#031926',teal:'#468189',sage:'#77aca2',mist:'#9dbebb',cream:'#f4e9cd'});
+});
+test('current application retains the approved blue palette from cfdca4a',async()=>{
+ const expected={petroleum:'#081a33',teal:'#248dff',sage:'#60c8ff',mist:'#b9d9fa',cream:'#e4f1ff'};
+ const css=await readFile('../src/code/src/index.css','utf8');
+ for(const [key,color] of Object.entries(expected))assert.equal(css.match(new RegExp('--brand-'+key+':\\s*(#[0-9a-fA-F]{6})'))?.[1].toLowerCase(),color,key);
 });
 test('every demonstrated screen is a captured real component with synthetic backend and valid PNG dimensions',async()=>{
  const manifest=JSON.parse(await readFile('public/captures/manifest.json','utf8'));assert.equal(manifest.mode,'real_ui_synthetic_backend');assert.equal(manifest.real_credentials,false);assert.equal(manifest.simulated_recovery,'confirmed');assert.match(manifest.app_tree,/^[0-9a-f]{40}$/);

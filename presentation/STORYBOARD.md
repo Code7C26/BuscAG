@@ -1,28 +1,28 @@
-# Resumen escena por escena
+# Las 24 diapositivas · plan de 25 minutos
 
-| Escena | Acto | Inicio–fin | Expositor | Animación / interacción |
-|---|---|---|---|---|
-| 01 | 1 | 00:00–01:30 | Valentino | 0–3 s negro absoluto. 3–12 s EXPERIMENTO 001. 12–40 s pregunta gigante. 40–75 s pensar en silencio y observar nodos. 75–90 s dos nodos empiezan a buscarse. |
-| 02 | 1 | 01:30–03:00 | Germán | Nodos orbitan sin tocarse; dos rondas de manos. Al final, un haz conecta los nodos. Logo se forma con partículas. No atribuir recuperaciones al público. |
-| 03 | 1 | 03:00–04:00 | Germán | Revelación del símbolo original con partículas y onda cian. Nombres grandes; ambos hablarán de ingeniería y negocio. Preparar encuesta 1 sin abrirla todavía. |
-| 04 | 2 | 04:00–06:00 | Ambos | 04:00 abrir encuesta 1 HTTPS. 30–45 s para escanear/votar. Cerrar, revelar y comentar. Si no hay servicio, pasar a manos levantadas; contar por opción sin mezclar fuentes. |
-| 05 | 2 | 06:00–07:00 | Valentino | Avisos flotan en profundidad, saturan y colapsan en un único punto de búsqueda. La representación es conceptual, sin cifras inventadas. |
-| 06 | 2 | 07:00–08:00 | Germán | Cámara se acerca a capturas auténticas de la interfaz. Rótulo datos sintéticos; no se presenta como demo real. |
-| 07 | 3 | 08:00–09:00 | Valentino | Encuesta 2. Cerrar antes de demo; no avanzar automáticamente. Registrar ganador o empate. |
-| 08 | 3 | 09:00–10:30 | Valentino | 0–20 s: sesión A. 20–65 s: completar. 65–90 s: guardar y recargar. Datos de prueba según DEMO.md. Nunca crear cuentas ni editar datos ajenos para forzar el resultado. |
-| 09 | 3 | 10:30–12:00 | Germán | 0–35 s: búsqueda/mapa. 35–75 s: hallazgo B. 75–90 s: persistencia. Si una función no está disponible, registrar BLOQUEADO. |
-| 10 | 3 | 12:00–13:30 | Valentino | 45 s Valentino: comparación; 45 s Germán: responder y recargar. Germán dice: «Confirmo desde mi sesión que recibí este mensaje y que la respuesta quedó en esta conversación». Transición sólo manual tras confirmación. |
-| 11 | 3 | 13:30–15:00 | Germán | 45 s Germán: solicitud y explicación; 45 s Valentino: confirmación y recarga. No marcar recuperación si no está probada. Respaldo sólo grabación real etiquetada; los clips sintéticos del trailer no son respaldo de MVP. |
-| 12 | 4 | 15:00–16:15 | Valentino | Capas se separan en profundidad con CSS transform. Cada capa permanece legible. No afirmar despliegue actual por la sola configuración. |
-| 13 | 4 | 16:15–17:30 | Germán | Mostrar fragmento extraído del HEAD auditado. Abrir archivo por enlace de auditoría sólo si el jurado lo solicita. |
-| 14 | 4 | 17:30–18:45 | Valentino | Secuencia visual: timeout → reintento con misma clave → respuesta confirmada. Esquema conceptual, no incidente de producción medido. |
-| 15 | 4 | 18:45–20:00 | Germán | Mostrar VALIDATION.md actualizado. No leer un listado extenso. No equiparar móvil emulado con teléfono real. |
-| 16 | 5 | 20:00–21:20 | Germán | Tarjetas: gratis / destacado propuesto / patrocinio propuesto. Sin precios inventados. |
-| 17 | 5 | 21:20–22:40 | Valentino | Gráfico breve con magnitudes separadas: inversión única / fijo mensual / fijo anual. Fuente PDF, páginas 1 y 7. |
-| 18 | 5 | 22:40–24:00 | Germán | Mapa: una comunidad → varias localidades → Argentina. Rotular VISIÓN FUTURA, sin atribuir usuarios actuales. Negocio prometedor, no demostrado. Móvil futuro presupuestado en notas. |
-| 19 | 5 | 24:00–25:00 | Valentino | 24:00–25:00 exacto. Mostrar flujo de trabajo propuesto, no tablero ficticio. Dar paso al video al minuto 25. |
-| 20 | 5 | 25:00–26:00 | Ambos | 25:00–26:00 exacto. Cargar MP4 desde Studio, validar duración 60 s y audio original. Reproducir tras clic. Pausar/reiniciar/volumen disponibles. No subtitular sin permiso. |
-| 21 | 5 | 26:00–27:00 | Germán | 26:00–27:00. Mostrar materiales editables. No usar el trailer sintético como tutorial real ni como publicidad inglesa. |
-| 22 | 6 | 27:00–28:00 | Valentino | 27:00–28:00. La pregunta inicial se transforma en la frase final con máscara tipográfica. Los nodos del inicio reaparecen y expanden sus conexiones. Visión futura explícita. |
-| 23 | 6 | 28:00–29:00 | Germán | 28:00–29:00. QR legibles. No afirmar piloto abierto sin decisión del equipo. |
-| 24 | 6 | 29:00–30:00 | Valentino | 29:00–30:00. Últimos 15 s: sostener logo y QR en silencio. No cerrar con una diapositiva de “gracias”. |
+| N.º | Acto | Inicio–fin | Quién | Pantalla | Avance |
+|---|---|---|---|---|---|
+| 01 | 1 | 00:00–00:45 | Valentino | ¿Cuánto tardarías en recuperar algo que perdiste? | Dejar correr el negro inicial y la pregunta. Pausa breve. Al 00:45, avanzar a 02. |
+| 02 | 1 | 00:45–01:30 | Germán | Dos personas. Un mismo objetivo. | Reservar ocho segundos para cada ronda de manos. Al 01:30, avanzar a 03. |
+| 03 | 1 | 01:30–02:30 | Valentino + Germán | BuscAG. Encontrarnos hace la diferencia. | Preparar encuesta 1. Al 02:30, avanzar a 04. |
+| 04 | 2 | 02:30–04:00 | Valentino + Germán | ¿Dónde buscarías primero un objeto perdido? | Cerrar y revelar. Comentar la opción real ganadora, o el empate, sin inventar cifras. Al 04:00, avanzar a 05. |
+| 05 | 2 | 04:00–05:00 | Valentino | Una publicación útil. | Señalar los cuatro campos animados. No abrir el formulario todavía: se hará en 08. Al 05:00, avanzar a 06. |
+| 06 | 2 | 05:00–06:00 | Germán | Encontrar sin recorrer todo. | Señalar la captura del inicio y los tres grupos de filtros. La captura usa datos sintéticos rotulados. Al 06:00, avanzar a 07. |
+| 07 | 3 | 06:00–07:00 | Valentino | ¿Qué buscamos juntos? | Abrir object, dejar veinte segundos para votar, cerrar y revelar. Al 07:00, avanzar a 08 y abrir el MVP. No usar votos de ensayo. |
+| 08 | 3 | 07:00–08:45 | Valentino + Germán | Publicar. Editar. Gestionar. | Mostrar Perfil/Configuración sin modificar datos personales durante la demo. Al 08:45, pasar a 09, manteniendo el MVP en la tele. |
+| 09 | 3 | 08:45–10:30 | Germán | Buscar también es ubicar. | En vivo: buscar, aplicar dos o tres filtros, limpiar, abrir Mapa y una ficha. Publicar el hallazgo preparado. Reservar aproximadamente cuarenta y cinco segundos para estas acciones. Al 10:30, pasar a 10 sin salir del MVP. |
+| 10 | 3 | 10:30–12:15 | Valentino + Germán | Coincidencias y conversación. | Responder, volver a la cuenta A y comprobar el mensaje. Activar CONEXIÓN ENCONTRADA sólo tras verlo confirmado. Al 12:15, pasar a 11. |
+| 11 | 3 | 12:15–14:00 | Germán + Valentino | Del aviso a la recuperación. | Aceptar o rechazar sólo el caso controlado. Si la RPC no está instalada, mostrar el aviso de función no disponible y explicar el límite en una frase. Al 14:00, volver a las diapositivas y avanzar a 12. |
+| 12 | 4 | 14:00–15:00 | Valentino | Entramos al sistema. | Señalar las cuatro capas animadas. Al 15:00, avanzar a 13. |
+| 13 | 4 | 15:00–16:00 | Germán | Una sugerencia. Reglas visibles. | Señalar el fragmento y la frase sobre propiedad. No volver a hacer toda la demo de comparación. Al 16:00, avanzar a 14. |
+| 14 | 4 | 16:00–17:00 | Valentino | La respuesta que no llegó. | Seguir la secuencia enviar → respuesta incierta → reintentar la misma acción. Al 17:00, avanzar a 15. |
+| 15 | 4 | 17:00–18:00 | Germán | Seguridad que se comprueba. | Mostrar los tres niveles de pruebas y los ejemplos de permisos. Al 18:00, avanzar a 16. |
+| 16 | 5 | 18:00–19:00 | Germán | La utilidad antes que el cobro. | Mostrar núcleo gratuito y órbitas de propuestas comerciales. Al 19:00, avanzar a 17. |
+| 17 | 5 | 19:00–20:00 | Valentino | Poner números es diseñar. | Señalar inversión, mensual y anual una sola vez. Al 20:00, avanzar a 18. |
+| 18 | 5 | 20:00–20:45 | Germán | Crecer después de probar. | Recorrer brevemente la expansión animada; no explicar de nuevo el origen. Al 20:45, avanzar a 19. |
+| 19 | 5 | 20:45–21:30 | Valentino | Construir. Revisar. Documentar. | No abrir un tablero durante este tramo. Al 21:30, avanzar a 20 e iniciar el video con audio. |
+| 20 | 5 | 21:30–22:30 | Ambos · video original | The original film. | Reproducir el video original completo, sin hablar encima. Al 22:30, avanzar a 21. |
+| 21 | 5 | 22:30–23:00 | Germán | La marca sale de la pantalla. | Mostrar materiales sin abrir archivos. Al 23:00, avanzar a 22. |
+| 22 | 6 | 23:00–23:30 | Valentino | ¿Cuánto tardarías en recuperar algo que perdiste? | Dejar transformar la pregunta en la animación existente. Al 23:30, avanzar a 23. |
+| 23 | 6 | 23:30–24:15 | Germán | Probalo. Revisalo. Mejorémoslo. | Sostener QR legibles; el acceso del jurado se prepara antes del evento. Al 24:15, avanzar a 24. |
+| 24 | 6 | 24:15–25:00 | Valentino | ¿Y si encontrarlo fuera mucho más fácil? | Sostener logo y conexiones en los últimos ocho segundos. Cerrar al 25:00, sin agregar otra diapositiva. |

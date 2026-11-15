@@ -1,3 +1,4 @@
+import {schedule} from '../server/model.mjs';
 import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, MotionConfig } from "motion/react";
 import {
@@ -374,7 +375,7 @@ export function Slide({
       </p>
       <h1>{s.kind === "poll" ? poll?.question || s.title : s.title}</h1>
       <p className="subtitle">{s.subtitle}</p>
-      {!["signal", "team", "audience", "poll", "video", "closing", "reveal", "vision", "viability", "architecture", "code", "challenge", "testing", "value", "management"].includes(s.kind) && (
+      {!["signal", "team", "audience", "poll", "video", "closing", "vision", "viability", "architecture", "code", "challenge", "testing", "value", "management"].includes(s.kind) && (
         <div className="bullets">
           {s.bullets.map((b, i) => (
             <motion.div
@@ -466,14 +467,9 @@ export function Slide({
   else if (s.kind === "scatter")
     visual = (
       <div className="scatter-art">
-        {[
-          "¿Alguien vio mis llaves?",
-          "Encontré unos auriculares",
-          "Se perdió una billetera",
-          "¿De quién es?",
-        ].map((v, i) => (
+        {s.bullets.map((v, i) => (
           <div className={"scattered card-" + i} key={i}>
-            <span>CANAL {i + 1} / REPRESENTACIÓN</span>
+            <span>CAMPO {i + 1} / PUBLICACIÓN</span>
             <p>{v}</p>
             <div className="fake-line" />
             <div className="fake-line short" />
@@ -939,7 +935,7 @@ function Presenter({
           Salir
         </button>
       </header>
-      {live.legacyProject&&<p className="warning panel">Proyecto anterior preservado. Exportalo desde Studio y restaurá el original nuevo para usar los seis actos; no se sobreescribió tu guion.</p>}<div className="presenter-grid">
+      {live.legacyProject&&<p className="warning panel">Proyecto anterior preservado. Exportalo desde Studio y restaurá la plantilla nueva para usar las 24 escenas en 25 minutos; no se sobreescribió tu guion.</p>}<div className="presenter-grid">
         <div>
           <div className="preview-frame">
             <Slide scene={scene} p={privateP} live={live} preview />
@@ -978,7 +974,7 @@ function Presenter({
             <p className="eyebrow">TIEMPO TOTAL</p>
             <strong>{fmt(elapsed)}</strong>
             <p>
-              Objetivo 30:00 ·{" "}
+              Objetivo {fmt(schedule(privateP).target)} ·{" "}
               {late
                 ? "Revisar ritmo de esta escena"
                 : "Escena hasta " + fmt(start + scene.duration)}

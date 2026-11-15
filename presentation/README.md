@@ -1,6 +1,6 @@
-# BUSCAG — EL EXPERIMENTO · versión aula 2.1.2
+# BUSCAG — EL EXPERIMENTO · versión aula 2.2.0
 
-Reconstrucción de 24 escenas en seis actos, 30:00 nominales y video original reservado 25:00–26:00. React/TypeScript/Vite/Motion, Canvas limitado y SVG/CSS. Fuente, imágenes, guion y recursos locales. Se conservan Studio, presentador, backups, IndexedDB, import/export y el iniciador Windows con la corrección de rutas estáticas 1.0.1.
+Reconstrucción de 24 escenas en seis actos, 25:00 nominales y video original reservado 21:30–22:30. React/TypeScript/Vite/Motion, Canvas limitado y SVG/CSS. Fuente, imágenes, guion y recursos locales. Se conservan Studio, presentador, backups, IndexedDB, import/export y el iniciador Windows con la corrección de rutas estáticas 1.0.1.
 
 ## Windows
 
@@ -37,3 +37,7 @@ SCRIPT.md contiene el discurso nuevo y STORYBOARD.md el resumen escena por escen
 La conexión manual de claves descrita en versiones anteriores queda reemplazada por **Conectar encuestas** → **Abrir autorización privada** → comparar código y autorizar con tu cuenta propietaria ChatGPT. No hace falta administrar ADMIN_KEY. Seguir CONECTAR-ENCUESTAS.md. La comprobación final con la sesión real del propietario y teléfonos físicos sigue pendiente del titular.
 
 La versión 2.1.1 corrige un rechazo real del runtime de Sites antes de mostrar el código. Ver CORRECCION-AUTORIZACION-2.1.1.md. Usar un enlace de conexión nuevo.
+
+## Revisión funcional de 25 minutos
+
+Guion completo y PDF: docs/Guion_BuscAG_Valentino_German_25min.pdf. Cambios: docs/REVISION_CONTENIDO_25.md. Auditoría de funciones reales: docs/AUDITORIA_FUNCIONES.md. 24 escenas, 12 minutos de intervención por estudiante y un minuto de video. Usar carpeta nueva o respaldar y restaurar la plantilla desde Studio; los proyectos de 30 minutos conservan sus propios tiempos al importarse.

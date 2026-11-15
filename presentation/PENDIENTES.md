@@ -8,7 +8,7 @@
 6. Dar acceso al jurado al repositorio privado o autorizar una alternativa pública de auditoría. El QR GitHub contiene la URL correcta; no elude permisos.
 7. Incorporar el video ORIGINAL inglés de ambos, 60 s, y una grabación auténtica de respaldo de la demo. No fueron aportados ni se sustituyeron por un tráiler sintético.
 8. Enlazar tutorial auténtico, redes/canales y tablero FAT reales; los campos siguen vacíos o identificados como pendientes.
-9. Ensayar los tres objetos con dos cuentas autorizadas, el audio, pantalla extendida, legibilidad desde el fondo, modo reducido y transferencia en la PC de Germán. El plan suma exactamente 30:00; el discurso humano requiere ensayo.
+9. Ensayar los tres objetos con dos cuentas autorizadas, el audio, pantalla extendida, legibilidad desde el fondo, modo reducido y transferencia en la PC de Germán. El plan suma exactamente 25:00; el discurso humano requiere ensayo.
 
 El modo de manos levantadas y el ensayo local están disponibles sin publicar el servicio. No se presenta esa alternativa como votación online ni como cumplimiento de conectividad móvil real.
 

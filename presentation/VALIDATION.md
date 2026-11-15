@@ -1,25 +1,25 @@
-# Validación 2.0.0 · aula
+# Validación · contenido funcional 2.2.0
 
-Se ejecutaron build TypeScript/Vite y 22 pruebas automatizadas de presentación: HTTP/MIME, seguridad de rutas, autenticación, SSE, persistencia, editor/importación/exportación, seis actos, tiempos, Worker SQLite y puente HTTPS. Las pruebas de Worker usan almacenamiento aislado y transporte controlado.
+## Contenido, guion y tiempo
 
-Playwright/Chromium recorrió las 24 escenas a 1920×1080 y comprobó 1280×720: negro inicial, títulos de al menos 84 px a 1080p, geometría, dos encuestas, QR decodificados, sincronización, cierre/revelado, conteos manuales independientes y Studio. Pixel 7/iPhone 13 son emulaciones de navegador, no teléfonos físicos. Las capturas se conservan como artefactos de trabajo.
+- Fuente funcional auditada: Alexis 176bf6b473abae2586f85db429e8c1fb0845990c; el árbol src/code de esta copia es idéntico. Auditoría y límites en docs/AUDITORIA_FUNCIONES.md. No se cambió la aplicación ni su base.
+- 24 escenas, seis actos y 1.500 segundos: 150 + 210 + 480 + 240 + 300 + 120. Encuestas al 02:30 y 06:00. Demo 07:00–14:00; video 21:30–22:30; cierre 25:00.
+- Valentino 720 segundos / 937 palabras; Germán 720 segundos / 974 palabras. Video original compartido: 60 segundos. Los tiempos incluyen pausas y operación; se requiere ensayo oral con cronómetro.
+- Un único plan docs/content-25.json genera pantalla, notas privadas, SCRIPT.md, STORYBOARD.md y TIMING-25.json. PDF de 15 páginas generado desde el mismo plan: todas las intervenciones fueron comparadas literalmente con el texto extraído del PDF, incluidos los 24 números de diapositiva.
+- Se preservaron IDs, actos, tipos, animaciones, diseños, colores, velocidad, tamaño y posiciones de las 24 escenas. El contenido anterior está archivado en docs/archive/30-minutos. Los proyectos anteriores de 30 minutos siguen siendo válidos en su propio perfil y no se sobrescriben.
 
-Plan nominal: seis actos 4+4+7+5+7+3 = 30 minutos. Video reservado 25:00–26:00. No garantiza una exposición oral de exactamente 30 minutos sin ensayo.
+## Verificaciones ejecutadas
 
-El servicio independiente de votación se publicó en Sites por HTTPS. La red Cloud bloquea su hostname; GitHub Actions pasó el preflight público separado: ambas páginas y recursos HTTP 200/MIME correcto, API pública 200, administración 401 y voto cerrado 409. Ambas URLs web.app dieron 200 y GitHub privado dio 404 anónimo. La prueba integral de abrir/votar/revelar con credencial remota debe repetirse tras configurar la clave privada del operador. Las pruebas locales integrales pasan con el mismo Worker y SQLite aislado.
+28 pruebas de presentación aprobadas: servidor, seguridad de rutas y MIME, privacidad, persistencia, editor/importación/exportación, tiempos, contenido coordinado y conexión de encuestas con servicios aislados. Build TypeScript/Vite y prueba HTTP portable aprobados.
 
-La entrega conserva las protecciones contra traversal que corrigieron Windows 1.0.1. CI prueba el ZIP distribuido extraído, sin reconstruirlo, en Windows y Linux. Consultar el resultado de la ejecución asociada al commit antes de dar esos sistemas por aprobados.
+Chromium recorrió las 24 escenas a 1920×1080 y comprobó 1280×720; se revisaron capturas de publicación, filtros, comparación, recuperación y arquitectura. Se mantienen las dos encuestas, QR decodificados, modo manual, sincronización, Studio y rendimiento reducido. Una pasada posterior revisó los últimos cambios menores. Esto no certifica una tele ni teléfonos físicos.
 
-No se probaron Android/iPhone físicos, proyector, sonido de aula ni datos móviles. Pendientes también video original inglés de 60 segundos, demo auténtica con dos cuentas y ensayo oral. El repositorio de auditoría sigue privado y exige acceso; no se cambió su visibilidad. No hubo despliegue Firebase ni modificación Supabase.
+El ZIP generado se extrajo en una carpeta nueva y pasó la prueba de presentación, avance SSE, presentador, Studio/guardar/undo y privacidad, sin errores JavaScript ni recursos 403. El guion no está en el bundle público y el PDF privado devuelve 404 desde las rutas públicas.
 
-## Conexión 2.1.0
+Antes de publicar la rama se ejecutaron las comprobaciones requeridas del MVP sin modificar sus fuentes: npm test, lint, build y client-security. No se ejecutaron migraciones ni despliegues. CI verifica además Windows/Linux contra el ZIP distribuido exacto y su SHA256; consultar la ejecución del commit para su resultado.
 
-25 pruebas pasan, incluidas entrega RSA-OAEP cifrada de un uso, expiración, CSRF, vínculo a identidad, rechazo de token erróneo, credencial de PC sin facultad de autorizar, persistencia y revocación. El navegador recorre el botón y formulario con identidad fixture; no se presenta como un inicio de sesión real de ChatGPT. La aceptación real del propietario sigue pendiente de su cuenta.
+El preflight de esta revisión es de lectura: no registra votos, no crea solicitudes de vinculación ni cambia el estado de las encuestas publicadas. No hubo despliegue ni configuración de Sites, Firebase o Supabase en esta tarea.
 
-## Autorización 2.1.1
+## Pendientes que no se presentan como hechos
 
-Causa real reproducida en servicio publicado: Sites rechaza redirect:error. Corregido con manual y rechazo explícito de 3xx. Nuevas regresiones y diagnóstico HTTPS Worker→servicio publicados. Ver CORRECCION-AUTORIZACION-2.1.1.md para alcance y límites.
-
-## Modo de votación 2.1.2
-
-HTTPS selecciona explícitamente votos reales y repetir la selección no cierra encuestas remotas. La prueba de navegador usa el botón Usar votos reales en celulares, abre, vuelve a seleccionar HTTPS, verifica que siga abierta y completa voto/conteo/cierre/revelado/revocación. El preflight externo sólo lee el estado de las encuestas y nunca envía votos de prueba al evento real, aunque haya encuestas abiertas.
+Video original si sólo existe en la copia del usuario, ensayo del recorrido con dos cuentas en el servicio que se usará, activación de RPC de recuperación, teléfono/tele/audio reales y acceso del jurado al repositorio privado. El código implementado no demuestra que una migración esté aplicada ni una función operativa en la URL publicada. Si falta un servicio, usar el apoyo rotulado y explicar el límite sin inventar éxito.

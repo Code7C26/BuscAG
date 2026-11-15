@@ -19,3 +19,7 @@ Al ensayar: persistencia tras recarga, propietarios distintos, imagen correcta, 
 La grabación de respaldo debe ser del ensayo real, sanitizada, rotulada y cargada en la escena demo desde Studio. No se aportó esa grabación. La interfaz permite cargar un MP4 sin tocar código; se verá con controles y nombre de recurso.
 
 No borrar en masa los registros al terminar. Acordar limpieza por separado, sin SQL ni eliminación de datos ajenos.
+
+## Plan actualizado de 25 minutos
+
+Encuesta del objeto: 06:00–07:00. Demo con dos cuentas: 07:00–14:00, escenas 08–11. 08 publicar, Perfil y editar; 09 filtros, mapa y hallazgo; 10 coincidencia y chat; 11 aviso y recuperación habilitada. Mantener el MVP en la tele durante el recorrido y volver a la diapositiva 12 al 14:00. Ver SCRIPT.md y PDF para las intervenciones exactas de ambos.

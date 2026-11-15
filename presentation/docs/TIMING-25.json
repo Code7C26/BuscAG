@@ -1,0 +1,307 @@
+{
+  "totalSeconds": 1500,
+  "video": {
+    "start": 1290,
+    "duration": 60
+  },
+  "allocatedBySpeaker": {
+    "Valentino": 720,
+    "Germán": 720
+  },
+  "wordsBySpeaker": {
+    "Valentino": 937,
+    "Germán": 974
+  },
+  "segments": [
+    {
+      "slide": 1,
+      "speaker": "Valentino",
+      "start": 0,
+      "end": 45,
+      "seconds": 45,
+      "words": 62,
+      "speechSecondsAt130wpm": 28.6,
+      "availableForActions": 16.4
+    },
+    {
+      "slide": 2,
+      "speaker": "Germán",
+      "start": 45,
+      "end": 90,
+      "seconds": 45,
+      "words": 58,
+      "speechSecondsAt130wpm": 26.8,
+      "availableForActions": 18.2
+    },
+    {
+      "slide": 3,
+      "speaker": "Valentino",
+      "start": 90,
+      "end": 120,
+      "seconds": 30,
+      "words": 44,
+      "speechSecondsAt130wpm": 20.3,
+      "availableForActions": 9.7
+    },
+    {
+      "slide": 3,
+      "speaker": "Germán",
+      "start": 120,
+      "end": 150,
+      "seconds": 30,
+      "words": 44,
+      "speechSecondsAt130wpm": 20.3,
+      "availableForActions": 9.7
+    },
+    {
+      "slide": 4,
+      "speaker": "Valentino",
+      "start": 150,
+      "end": 195,
+      "seconds": 45,
+      "words": 33,
+      "speechSecondsAt130wpm": 15.2,
+      "availableForActions": 29.8
+    },
+    {
+      "slide": 4,
+      "speaker": "Germán",
+      "start": 195,
+      "end": 240,
+      "seconds": 45,
+      "words": 42,
+      "speechSecondsAt130wpm": 19.4,
+      "availableForActions": 25.6
+    },
+    {
+      "slide": 5,
+      "speaker": "Valentino",
+      "start": 240,
+      "end": 300,
+      "seconds": 60,
+      "words": 102,
+      "speechSecondsAt130wpm": 47.1,
+      "availableForActions": 12.9
+    },
+    {
+      "slide": 6,
+      "speaker": "Germán",
+      "start": 300,
+      "end": 360,
+      "seconds": 60,
+      "words": 102,
+      "speechSecondsAt130wpm": 47.1,
+      "availableForActions": 12.9
+    },
+    {
+      "slide": 7,
+      "speaker": "Valentino",
+      "start": 360,
+      "end": 420,
+      "seconds": 60,
+      "words": 57,
+      "speechSecondsAt130wpm": 26.3,
+      "availableForActions": 33.7
+    },
+    {
+      "slide": 8,
+      "speaker": "Valentino",
+      "start": 420,
+      "end": 495,
+      "seconds": 75,
+      "words": 76,
+      "speechSecondsAt130wpm": 35.1,
+      "availableForActions": 39.9
+    },
+    {
+      "slide": 8,
+      "speaker": "Germán",
+      "start": 495,
+      "end": 525,
+      "seconds": 30,
+      "words": 41,
+      "speechSecondsAt130wpm": 18.9,
+      "availableForActions": 11.1
+    },
+    {
+      "slide": 9,
+      "speaker": "Germán",
+      "start": 525,
+      "end": 630,
+      "seconds": 105,
+      "words": 111,
+      "speechSecondsAt130wpm": 51.2,
+      "availableForActions": 53.8
+    },
+    {
+      "slide": 10,
+      "speaker": "Valentino",
+      "start": 630,
+      "end": 690,
+      "seconds": 60,
+      "words": 66,
+      "speechSecondsAt130wpm": 30.5,
+      "availableForActions": 29.5
+    },
+    {
+      "slide": 10,
+      "speaker": "Germán",
+      "start": 690,
+      "end": 735,
+      "seconds": 45,
+      "words": 47,
+      "speechSecondsAt130wpm": 21.7,
+      "availableForActions": 23.3
+    },
+    {
+      "slide": 11,
+      "speaker": "Germán",
+      "start": 735,
+      "end": 795,
+      "seconds": 60,
+      "words": 74,
+      "speechSecondsAt130wpm": 34.2,
+      "availableForActions": 25.8
+    },
+    {
+      "slide": 11,
+      "speaker": "Valentino",
+      "start": 795,
+      "end": 840,
+      "seconds": 45,
+      "words": 52,
+      "speechSecondsAt130wpm": 24.0,
+      "availableForActions": 21.0
+    },
+    {
+      "slide": 12,
+      "speaker": "Valentino",
+      "start": 840,
+      "end": 900,
+      "seconds": 60,
+      "words": 90,
+      "speechSecondsAt130wpm": 41.5,
+      "availableForActions": 18.5
+    },
+    {
+      "slide": 13,
+      "speaker": "Germán",
+      "start": 900,
+      "end": 960,
+      "seconds": 60,
+      "words": 90,
+      "speechSecondsAt130wpm": 41.5,
+      "availableForActions": 18.5
+    },
+    {
+      "slide": 14,
+      "speaker": "Valentino",
+      "start": 960,
+      "end": 1020,
+      "seconds": 60,
+      "words": 101,
+      "speechSecondsAt130wpm": 46.6,
+      "availableForActions": 13.4
+    },
+    {
+      "slide": 15,
+      "speaker": "Germán",
+      "start": 1020,
+      "end": 1080,
+      "seconds": 60,
+      "words": 100,
+      "speechSecondsAt130wpm": 46.2,
+      "availableForActions": 13.8
+    },
+    {
+      "slide": 16,
+      "speaker": "Germán",
+      "start": 1080,
+      "end": 1140,
+      "seconds": 60,
+      "words": 96,
+      "speechSecondsAt130wpm": 44.3,
+      "availableForActions": 15.7
+    },
+    {
+      "slide": 17,
+      "speaker": "Valentino",
+      "start": 1140,
+      "end": 1200,
+      "seconds": 60,
+      "words": 97,
+      "speechSecondsAt130wpm": 44.8,
+      "availableForActions": 15.2
+    },
+    {
+      "slide": 18,
+      "speaker": "Germán",
+      "start": 1200,
+      "end": 1245,
+      "seconds": 45,
+      "words": 61,
+      "speechSecondsAt130wpm": 28.2,
+      "availableForActions": 16.8
+    },
+    {
+      "slide": 19,
+      "speaker": "Valentino",
+      "start": 1245,
+      "end": 1290,
+      "seconds": 45,
+      "words": 63,
+      "speechSecondsAt130wpm": 29.1,
+      "availableForActions": 15.9
+    },
+    {
+      "slide": 20,
+      "speaker": "Video",
+      "start": 1290,
+      "end": 1350,
+      "seconds": 60,
+      "words": 0,
+      "speechSecondsAt130wpm": 0.0,
+      "availableForActions": 60.0
+    },
+    {
+      "slide": 21,
+      "speaker": "Germán",
+      "start": 1350,
+      "end": 1380,
+      "seconds": 30,
+      "words": 46,
+      "speechSecondsAt130wpm": 21.2,
+      "availableForActions": 8.8
+    },
+    {
+      "slide": 22,
+      "speaker": "Valentino",
+      "start": 1380,
+      "end": 1410,
+      "seconds": 30,
+      "words": 38,
+      "speechSecondsAt130wpm": 17.5,
+      "availableForActions": 12.5
+    },
+    {
+      "slide": 23,
+      "speaker": "Germán",
+      "start": 1410,
+      "end": 1455,
+      "seconds": 45,
+      "words": 62,
+      "speechSecondsAt130wpm": 28.6,
+      "availableForActions": 16.4
+    },
+    {
+      "slide": 24,
+      "speaker": "Valentino",
+      "start": 1455,
+      "end": 1500,
+      "seconds": 45,
+      "words": 56,
+      "speechSecondsAt130wpm": 25.8,
+      "availableForActions": 19.2
+    }
+  ]
+}

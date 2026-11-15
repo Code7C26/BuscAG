@@ -4,7 +4,7 @@
 
 Windows + Chrome + Node 24 LTS. Pantalla extendida 1920×1080; / en proyector y /presenter en monitor privado. /studio conserva edición, multimedia, guion, backups, IndexedDB y ZIP. No proyectar el panel privado. El audio requiere habilitación por clic; probar parlantes antes del evento. Modo «Rendimiento reducido» congela movimientos continuos y dibuja el logo estático.
 
-Las seis ventanas son 00–04, 04–08, 08–15, 15–20, 20–27 y 27–30. La suma nominal es 1.800 s; original inglés 25:00–26:00. El reloj sólo inicia con esos bloques válidos. Las escenas y votaciones no avanzan automáticamente. Después de editar tiempos, usar ajuste y volver a ensayar; el reloj no garantiza duración oral humana.
+Las seis ventanas son 00:00–02:30, 02:30–06:00, 06:00–14:00, 14:00–18:00, 18:00–23:00 y 23:00–25:00. La suma nominal es 1.500 s; original inglés 21:30–22:30. El reloj sólo inicia con esos bloques válidos. Las escenas y votaciones no avanzan automáticamente. Después de editar tiempos, usar ajuste y volver a ensayar; el reloj no garantiza duración oral humana.
 
 ## Encuestas: conexión del operador
 
@@ -34,7 +34,7 @@ Extraer el ZIP nuevo en otra carpeta y cerrar el servidor anterior. No sobrescri
 
 ## Pendientes del evento
 
-Configuración privada del operador, pruebas con Android/iPhone físicos y datos móviles, proyector y audio reales, ensayo de 30 minutos, video publicitario original inglés de 60 s y grabación auténtica de respaldo de demo. No se fabricó ninguno de esos materiales ni resultados.
+Configuración privada del operador, pruebas con Android/iPhone físicos y datos móviles, proyector y audio reales, ensayo de 25 minutos, video publicitario original inglés de 60 s y grabación auténtica de respaldo de demo. No se fabricó ninguno de esos materiales ni resultados.
 
 ## Conexión simplificada 2.1.0
 

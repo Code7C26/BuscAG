@@ -1,147 +1,294 @@
-# BUSCAG — EL EXPERIMENTO · Aula / seis actos
+# BUSCAG — EL EXPERIMENTO · Guion coordinado de 25 minutos
 
-30:00 nominales. Video original 25:00–26:00. Avance manual. Participación inicial a mano alzada; encuestas reales en actos II y III. El guion anterior completo se conserva en docs/archive/SCRIPT-v1.md.
+24 diapositivas · seis actos · 25:00 nominales, incluidas encuestas, operación de la demo y video. Video inglés original: 21:30–22:30. Valentino y Germán disponen de 12:00 cada uno, más el minuto compartido del video. Avance manual; ensayar con cronómetro. Los tiempos son presupuestos de intervención, no una velocidad oral garantizada.
 
-## 01 · ACTO 1 · 00:00–01:30 · Valentino
-¿Cuánto tardarías en recuperar algo que perdiste?
-Antes de mostrar una pantalla, les proponemos una pregunta. Piensen en un objeto que hayan perdido y que de verdad les importara. Puede ser una llave, unos auriculares o algo con valor personal. No hace falta decirlo en voz alta. Recuerden qué hicieron primero, a quién preguntaron y cuántas veces tuvieron que contar lo mismo. [Pausa de ocho segundos.] En esta pantalla hay dos puntos. Uno representa a quien busca; el otro, a quien encontró. Los dos quieren resolver el mismo problema, pero todavía no tienen un lugar común donde encontrarse. Ese espacio entre las personas es nuestro punto de partida. No vamos a representar una pérdida ni a prometer una recuperación. Vamos a hacer un experimento con ustedes: reconocer el problema, elegir un caso y recorrer el sistema que construimos. [Sostener la pregunta y el silencio; la participación a mano alzada empieza en la escena siguiente.]
+Las capturas de apoyo conservan el rótulo de datos sintéticos. La demostración se hace con dos cuentas en el MVP, sin repetir aparte todo el bloque 08–11. Las condiciones del backend están en las notas de cada escena, no deben leerse como un discurso adicional.
 
-Acciones: 0–3 s negro absoluto. 3–12 s EXPERIMENTO 001. 12–40 s pregunta gigante. 40–75 s pensar en silencio y observar nodos. 75–90 s dos nodos empiezan a buscarse.
+## Diapositiva 01 · Acto 1 · 00:00–00:45
+**En pantalla:** ¿Cuánto tardarías en recuperar algo que perdiste? — Pensá en algo que te importaba.
+**Visual:** conservar la escena cinematográfica original.
 
-## 02 · ACTO 1 · 01:30–03:00 · Germán
-Dos personas. Un mismo objetivo.
-Levanten la mano quienes alguna vez perdieron algo que les importaba. [Diez segundos.] Ahora, quienes alguna vez encontraron algo ajeno. [Diez segundos.] En esta misma aula aparecen los dos lados del problema. No sabemos cuántos objetos recuperó esta comunidad ni usamos estas manos como una estadística. Lo que vemos es una experiencia compartida. Cada nodo representa una persona: ambas quieren resolver una pérdida, pero todavía no saben cómo encontrarse. Nuestro experimento empieza en ese espacio. No vamos a actuar una historia ni a prometer resultados. Ustedes van a decidir por dónde buscarían y qué objeto define el recorrido. Después vamos a abrir el sistema que construimos y explicar sus límites. [Pausa.] BuscAG quiere hacer posible esa conexión.
+### VALENTINO · 00:00–00:45
+Piensen en algo que hayan perdido: unas llaves, unos auriculares o una billetera. ¿Dónde lo buscarían? A veces quien lo encontró está cerca, pero la información quedó en otro lugar. Ese es el punto de partida de BuscAG. Hoy les proponemos un experimento: ustedes eligen un objeto y nosotros mostramos cómo se publica, se busca y se contacta a la otra persona.
 
-Acciones: Nodos orbitan sin tocarse; dos rondas de manos. Al final, un haz conecta los nodos. Logo se forma con partículas. No atribuir recuperaciones al público.
+**Operación y avance:** Dejar correr el negro inicial y la pregunta. Pausa breve. Al 00:45, avanzar a 02.
 
-## 03 · ACTO 1 · 03:00–04:00 · Germán
-BuscAG. Encontrarnos hace la diferencia.
-Somos Valentino Mamonde y Germán Luján. BuscAG conecta publicaciones de objetos perdidos y encontrados. Valentino dedicó más tiempo al código y yo a marketing y documentación. Los dos investigamos, tomamos decisiones técnicas y vamos a explicar ingeniería y negocio. También vamos a usar dos sesiones independientes. Queremos que puedan distinguir una idea de un producto revisable: van a ver qué existe, qué probamos y qué sigue pendiente. El código y la documentación quedan accesibles al final. Ahora queremos conocer su primera decisión: ¿dónde buscarían un objeto perdido?
+**Nota privada de preparación:** Conservar negro inicial y animación de nodos. No repetir la historia de origen más adelante.
 
-Acciones: Revelación del símbolo original con partículas y onda cian. Nombres grandes; ambos hablarán de ingeniería y negocio. Preparar encuesta 1 sin abrirla todavía.
+## Diapositiva 02 · Acto 1 · 00:45–01:30
+**En pantalla:** Dos personas. Un mismo objetivo. — Quien pierde. Quien encuentra.
+**Puntos visibles:** ¿Quién perdió algo importante? · ¿Quién encontró algo ajeno?
 
-## 04 · ACTO 2 · 04:00–06:00 · Ambos
-¿Dónde buscarías primero un objeto perdido?
-VALENTINO · 04:00–05:00: Pueden escanear el QR y elegir una opción: redes sociales, grupos de WhatsApp o volver al lugar. Hay una respuesta por sesión del navegador. No es una encuesta representativa ni mide a toda la comunidad: recoge solamente lo que responda este público hoy. [Dar treinta segundos para votar.] Mientras llegan las respuestas, observen algo: las tres opciones pueden servir, pero cada una conserva una parte distinta de la información. [Cerrar la encuesta y revelar.] Estos son los votos recibidos por el sistema. Si hay empate, lo diremos; no vamos a fabricar una opción ganadora. Si no hay conexión, hacemos una consulta a mano alzada y la identificamos como tal. La pregunta que sigue es cómo reunir esos caminos para que una publicación pueda ser encontrada por la otra persona. [Ofrecer treinta segundos para escanear y votar; no completar el silencio con estadísticas.] GERMÁN · 05:00–06:00: Cerramos y revelamos lo que respondió este público. No es una muestra representativa de toda la comunidad. Si hay empate o no llegaron votos, lo decimos. Las tres opciones pueden ayudar; la dificultad es que cada una conserva una parte distinta de la información. BuscAG propone reunir esos caminos. [Si internet falla: seleccionar manos levantadas, preguntar opción por opción y conservar ese conteo como manual.]
+### GERMÁN · 00:45–01:30
+Levanten la mano quienes alguna vez perdieron algo importante. Ahora, quienes encontraron algo ajeno. En esta aula ya tenemos los dos lados del problema. BuscAG reúne publicaciones de pérdidas y hallazgos para que esas personas puedan buscarse. Vamos a seguir ese recorrido con dos cuentas distintas, desde la publicación hasta el contacto y la gestión de la recuperación.
 
-Acciones: 04:00 abrir encuesta 1 HTTPS. 30–45 s para escanear/votar. Cerrar, revelar y comentar. Si no hay servicio, pasar a manos levantadas; contar por opción sin mezclar fuentes.
+**Operación y avance:** Reservar ocho segundos para cada ronda de manos. Al 01:30, avanzar a 03.
 
-## 05 · ACTO 2 · 06:00–07:00 · Valentino
-La información está. La conexión falta.
-El problema que identificamos no es que nadie quiera ayudar. Muchas veces alguien publica un hallazgo, pero lo hace en un grupo al que la persona que perdió el objeto no pertenece. Otra persona vuelve al lugar y pregunta, mientras la foto queda en otra red. Cada canal puede ser útil; el problema es la fragmentación. No tenemos una estadística que nos permita afirmar cuántos objetos se pierden en la ciudad ni qué porcentaje se recupera. Nuestro diagnóstico parte de esa necesidad concreta y de la descripción del proyecto: ordenar publicaciones y facilitar el contacto. BuscAG nace de preguntarnos qué pasaría si la información de pérdida y hallazgo estuviera en una misma plataforma. La animación reúne avisos para explicar esa idea. Es una representación del problema, no un registro de usuarios reales. El público inicial definido en el proyecto son estudiantes, docentes y vecinos que comparten espacios. Elegir una comunidad delimitada es una decisión técnica y de negocio: una plataforma vacía no resuelve el problema aunque tenga muchas pantallas. Necesitamos publicaciones útiles en una zona y personas que puedan encontrarlas. Nuestra hipótesis es que publicar con categoría, ubicación y descripción facilita la búsqueda frente a revisar conversaciones dispersas. Esa hipótesis todavía requiere un piloto. Tenemos documentación de investigación y de viabilidad, pero no presentamos resultados de mercado que no estén medidos. En ese piloto registraríamos publicaciones, contactos recibidos, recuperaciones confirmadas, tiempo de resolución y personas que vuelven a usar el servicio. Primero necesitamos comprobar utilidad; después tiene sentido ampliar alcance. La solución que desarrollamos intenta convertir esa necesidad en un flujo simple y revisable.
+**Nota privada de preparación:** Las manos son participación, no una estadística de mercado.
 
-Acciones: Avisos flotan en profundidad, saturan y colapsan en un único punto de búsqueda. La representación es conceptual, sin cifras inventadas.
+## Diapositiva 03 · Acto 1 · 01:30–02:30
+**En pantalla:** BuscAG. Encontrarnos hace la diferencia. — Valentino Mamonde + Germán Luján
+**Puntos visibles:** Desarrollo + investigación · Marketing + documentación
 
-## 06 · ACTO 2 · 07:00–08:00 · Germán
-Un lugar para encontrarnos.
-Esta es la interfaz de BuscAG. Las capturas provienen de la aplicación del repositorio, con un backend sintético utilizado para documentación visual. Por eso están rotuladas: muestran el diseño, no prueban una recuperación real. En el código encontramos publicación de objetos, búsqueda, filtros, mapa, comparación de coincidencias y conversaciones. También existen interfaces de notificaciones y recuperación, con condiciones que dependen del backend disponible. No vamos a anunciar push externo ni funciones pagas como activas sin verificarlas. La idea central es reunir información y permitir un contacto contextual. El sistema sugiere coincidencias: una sugerencia no demuestra propiedad y tampoco confirma una entrega. Enseguida salimos de estas capturas y usamos dos sesiones reales del MVP. Ustedes van a elegir qué objeto organiza esa demostración.
+### VALENTINO · 01:30–02:00
+Somos Valentino Mamonde y Germán Luján. Yo trabajé principalmente en el desarrollo, y Germán en marketing y documentación. Los dos participamos de las decisiones del proyecto. En lugar de recorrer pantallas sueltas, vamos a mostrar para qué sirve cada función en un mismo caso.
 
-Acciones: Cámara se acerca a capturas auténticas de la interfaz. Rótulo datos sintéticos; no se presenta como demo real.
+**Operación y avance:** Valentino presenta el equipo. A los treinta segundos cede la palabra sin avanzar.
 
-## 07 · ACTO 3 · 08:00–09:00 · Valentino
-¿Qué buscamos juntos?
-Ahora elijan el objeto de la demostración: auriculares, llaves o billetera. Los tres tienen una ficha preparada para ensayar con datos de prueba. [Veinte segundos para votar.] Cerramos y revelamos. Si hay un empate, elegimos entre las opciones empatadas y lo decimos. Si no entraron votos, hacemos la elección en sala. No vamos a convertir datos de ensayo en participación real. El resultado define el caso; el funcionamiento lo vamos a comprobar en la aplicación.
+### GERMÁN · 02:00–02:30
+Primero vamos a escuchar al público. Después usaremos publicaciones, filtros, mapa y coincidencias. También vamos a mostrar el chat, los avisos y el perfil. Al final explicaremos cómo está construido, qué probamos y cuánto costaría sostenerlo. Empezamos con una decisión sencilla: ¿dónde buscarían primero?
 
-Acciones: Encuesta 2. Cerrar antes de demo; no avanzar automáticamente. Registrar ganador o empate.
+**Operación y avance:** Preparar encuesta 1. Al 02:30, avanzar a 04.
 
-## 08 · ACTO 3 · 09:00–10:30 · Valentino
-Una cuenta. Una publicación.
-Estamos en una sesión independiente de la cuenta de Germán. Voy a publicar el objeto elegido con el prefijo PRESENTACIÓN QA. Usamos una fotografía propia, una referencia pública de ubicación y una descripción de prueba. No necesitamos poner un domicilio ni información sensible para explicar el flujo. [Completar y guardar.] La interfaz puede mostrar un envío pendiente; eso todavía no significa que el servidor lo haya confirmado. Ahora comprobamos la publicación y recargamos para verificar que siga ahí. Si aparece un error lo vamos a leer y registrar, sin reemplazarlo por una animación de éxito. Esta es la primera evidencia: una publicación persistida con su autor correcto.
+**Nota privada de preparación:** Conservar logo de partículas y nombres. No cambiar el reparto visual del equipo.
 
-Acciones: 0–20 s: sesión A. 20–65 s: completar. 65–90 s: guardar y recargar. Datos de prueba según DEMO.md. Nunca crear cuentas ni editar datos ajenos para forzar el resultado.
+## Diapositiva 04 · Acto 2 · 02:30–04:00
+**En pantalla:** ¿Dónde buscarías primero un objeto perdido? — El público decide.
+**Puntos visibles:** Redes sociales · Grupos de WhatsApp · Volver al lugar
 
-## 09 · ACTO 3 · 10:30–12:00 · Germán
-La otra persona entra en escena.
-Yo estoy en otro perfil de navegador, con otra sesión. Primero buscamos por el título y comprobamos los filtros de categoría y estado. La ubicación nos aporta contexto; si no damos permiso de GPS, el sistema no debería inventar nuestra posición. Ahora publicamos el hallazgo de prueba con la misma categoría, fechas compatibles y una descripción coherente. [Ejecutar la búsqueda y publicación.] La comparación necesita datos suficientes, pero no debemos escribir secretos del objeto para hacerla coincidir. Que dos publicaciones se parezcan es una pista. La persona que entrega sigue necesitando comprobar la pertenencia de forma prudente.
+### VALENTINO · 02:30–03:15
+Escaneen el QR y elijan dónde buscarían primero: redes sociales, grupos de WhatsApp o volver al lugar. Abrimos la votación y esperamos sus respuestas. Cada navegador puede votar una vez en esta encuesta.
 
-Acciones: 0–35 s: búsqueda/mapa. 35–75 s: hallazgo B. 75–90 s: persistencia. Si una función no está disponible, registrar BLOQUEADO.
+**Operación y avance:** Abrir encuesta search en modo REAL/HTTPS. Reservar treinta segundos para escanear y votar; luego ceder la palabra sin avanzar.
 
-## 10 · ACTO 3 · 12:00–13:30 · Valentino
-Una coincidencia necesita razones.
-Abrimos las coincidencias disponibles. El sistema compara categoría, términos, distancia y fecha; después muestra razones para que podamos entender la sugerencia. No es una probabilidad científica de propiedad. [Abrir comparación.] Si esta pareja aparece, revisamos que sean nuestras dos publicaciones y que cada propietario esté correctamente identificado. Ahora contacto desde el objeto y Germán responde desde su cuenta. Comprobamos que el mensaje aparezca en la conversación correcta. Recién si vemos el resultado confirmado podemos activar la transición CONEXIÓN ENCONTRADA. Esa transición celebra lo observado, no lo reemplaza. Si el servicio no responde, dejamos visible el error y pasamos al análisis técnico.
+### GERMÁN · 03:15–04:00
+Cerramos la votación y mostramos los resultados. Esta es la elección de quienes participaron hoy. Si hay empate, lo decimos. Cada camino puede ayudar; BuscAG busca reunir esa información y permitir una búsqueda más ordenada. Ahora veamos qué datos tiene una publicación.
 
-Acciones: 45 s Valentino: comparación; 45 s Germán: responder y recargar. Germán dice: «Confirmo desde mi sesión que recibí este mensaje y que la respuesta quedó en esta conversación». Transición sólo manual tras confirmación.
+**Operación y avance:** Cerrar y revelar. Comentar la opción real ganadora, o el empate, sin inventar cifras. Al 04:00, avanzar a 05.
 
-## 11 · ACTO 3 · 13:30–15:00 · Germán
-Contactar no es recuperar.
-Llegamos al último paso. Un chat no demuestra una devolución. Si el backend habilita la recuperación bilateral, la cuenta autorizada solicita confirmación y la otra persona acepta o rechaza. Vamos a comprobar el resultado desde ambas sesiones. [Ejecutar sólo si el ensayo lo habilitó.] Si falta ese servicio, lo declaramos pendiente y la demo termina en el contacto real. No usamos un cambio de estado directo para evitar una restricción del servidor. Tampoco afirmamos una recuperación real de un objeto perdido en la comunidad: esta es una prueba controlada entre nosotros. Lo que importa es mostrar qué estado confirmó el sistema, qué permisos aplicó y qué podemos repetir.
+**Nota privada de preparación:** Si falla Internet, seleccionar Manos levantadas y contar por opción. Mantener separados los votos online y el conteo manual.
 
-Acciones: 45 s Germán: solicitud y explicación; 45 s Valentino: confirmación y recarga. No marcar recuperación si no está probada. Respaldo sólo grabación real etiquetada; los clips sintéticos del trailer no son respaldo de MVP.
+## Diapositiva 05 · Acto 2 · 04:00–05:00
+**En pantalla:** Una publicación útil. — Los datos que hacen posible la búsqueda.
+**Puntos visibles:** Perdido o encontrado · Foto + título + descripción · Categoría + fecha · Lugar confirmado
 
-## 12 · ACTO 4 · 15:00–16:15 · Valentino
-Entramos al sistema.
-Ahora abrimos las capas del sistema. React organiza componentes y estado; TypeScript permite comprobar contratos antes de ejecutar. Vite construye el cliente. La lógica de coincidencias compara publicaciones y explica por qué propone una pareja. Supabase reúne base PostgreSQL, autenticación, almacenamiento y mecanismos de actualización. RLS aplica permisos en el servidor: ocultar un botón no alcanza para impedir una operación. El repositorio configura Firebase Hosting; Vercel y Render aparecen en el informe como escenarios presupuestados, no como prueba del hosting activo. La versión que sirve una URL debe verificarse contra su artefacto. Esta separación nos ayuda a ubicar una falla: una pantalla disponible no prueba que una RPC esté instalada ni que una operación esté autorizada.
+### VALENTINO · 04:00–05:00
+Publicar es más que subir una foto. Primero elegimos si el objeto está perdido o fue encontrado. Después completamos el título, la descripción, la categoría, la fecha y el lugar; también podemos agregar una imagen. Por ejemplo, “llaves con llavero azul” aporta más información que escribir solamente “llaves”. La ubicación se confirma en el mapa, con un punto elegido o con permiso de ubicación. La aplicación valida los datos antes de guardar. Así, quien busca tiene una ficha con contexto y las coincidencias cuentan con información para comparar. No hace falta publicar un domicilio privado ni revelar todos los detalles del objeto.
 
-Acciones: Capas se separan en profundidad con CSS transform. Cada capa permanece legible. No afirmar despliegue actual por la sola configuración.
+**Operación y avance:** Señalar los cuatro campos animados. No abrir el formulario todavía: se hará en 08. Al 05:00, avanzar a 06.
 
-## 13 · ACTO 4 · 16:15–17:30 · Germán
-Una sugerencia. Reglas visibles.
-Este fragmento está tomado del motor real de coincidencias y su referencia queda en la documentación. La comparación no depende de pedirle a una IA que decida de quién es un objeto. Hay reglas: categorías compatibles, estados válidos, texto y proximidad geográfica y temporal. Las pruebas cubren casos que deberían coincidir y casos que deben rechazarse. También hay reglas para datos inválidos y publicaciones del mismo propietario. Una puntuación sirve para ordenar sugerencias; no equivale a certeza de identidad o de propiedad. Nosotros tenemos que elegir esas reglas, revisar sus límites y construir casos de prueba. Podemos usar IA para explorar alternativas o revisar código, pero no atribuimos al equipo un proceso específico de uso de IA que no esté documentado. La responsabilidad de verificar la decisión sigue siendo nuestra.
+**Nota privada de preparación:** Los cuatro avisos animados pasan a representar campos de una misma publicación; conservar su movimiento y el símbolo central.
 
-Acciones: Mostrar fragmento extraído del HEAD auditado. Abrir archivo por enlace de auditoría sólo si el jurado lo solicita.
+## Diapositiva 06 · Acto 2 · 05:00–06:00
+**En pantalla:** Encontrar sin recorrer todo. — Búsqueda y filtros que se pueden combinar.
+**Puntos visibles:** Texto + categoría + estado · Zona + fechas + autoría · Recientes / antiguas / distancia
 
-## 14 · ACTO 4 · 17:30–18:45 · Valentino
-La respuesta que no llegó.
-Un desafío real documentado fue qué hacer cuando el servidor puede haber guardado una acción, pero la respuesta se pierde. Si repetimos una publicación con una clave nueva, podemos duplicarla. Si damos el envío por hecho, podemos mentirle al usuario. El historial registra trabajo sobre publicación y mensajería idempotentes: conservar la identidad del intento y reconciliar la respuesta confirmada. La subida de fotos tampoco debe sobrescribir un archivo ante una respuesta incierta. Hay pruebas con fallas simuladas y límites documentados para backends antiguos. No basta con mostrar un mensaje verde; hay que comprobar un único resultado persistido. Esta investigación enlaza frontend, contrato de servidor y pruebas. La evidencia está en ALEXIS_DEVELOPMENT y en las suites, con el alcance de cada verificación.
+### GERMÁN · 05:00–06:00
+En la pantalla principal podemos buscar por texto y combinarlo con categoría y estado: perdido o encontrado. La búsqueda avanzada agrega zona, un rango de fechas y la posibilidad de ver nuestras publicaciones o las de otras personas. También podemos ordenar por recientes, antiguas o distancia. Por ejemplo: buscar llaves, elegir una categoría y limitar el día y la zona donde se perdieron. No son búsquedas separadas: los criterios se combinan. El filtro Cerca usa un radio de cuatro kilómetros cuando tenemos ubicación disponible. Si no damos permiso, la aplicación no inventa nuestra posición. Después veremos el mismo caso sobre el mapa.
 
-Acciones: Secuencia visual: timeout → reintento con misma clave → respuesta confirmada. Esquema conceptual, no incidente de producción medido.
+**Operación y avance:** Señalar la captura del inicio y los tres grupos de filtros. La captura usa datos sintéticos rotulados. Al 06:00, avanzar a 07.
 
-## 15 · ACTO 4 · 18:45–20:00 · Germán
-Probar también es construir.
-Las pruebas se leen junto a su entorno. Una prueba unitaria comprueba reglas con datos controlados. Una prueba de navegador puede comprobar interfaz con respuestas simuladas. Una prueba real necesita cuentas y servicios disponibles. El repositorio separa esos niveles y documenta pendientes de Safari físico, sesiones autenticadas y versión servida. En esta entrega guardamos los resultados de los comandos que efectivamente ejecutamos, sin reciclar cifras de otro informe como si fueran nuevas. Para el jurado dejamos el código, las instrucciones y la evidencia accesibles. Antes del evento necesitamos repetir el flujo con los dos perfiles y probar el proyector. Una falla de privacidad, una conversación cruzada o una recuperación sin consentimiento bloquea la demo. Mostrar esos límites también es parte de la ingeniería.
+**Nota privada de preparación:** Distinguir filtros avanzados del listado de los controles propios del mapa. No atribuir geocodificación ni GPS sin permiso.
 
-Acciones: Mostrar VALIDATION.md actualizado. No leer un listado extenso. No equiparar móvil emulado con teléfono real.
+## Diapositiva 07 · Acto 3 · 06:00–07:00
+**En pantalla:** ¿Qué buscamos juntos? — Ustedes eligen el caso de la demo.
+**Puntos visibles:** Auriculares · Llaves · Billetera
 
-## 16 · ACTO 5 · 20:00–21:20 · Germán
-La utilidad antes que el cobro.
-La propuesta de valor es facilitar que quien perdió y quien encontró compartan un mismo canal. Eso requiere participación. Por eso el modelo propuesto mantiene gratuitas la búsqueda y la publicación básica. El informe plantea dos vías posibles de ingresos: publicaciones destacadas opcionales y patrocinios de comercios u organizaciones. Son propuestas comerciales, no funciones cobrando hoy ni acuerdos firmados. Antes de elegir un precio, hay que comprobar que la plataforma resulta útil y que existe disposición a pagar por visibilidad sin bloquear su función esencial. También tenemos que considerar privacidad, soporte y moderación. La venta que hacemos hoy es una invitación a probar una solución concreta y a validar su continuidad. No presentamos ingresos, clientes ni rentabilidad que no estén medidos.
+### VALENTINO · 06:00–07:00
+Ahora elijan qué objeto vamos a buscar: auriculares, llaves o billetera. Tenemos preparados los tres recorridos. Abrimos la segunda votación. Cerramos y mostramos el resultado. Si empatan, elegimos entre las opciones empatadas y lo aclaramos. El objeto que gane será el mismo durante toda la demostración: primero la persona que lo perdió y después quien lo encontró.
 
-Acciones: Tarjetas: gratis / destacado propuesto / patrocinio propuesto. Sin precios inventados.
+**Operación y avance:** Abrir object, dejar veinte segundos para votar, cerrar y revelar. Al 07:00, avanzar a 08 y abrir el MVP. No usar votos de ensayo.
 
-## 17 · ACTO 5 · 21:20–22:40 · Valentino
-Poner números es diseñar.
-El informe valoriza ciento ochenta horas de desarrollo web en un millón setecientos treinta mil setecientos pesos argentinos. Son horas estimadas a una tarifa de referencia, no un registro de pagos realizados. El fijo directo presupuestado es de treinta y nueve mil doscientos cincuenta pesos por mes y cuatrocientos setenta y nueve mil quinientos por año. El anual incluye el dominio; por eso no es simplemente el mensual multiplicado por doce. El escenario usa Supabase Pro y hosting inicial sin cargo según los supuestos del documento. Los servicios variables, mantenimiento e impuestos deben revisarse aparte. Si crecemos, actualizamos consumo y condiciones. Estas cifras permiten conversar sobre sostenibilidad, pero sin ingresos validados todavía no permiten afirmar un resultado financiero positivo.
+**Nota privada de preparación:** Si no hay conexión, elegir a mano alzada. Preparar dos perfiles de navegador, una cuenta por perfil, antes de exponer.
 
-Acciones: Gráfico breve con magnitudes separadas: inversión única / fijo mensual / fijo anual. Fuente PDF, páginas 1 y 7.
+## Diapositiva 08 · Acto 3 · 07:00–08:45
+**En pantalla:** Publicar. Editar. Gestionar. — Cuenta A · publicación y perfil.
+**Puntos visibles:** Guardar y volver a abrir · Mi perfil → Mis publicaciones · Editar sólo lo propio
 
-## 18 · ACTO 5 · 22:40–24:00 · Germán
-Hoy, una plataforma.
-La conclusión del informe distingue dos preguntas. ¿Podemos construir y operar la solución? La evaluación técnica es favorable, sujeta a pruebas y seguridad. ¿Conviene ampliar la inversión y cómo se sostiene? La viabilidad comercial es prometedora, pero no está demostrada. El próximo paso razonable es un piloto en una zona definida con indicadores acordados. La aplicación móvil es una visión futura: Capacitor permitiría reutilizar parte de la web, con sesenta a noventa horas adicionales estimadas y entre quinientos setenta y seis mil novecientos y ochocientos sesenta y cinco mil trescientos cincuenta pesos. No está publicada en tiendas. Las cuentas, revisiones y pruebas agregan condiciones que quedan en el informe. Si el acceso móvil resulta una barrera comprobada, esa inversión tendrá una razón basada en evidencia.
+### VALENTINO · 07:00–08:15
+Entramos con mi cuenta y publicamos el objeto elegido. Marcamos “perdido”, completamos sus datos y confirmamos el lugar. Al guardar, volvemos a abrir la ficha para comprobar que quedó registrada. Ahora entro a mi perfil: desde acá puedo ver mis publicaciones y las recuperadas. Si olvidé un detalle, abro Editar, corrijo la descripción y guardo el cambio. La edición conserva la misma publicación; no tengo que crear otra para corregirla. Sólo puedo editar mis propios avisos.
 
-Acciones: Mapa: una comunidad → varias localidades → Argentina. Rotular VISIÓN FUTURA, sin atribuir usuarios actuales. Negocio prometedor, no demostrado. Móvil futuro presupuestado en notas.
+**Operación y avance:** En vivo: publicar con datos preparados, recargar y abrir Perfil → Editar. Cambiar un detalle breve y guardar. Reservar al menos treinta segundos de este tramo para operar.
 
-## 19 · ACTO 5 · 24:00–25:00 · Valentino
-Construir. Revisar. Dejar evidencia.
-En FAT conectamos desarrollo y gestión. Una tarea necesita una necesidad, un responsable y un criterio de aceptación; terminar una pantalla no alcanza si el flujo no puede comprobarse. Git conserva las decisiones y permite comparar versiones. En esta entrega revisamos main, Alexis y German, respaldamos las puntas y documentamos si la integración pasó sus condiciones. El tablero de tareas real queda pendiente de enlazar si no está disponible: no fabricamos sprints ni métricas. README, manual y bitácora acompañan al producto para que otra persona pueda ejecutarlo y auditarlo. No vamos a leerlos acá; quedan accesibles por enlace. Esa documentación permite continuar el proyecto después de este pitch.
+### GERMÁN · 08:15–08:45
+El perfil también permite actualizar los datos personales disponibles, como nombre, avatar y localidad. La vista pública muestra información pública; el contacto con otra persona se hace desde una publicación. Ahora voy a entrar desde mi cuenta para buscar este aviso.
 
-Acciones: 24:00–25:00 exacto. Mostrar flujo de trabajo propuesto, no tablero ficticio. Dar paso al video al minuto 25.
+**Operación y avance:** Mostrar Perfil/Configuración sin modificar datos personales durante la demo. Al 08:45, pasar a 09, manteniendo el MVP en la tele.
 
-## 20 · ACTO 5 · 25:00–26:00 · Ambos
-The original film.
-[No hay un guion alternativo. Reproducir únicamente el video publicitario ORIGINAL de Valentino y Germán hablando inglés. Si falta el archivo, comunicar que el requisito sigue pendiente; no presentar otro video como equivalente.]
+**Nota privada de preparación:** Usar prefijo PRESENTACIÓN QA y foto propia. No borrar publicaciones: borrar también puede eliminar conversaciones. Si falla guardar, conservar el error y usar respaldo visual rotulado.
 
-Acciones: 25:00–26:00 exacto. Cargar MP4 desde Studio, validar duración 60 s y audio original. Reproducir tras clic. Pausar/reiniciar/volumen disponibles. No subtitular sin permiso.
+## Diapositiva 09 · Acto 3 · 08:45–10:30
+**En pantalla:** Buscar también es ubicar. — Cuenta B · búsqueda, filtros y mapa.
+**Puntos visibles:** Texto y filtros combinados · Marcadores → ficha del objeto · Hallazgo desde otra cuenta
 
-## 21 · ACTO 5 · 26:00–27:00 · Germán
-La marca sale de la pantalla.
-El video conecta la propuesta con una identidad que también funciona fuera de la pantalla. Preparamos diseños editables de flyer, stickers QR, credenciales, tarjetas, indumentaria sencilla y stand. Todos llevan a enlaces configurables del proyecto, sin inventar teléfonos ni cuentas sociales. El tutorial tiene un espacio reservado para su archivo real. Los canales de marca que no estén verificados permanecen como pendientes. El objetivo de difusión no es sumar piezas aisladas: es que alguien vea una invitación, llegue a BuscAG y entienda cómo participar. También necesitamos medir ese recorrido en el piloto. Los diseños están listos para adaptar; imprimirlos exige confirmar antes el destino final de cada QR.
+### GERMÁN · 08:45–10:30
+Desde mi cuenta busco el objeto que acaba de publicar Valentino. Primero escribo una parte del título. Después combino categoría, estado y fecha para reducir los resultados. También puedo limitar por zona y ver sólo publicaciones de otras personas. En el mapa, los marcadores ubican los avisos que tienen coordenadas válidas. Al seleccionar uno, puedo abrir la ficha y revisar su información. El mapa tiene sus propios controles de texto, categoría y estado; no todos los filtros avanzados del listado se trasladan automáticamente. Ahora publico el hallazgo desde mi cuenta, con una descripción y un lugar coherentes con nuestro ejemplo. Ya tenemos una pérdida y un hallazgo publicados por personas distintas.
 
-Acciones: 26:00–27:00. Mostrar materiales editables. No usar el trailer sintético como tutorial real ni como publicidad inglesa.
+**Operación y avance:** En vivo: buscar, aplicar dos o tres filtros, limpiar, abrir Mapa y una ficha. Publicar el hallazgo preparado. Reservar aproximadamente cuarenta y cinco segundos para estas acciones. Al 10:30, pasar a 10 sin salir del MVP.
 
-## 22 · ACTO 6 · 27:00–28:00 · Valentino
-¿Cuánto tardarías en recuperar algo que perdiste?
-Volvemos a la pregunta con la que empezamos. ¿Cuánto tardarían en recuperar algo que perdieron? No tenemos una cifra para prometerles. Tenemos una propuesta concreta, reglas que se pueden revisar y una comunidad con la que aprender. [Pausa de cinco segundos.] La pregunta empieza a cambiar: ¿y si encontrarlo fuera mucho más fácil? El mapa que aparece es una visión de conexiones futuras, no usuarios actuales. La siguiente conexión podría empezar con una publicación útil y una persona dispuesta a ayudar.
+**Nota privada de preparación:** No afirmar que el mapa rastrea el objeto. Sin GPS, mostrar la ubicación de las publicaciones, sin presentar el centro de referencia como posición personal.
 
-Acciones: 27:00–28:00. La pregunta inicial se transforma en la frase final con máscara tipográfica. Los nodos del inicio reaparecen y expanden sus conexiones. Visión futura explícita.
+## Diapositiva 10 · Acto 3 · 10:30–12:15
+**En pantalla:** Coincidencias y conversación. — Comparar primero. Contactar después.
+**Puntos visibles:** Categoría + texto + distancia + fecha · Índice orientativo y motivos · Chat de esa publicación
 
-## 23 · ACTO 6 · 28:00–29:00 · Germán
-Probalo. Revisalo. Mejorémoslo.
-Ahora la invitación es concreta. Un QR lleva al entorno web de prueba previsto y el otro al repositorio, donde está el código y la documentación. La disponibilidad del sitio debe comprobarse antes del evento; el QR no demuestra por sí solo que el servicio esté operativo. Si lo prueban, nos interesa saber dónde encuentran una barrera, qué información necesitan y qué les genera confianza para contactar a otra persona. Si quieren auditar, pueden revisar el motor de coincidencias y los límites que documentamos. No necesitamos que crean en una promesa de rentabilidad. Necesitamos una prueba útil, una revisión honesta y un próximo paso que podamos medir.
+### VALENTINO · 10:30–11:30
+Ahora abrimos Coincidencias. El sistema compara una pérdida con un hallazgo de otra persona y revisa categoría, palabras, distancia y fechas. La comparación muestra las dos fichas, un índice y los motivos de la sugerencia. Ese índice ayuda a ordenar resultados: no prueba que el objeto sea mío. Revisamos los detalles y, desde la publicación, abrimos el chat para preguntar por una característica que no publicamos.
 
-Acciones: 28:00–29:00. QR legibles. No afirmar piloto abierto sin decisión del equipo.
+**Operación y avance:** Mostrar una coincidencia compatible y sus motivos. Abrir el chat y enviar un mensaje corto; reservar unos veinte segundos para operar. Ceder la palabra sin avanzar.
 
-## 24 · ACTO 6 · 29:00–30:00 · Valentino
-¿Y si encontrarlo fuera mucho más fácil?
-Volvamos a la pregunta del principio. ¿Cuánto tardarían en recuperar algo que perdieron? No podemos prometer un tiempo ni asegurar que todo objeto vuelva. Lo que sí podemos construir es una forma de que la información no quede separada de quien la necesita. Hoy vieron una propuesta, sus reglas, sus costos y los límites que todavía tenemos que validar. Germán y yo queremos seguir ese trabajo con una comunidad real. [Pausa de cinco segundos.] ¿Y si encontrarlo fuera mucho más fácil? BuscAG: encontrarnos hace la diferencia.
+### GERMÁN · 11:30–12:15
+En mi cuenta aparece la conversación de esa publicación. Respondo desde acá y Valentino comprueba que recibió la respuesta. El chat mantiene juntos el objeto, las personas y los mensajes, para no confundir conversaciones. Si un envío queda pendiente, la interfaz permite revisar su estado y reintentar.
 
-Acciones: 29:00–30:00. Últimos 15 s: sostener logo y QR en silencio. No cerrar con una diapositiva de “gracias”.
+**Operación y avance:** Responder, volver a la cuenta A y comprobar el mensaje. Activar CONEXIÓN ENCONTRADA sólo tras verlo confirmado. Al 12:15, pasar a 11.
+
+**Nota privada de preparación:** No activar éxito por una sugerencia o una captura. Si no aparece un match, explicar las reglas sobre la comparación rotulada y continuar al chat disponible, sin forzar datos ajenos.
+
+## Diapositiva 11 · Acto 3 · 12:15–14:00
+**En pantalla:** Del aviso a la recuperación. — Avisos internos y confirmación de entrega.
+**Puntos visibles:** Avisos → publicación o conversación · Leído y sin leer · Solicitar → aceptar o rechazar
+
+### GERMÁN · 12:15–13:15
+En Notificaciones encontramos avisos de mensajes, coincidencias y novedades. Podemos distinguir los que no leímos, abrir el destino del aviso y marcarlos como leídos. Así no tenemos que revisar todas las publicaciones una por una. Después de conversar y comprobar el objeto, pasamos a Gestionar recuperación. En el recorrido bilateral, una persona solicita la confirmación de devolución y la otra acepta o rechaza. El chat por sí solo no cambia el objeto a recuperado.
+
+**Operación y avance:** Mostrar un aviso interno preparado, abrir su destino y gestionar recuperación si el servicio la habilita. Reservar unos veinte segundos para operar. Ceder la palabra sin avanzar.
+
+### VALENTINO · 13:15–14:00
+Desde mi sesión reviso la solicitud y confirmo la entrega de este ejemplo. Comprobamos el estado y el historial desde ambas cuentas. El sistema también distingue una recuperación declarada sin contraparte de una devolución confirmada entre personas. La confirmación corresponde a esta publicación. Así distinguimos una declaración propia de una entrega confirmada.
+
+**Operación y avance:** Aceptar o rechazar sólo el caso controlado. Si la RPC no está instalada, mostrar el aviso de función no disponible y explicar el límite en una frase. Al 14:00, volver a las diapositivas y avanzar a 12.
+
+**Nota privada de preparación:** Función implementada en código, dependiente de recovery_context v2 y RPC de recuperación. No desplegar SQL ni cambiar estado directamente. Avisos internos no equivalen a push del sistema operativo, que necesita permisos y configuración propia.
+
+## Diapositiva 12 · Acto 4 · 14:00–15:00
+**En pantalla:** Entramos al sistema. — React + TypeScript + Vite + Supabase.
+**Puntos visibles:** Componentes y estado · Contratos y construcción · Datos, sesiones y permisos
+
+### VALENTINO · 14:00–15:00
+Lo que acabamos de usar se divide en capas. React organiza los componentes de la interfaz y su estado. TypeScript nos ayuda a detectar incompatibilidades en los datos durante el desarrollo. Vite prepara el entorno y construye los archivos del cliente. Supabase aporta autenticación, base PostgreSQL, almacenamiento de imágenes y actualizaciones de datos. La lógica de coincidencias compara publicaciones, mientras el servidor controla qué operaciones puede hacer cada cuenta. Separar estas responsabilidades nos permite ubicar mejor un error: una pantalla puede estar disponible aunque un servicio todavía no esté configurado.
+
+**Operación y avance:** Señalar las cuatro capas animadas. Al 15:00, avanzar a 13.
+
+**Nota privada de preparación:** Mantener separación visual de capas y animación de flujo; incluir TypeScript en la capa de interfaz. No cambiar tecnologías ni hosting de la aplicación.
+
+## Diapositiva 13 · Acto 4 · 15:00–16:00
+**En pantalla:** Una sugerencia. Reglas visibles. — El criterio se puede explicar y revisar.
+**Puntos visibles:** Categoría y estados compatibles · Texto, distancia y fechas · Índice orientativo, no certeza
+
+### GERMÁN · 15:00–16:00
+Este es un fragmento del código real del comparador. Antes de puntuar, exige una publicación perdida y otra encontrada, de personas distintas y con categoría compatible. También descarta datos inválidos. Después evalúa términos de la descripción, cercanía y fechas. Por eso una coincidencia tiene motivos que podemos revisar, en lugar de depender solamente de un número. Las pruebas incluyen casos compatibles y casos que deben rechazarse. Nuestra tarea es elegir y comprobar esas reglas; la sugerencia acompaña la búsqueda, pero la verificación del objeto sigue en manos de las personas.
+
+**Operación y avance:** Señalar el fragmento y la frase sobre propiedad. No volver a hacer toda la demo de comparación. Al 16:00, avanzar a 14.
+
+**Nota privada de preparación:** El fragmento permanece auténtico y con su referencia de código. No presentar el índice como probabilidad científica ni como reconocimiento por IA de fotografías.
+
+## Diapositiva 14 · Acto 4 · 16:00–17:00
+**En pantalla:** La respuesta que no llegó. — Guardar una vez. Confirmar antes de anunciar éxito.
+**Puntos visibles:** Publicación y mensaje con identidad de intento · Reintentar sin crear otro envío · Estado pendiente y confirmación
+
+### VALENTINO · 16:00–17:00
+Un problema técnico aparece cuando enviamos una publicación o un mensaje y la respuesta se pierde. Tal vez el servidor lo guardó, pero la pantalla todavía no lo sabe. Si creamos un envío distinto cada vez que apretamos el botón, podemos duplicar el resultado. Por eso el código conserva la identidad del intento y comprueba la respuesta antes de darlo por confirmado. La pantalla diferencia pendiente, error y confirmación. Esta misma idea protege las imágenes ante un reintento. Es una decisión que el usuario nota en algo simple: poder intentar de nuevo sin perder el contexto de lo que estaba haciendo.
+
+**Operación y avance:** Seguir la secuencia enviar → respuesta incierta → reintentar la misma acción. Al 17:00, avanzar a 15.
+
+**Nota privada de preparación:** Conservar la traza animada. No afirmar garantía absoluta sin las RPC y contratos requeridos; esa condición queda en la auditoría.
+
+## Diapositiva 15 · Acto 4 · 17:00–18:00
+**En pantalla:** Seguridad que se comprueba. — Cada cuenta opera dentro de sus permisos.
+**Puntos visibles:** Propietario: editar su publicación · Participantes: conversación correcta · Pruebas locales, navegador y servicio
+
+### GERMÁN · 17:00–18:00
+La seguridad no consiste solamente en esconder un botón. El frontend comprueba, por ejemplo, que una publicación sea propia antes de editarla. Además, las políticas de la base de datos y las funciones del servidor deben autorizar la operación. En el chat importan los participantes y la publicación correcta; en la recuperación, quién solicita y quién confirma. Las pruebas revisan reglas, datos inválidos, sesiones y reintentos. Algunas usan datos controlados y otras recorren la interfaz. Para afirmar que una función está operativa en el sitio también hay que probarla con cuentas y servicios reales. Esos niveles se documentan por separado.
+
+**Operación y avance:** Mostrar los tres niveles de pruebas y los ejemplos de permisos. Al 18:00, avanzar a 16.
+
+**Nota privada de preparación:** No leer números de suites históricos ni decir que una prueba con fixture prueba producción. No modificar la base para la exposición.
+
+## Diapositiva 16 · Acto 5 · 18:00–19:00
+**En pantalla:** La utilidad antes que el cobro. — Base gratuita y opciones comerciales propuestas.
+**Puntos visibles:** Publicar y buscar: base gratuita · Destacados: propuesta opcional · Patrocinios: interés por validar
+
+### GERMÁN · 18:00–19:00
+El valor de BuscAG está en facilitar un recorrido completo: publicar, buscar, comparar y contactar. Para que esa red sea útil, la propuesta mantiene gratuitas la publicación y la búsqueda básica. El informe plantea posibles ingresos por destacados opcionales y patrocinios de comercios u organizaciones. Son alternativas de negocio para evaluar, no cobros activos ni acuerdos ya firmados. Antes de definir precios necesitamos comprobar uso, costos y disposición a pagar. La función principal debe seguir siendo accesible. Por eso proponemos empezar con una comunidad delimitada y medir si el servicio realmente ayuda a resolver los casos.
+
+**Operación y avance:** Mostrar núcleo gratuito y órbitas de propuestas comerciales. Al 19:00, avanzar a 17.
+
+**Nota privada de preparación:** Mantener animación del modelo; sin inventar precios, clientes ni rentabilidad.
+
+## Diapositiva 17 · Acto 5 · 19:00–20:00
+**En pantalla:** Poner números es diseñar. — Presupuesto del informe · pesos argentinos.
+**Puntos visibles:** 180 h · $1.730.700 de desarrollo · Fijo: $39.250 por mes · $479.500 al año, con dominio
+
+### VALENTINO · 19:00–20:00
+El informe estima ciento ochenta horas de desarrollo web, valorizadas en un millón setecientos treinta mil setecientos pesos. El fijo directo presupuestado es de treinta y nueve mil doscientos cincuenta pesos mensuales y cuatrocientos setenta y nueve mil quinientos anuales, incluyendo el dominio. Son estimaciones, no gastos que ya pagamos. El escenario contempla Supabase Pro y hosting inicial sin cargo según los supuestos del documento. Mantenimiento, impuestos y consumos variables se revisan aparte. Separar inversión inicial y operación nos permite evaluar qué necesitamos para sostener el proyecto, sin confundir una aplicación construida con un negocio ya rentable.
+
+**Operación y avance:** Señalar inversión, mensual y anual una sola vez. Al 20:00, avanzar a 18.
+
+**Nota privada de preparación:** Conservar cifras originales del PDF y su visual. No redondear ni actualizar precios sin otra fuente.
+
+## Diapositiva 18 · Acto 5 · 20:00–20:45
+**En pantalla:** Crecer después de probar. — Primero un piloto. Después, más alcance.
+**Puntos visibles:** Medir publicaciones y contactos · Confirmar recuperaciones · VISIÓN FUTURA: más comunidades
+
+### GERMÁN · 20:00–20:45
+El próximo paso es probar el recorrido en una comunidad concreta y medir publicaciones, contactos y recuperaciones confirmadas. Con esos datos podemos decidir qué mejorar y si conviene ampliar el alcance. El mapa de Argentina representa una visión futura, no usuarios que ya tenemos. Una aplicación móvil publicada en tiendas también es una posibilidad posterior; hoy estamos mostrando la aplicación web.
+
+**Operación y avance:** Recorrer brevemente la expansión animada; no explicar de nuevo el origen. Al 20:45, avanzar a 19.
+
+**Nota privada de preparación:** Retirar del discurso el presupuesto móvil detallado; conservarlo en informe. Mantener la animación y el rótulo VISIÓN FUTURA.
+
+## Diapositiva 19 · Acto 5 · 20:45–21:30
+**En pantalla:** Construir. Revisar. Documentar. — Git + tareas + pruebas + documentación.
+**Puntos visibles:** Investigar → programar → probar · Criterios de aceptación · README + manual + evidencia
+
+### VALENTINO · 20:45–21:30
+Para organizar el trabajo usamos el repositorio y la documentación del proyecto. Cada cambio necesita una necesidad concreta y una forma de comprobar que funciona. Git conserva el historial; el README, el manual y los informes permiten que otra persona entienda y continúe el sistema. En FAT relacionamos esa organización con responsables y criterios de aceptación. Ahora presentamos nuestro video original en inglés.
+
+**Operación y avance:** No abrir un tablero durante este tramo. Al 21:30, avanzar a 20 e iniciar el video con audio.
+
+**Nota privada de preparación:** Mantener flujo animado. No afirmar que se integraron ramas ni mostrar un tablero ficticio.
+
+## Diapositiva 20 · Acto 5 · 21:30–22:30
+**En pantalla:** The original film. — Video original de Valentino y Germán.
+**Puntos visibles:** 60 segundos · inglés · audio original
+
+### VIDEO · 21:30–22:30
+[VIDEO: reproducir el original en inglés completo, sin hablar encima.]
+
+**Operación y avance:** Reproducir el video original completo, sin hablar encima. Al 22:30, avanzar a 21.
+
+**Nota privada de preparación:** Archivo original pendiente si no fue cargado por el usuario. Conservar espacio de 60 s; no generar otro video, subtítulos ni un discurso alternativo.
+
+## Diapositiva 21 · Acto 5 · 22:30–23:00
+**En pantalla:** La marca sale de la pantalla. — Materiales que llevan a BuscAG.
+**Puntos visibles:** Flyer + stickers QR + tarjetas · Credenciales + indumentaria + stand
+
+### GERMÁN · 22:30–23:00
+La identidad también aparece en flyers, stickers, tarjetas y el stand. Los QR permiten pasar de la marca a la web o a la documentación. Antes de imprimirlos verificamos sus destinos. El objetivo es que una persona llegue, entienda cómo publicar y pueda empezar a buscar.
+
+**Operación y avance:** Mostrar materiales sin abrir archivos. Al 23:00, avanzar a 22.
+
+**Nota privada de preparación:** Conservar piezas y animación. Tutorial y redes no verificados siguen pendientes, sin ocupar discurso adicional.
+
+## Diapositiva 22 · Acto 6 · 23:00–23:30
+**En pantalla:** ¿Cuánto tardarías en recuperar algo que perdiste? — Ahora conocemos el recorrido.
+**Visual:** conservar la escena cinematográfica original.
+
+### VALENTINO · 23:00–23:30
+Volvemos a la pregunta inicial. Ahora vimos un recorrido concreto: una publicación con datos, una búsqueda con filtros, una comparación y una conversación. No podemos prometer un tiempo de recuperación, pero sí mostrar cómo BuscAG organiza esos pasos.
+
+**Operación y avance:** Dejar transformar la pregunta en la animación existente. Al 23:30, avanzar a 23.
+
+**Nota privada de preparación:** Reprise breve: no repetir la historia ni toda la lista de funciones del inicio.
+
+## Diapositiva 23 · Acto 6 · 23:30–24:15
+**En pantalla:** Probalo. Revisalo. Mejorémoslo. — Web + código + documentación.
+**Puntos visibles:** Probar el recorrido · Revisar el código · Compartir mejoras concretas
+
+### GERMÁN · 23:30–24:15
+Los invitamos a probar el recorrido y a revisar el código y la documentación. El QR de la web permite abrir BuscAG; el del repositorio requiere una cuenta con acceso porque sigue siendo privado. Nos interesa saber si se entiende cómo publicar, qué filtros ayudan y dónde aparece una dificultad. Esa devolución sirve para elegir las próximas mejoras con una base concreta.
+
+**Operación y avance:** Sostener QR legibles; el acceso del jurado se prepara antes del evento. Al 24:15, avanzar a 24.
+
+**Nota privada de preparación:** El QR web usa el dominio configurado, no prometer que es staging. No cambiar visibilidad del repositorio ni enlaces sin decisión del usuario.
+
+## Diapositiva 24 · Acto 6 · 24:15–25:00
+**En pantalla:** ¿Y si encontrarlo fuera mucho más fácil? — Encontrarnos hace la diferencia.
+**Puntos visibles:** BuscAG · Encontrarnos hace la diferencia.
+
+### VALENTINO · 24:15–25:00
+Hoy mostramos cómo BuscAG acompaña una búsqueda desde la publicación hasta el contacto y la gestión de la recuperación. También explicamos las decisiones técnicas y lo que necesitamos validar para seguir. La próxima etapa es usarlo, escuchar a la comunidad y mejorar ese recorrido. ¿Y si encontrarlo fuera mucho más fácil? BuscAG: encontrarnos hace la diferencia.
+
+**Operación y avance:** Sostener logo y conexiones en los últimos ocho segundos. Cerrar al 25:00, sin agregar otra diapositiva.
+
+**Nota privada de preparación:** Mantener final original y red de conexiones. No agregar otra conclusión ni leer una lista nueva.

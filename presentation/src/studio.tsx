@@ -40,7 +40,7 @@ import {
 import { Slide, QR } from "./main";
 import {VotingSettings,LinkCheck} from "./voting-settings";
 import {voteUrl} from "../server/public-links.mjs";
-import { timing, validateProject, kinds } from "../server/model.mjs";
+import { timing, schedule, validateProject, kinds } from "../server/model.mjs";
 export function Studio({ live }: { live: Live | null }) {
   const [p, setP] = useState<Project>(original()),
     [selected, setSelected] = useState("scene-01"),
@@ -194,7 +194,7 @@ export function Studio({ live }: { live: Live | null }) {
     setMsg("Recurso cargado y almacenado. Guardá el proyecto para vincularlo.");
   }
   function normalize(){
-    const groups=[{act:1,total:240},{act:2,total:240},{act:3,total:420},{act:4,total:300},{act:5,total:300,before:true},{act:5,total:60,video:true},{act:5,total:60,after:true},{act:6,total:180}];
+    const profile=schedule(p),a=profile.acts;const groups=[...a.slice(0,4).map(x=>({act:x.id,total:x.end-x.start,before:false,after:false,video:false})),{act:5,total:profile.videoStart-a[4].start,before:true,after:false,video:false},{act:5,total:60,video:true,before:false,after:false},{act:5,total:a[4].end-profile.videoStart-60,after:true,before:false,video:false},{act:6,total:a[5].end-a[5].start,before:false,after:false,video:false}];
     const videoIndex=p.scenes.findIndex(s=>!s.hidden&&s.kind==='video');
     if(videoIndex<0||p.scenes.filter(s=>!s.hidden&&s.kind==='video').length!==1){setMsg('Se necesita un solo video en el acto V.');return;}
     try{const next=structuredClone(p);for(const g of groups){const list=next.scenes.filter((s,i)=>!s.hidden&&s.act===g.act&&(!g.before||i<videoIndex)&&(!g.after||i>videoIndex)&&(!g.video||s.kind==='video')&&(!(g.before||g.after)||s.kind!=='video'));if(!list.length||list.length*5>g.total)throw Error('Faltan escenas o hay demasiadas dentro de un acto.');let remaining=g.total-list.length*5,sum=list.reduce((n,s)=>n+s.duration,0);list.forEach((s,i)=>{const extra=i===list.length-1?remaining:Math.floor((g.total-list.length*5)*s.duration/sum);s.duration=5+extra;remaining-=extra;});}edit(d=>Object.assign(d,next));}catch(e){setMsg((e as Error).message);}
@@ -344,7 +344,7 @@ export function Studio({ live }: { live: Live | null }) {
             </button>
           ))}
           <div className={"timing-summary " + (!t.valid ? "warning" : "")}>
-            <ClockIcon /> {fmt(t.total)} / 30:00
+            <ClockIcon /> {fmt(t.total)} / {fmt(schedule(p).target)}
             <p>
               Video:{" "}
               {t.video
@@ -353,7 +353,7 @@ export function Studio({ live }: { live: Live | null }) {
                   fmt(t.video.start + t.video.duration)
                 : "pendiente"}
             </p>
-            <button onClick={normalize}>Ajustar a 30:00 y video 25–26</button>
+            <button onClick={normalize}>Ajustar a {fmt(schedule(p).target)} y video {fmt(schedule(p).videoStart)}–{fmt(schedule(p).videoStart+60)}</button>
           </div>
         </aside>
         <div className="studio-center">

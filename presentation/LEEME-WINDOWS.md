@@ -1,4 +1,4 @@
-**Versión 2.1.2 · aula: seis actos, 30 minutos, encuestas HTTPS y alternativa con manos. Incluye la corrección 1.0.1: corregido el rechazo 403 de recursos estáticos en Windows. Ver CORRECCION-WINDOWS-1.0.1.md. Cerrar el servidor viejo antes de abrir esta copia.**
+**Versión 2.2.0 · aula: 24 escenas, seis actos y 25 minutos, encuestas HTTPS y alternativa con manos. Incluye la corrección 1.0.1: corregido el rechazo 403 de recursos estáticos en Windows. Ver CORRECCION-WINDOWS-1.0.1.md. Cerrar el servidor viejo antes de abrir esta copia.**
 
 # Abrir BuscAG en Windows, paso a paso
 
@@ -56,3 +56,7 @@ La conexión manual de claves descrita en versiones anteriores queda reemplazada
 La versión 2.1.1 corrige un rechazo real del runtime de Sites antes de mostrar el código. Ver CORRECCION-AUTORIZACION-2.1.1.md. Usar un enlace de conexión nuevo.
 
 2.1.2 distingue aperturas de ensayo y reales. Para votar desde celulares, pulsar Usar votos reales en celulares o HTTPS; después Abrir. Volver a pulsar HTTPS no cierra una encuesta online ya abierta.
+
+## Guion y tiempos de esta edición
+
+El PDF completo está en docs/Guion_BuscAG_Valentino_German_25min.pdf. El plan nuevo dura 25 minutos con video de 21:30 a 22:30. Extraer en una carpeta nueva para iniciar con estas escenas. Si ya editaste la copia anterior, exportá su proyecto y conservá el video antes de restaurar la plantilla nueva en Studio. No sobrescribimos data/ ni convertimos tu guion anterior automáticamente.

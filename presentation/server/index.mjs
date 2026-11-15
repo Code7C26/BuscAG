@@ -19,7 +19,7 @@ import {
   createHash,
 } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { validateProject, publicProject, timing } from "./model.mjs";
+import { validateProject, publicProject, timing, schedule } from "./model.mjs";
 import {createVotingBridge} from "./voting-bridge.mjs";
 import {isInsideDirectory, resolvePublicPath} from "./static-paths.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -122,7 +122,7 @@ export async function createApp({
     if(!state.rehearsal&&bridge?.status().configured)return (bridge.getPolls(admin)||project.polls.map(p=>({...p,open:false,reveal:false,total:0,counts:null,winners:[]}))).map(p=>({...p,source:'https'}));
     return project.polls.map(p=>({...stats(p.id,admin),source:state.rehearsal?'rehearsal':allowLocalVotes?'local-test':'unconfigured'}));
   }
-  const snapshot = (admin = false) => ({...state,projectRevision,handCounts:admin?state.handCounts:undefined,elapsed:elapsed(),at:Date.now(),polls:shownPolls(admin),legacyProject:project.narrativeVersion!==2,voting:bridge?.status(admin)||{configured:false,origin:'',connected:false,error:''},timing:timing(project)});
+  const snapshot = (admin = false) => ({...state,projectRevision,handCounts:admin?state.handCounts:undefined,elapsed:elapsed(),at:Date.now(),polls:shownPolls(admin),legacyProject:project.narrativeVersion!==3,voting:bridge?.status(admin)||{configured:false,origin:'',connected:false,error:''},timing:timing(project)});
   function emit(){const msg='data: '+JSON.stringify(snapshot())+'\n\n';for(const c of clients)c.write(msg);}
   bridge=await createVotingBridge(dataDir,{transport:votingTransport,onUpdate:()=>emit()});
   const heartbeat = setInterval(() => {
@@ -377,7 +377,7 @@ export async function createApp({
           } else if (b.action === "timer") {
             if (b.running && !timing(project).valid)
               throw Error(
-                "Revisar los seis actos (0–4, 4–8, 8–15, 15–20, 20–27, 27–30) y el video 25:00–26:00 antes de iniciar.",
+                `Revisar los seis actos del plan de ${schedule(project).target/60} minutos y el minuto reservado al video antes de iniciar.`,
               );
             state.elapsed = b.reset ? 0 : elapsed();
             state.running = !!b.running;

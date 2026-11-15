@@ -5,7 +5,7 @@
     {
       "id": "scene-01",
       "kind": "signal",
-      "duration": 90,
+      "duration": 45,
       "kicker": "ACTO I · EL EXPERIMENTO",
       "title": "¿Cuánto tardarías en recuperar algo que perdiste?",
       "subtitle": "Pensá en algo que te importaba.",
@@ -28,13 +28,13 @@
     {
       "id": "scene-02",
       "kind": "audience",
-      "duration": 90,
+      "duration": 45,
       "kicker": "ACTO I · EL EXPERIMENTO",
       "title": "Dos personas. Un mismo objetivo.",
-      "subtitle": "NINGUNA CONEXIÓN.",
+      "subtitle": "Quien pierde. Quien encuentra.",
       "bullets": [
         "¿Quién perdió algo importante?",
-        "¿Quién encontró algo de otra persona?"
+        "¿Quién encontró algo ajeno?"
       ],
       "speaker": "Germán",
       "script": "",
@@ -62,7 +62,7 @@
         "Desarrollo + investigación",
         "Marketing + documentación"
       ],
-      "speaker": "Germán",
+      "speaker": "Valentino + Germán",
       "script": "",
       "actions": "",
       "hidden": false,
@@ -80,7 +80,7 @@
     {
       "id": "scene-04",
       "kind": "poll",
-      "duration": 120,
+      "duration": 90,
       "kicker": "ACTO II · EL PÚBLICO DECIDE",
       "title": "¿Dónde buscarías primero un objeto perdido?",
       "subtitle": "El público decide.",
@@ -89,7 +89,7 @@
         "Grupos de WhatsApp",
         "Volver al lugar"
       ],
-      "speaker": "Ambos",
+      "speaker": "Valentino + Germán",
       "script": "",
       "actions": "",
       "hidden": false,
@@ -110,12 +110,13 @@
       "kind": "scatter",
       "duration": 60,
       "kicker": "ACTO II · EL PÚBLICO DECIDE",
-      "title": "La información está. La conexión falta.",
-      "subtitle": "Un aviso acá. Una búsqueda allá.",
+      "title": "Una publicación útil.",
+      "subtitle": "Los datos que hacen posible la búsqueda.",
       "bullets": [
-        "Grupos aislados",
-        "Avisos que se pierden",
-        "Una comunidad como punto de partida"
+        "Perdido o encontrado",
+        "Foto + título + descripción",
+        "Categoría + fecha",
+        "Lugar confirmado"
       ],
       "speaker": "Valentino",
       "script": "",
@@ -137,9 +138,13 @@
       "kind": "reveal",
       "duration": 60,
       "kicker": "ACTO II · EL PÚBLICO DECIDE",
-      "title": "Un lugar para encontrarnos.",
-      "subtitle": "Publicar. Buscar. Comparar. Conversar.",
-      "bullets": [],
+      "title": "Encontrar sin recorrer todo.",
+      "subtitle": "Búsqueda y filtros que se pueden combinar.",
+      "bullets": [
+        "Texto + categoría + estado",
+        "Zona + fechas + autoría",
+        "Recientes / antiguas / distancia"
+      ],
       "speaker": "Germán",
       "script": "",
       "actions": "",
@@ -161,7 +166,7 @@
       "duration": 60,
       "kicker": "ACTO III · LA SORPRESA PRINCIPAL",
       "title": "¿Qué buscamos juntos?",
-      "subtitle": "El objeto más votado elige el caso de la demo.",
+      "subtitle": "Ustedes eligen el caso de la demo.",
       "bullets": [
         "Auriculares",
         "Llaves",
@@ -186,16 +191,16 @@
     {
       "id": "scene-08",
       "kind": "demo",
-      "duration": 90,
+      "duration": 105,
       "kicker": "ACTO III · LA SORPRESA PRINCIPAL",
-      "title": "Una cuenta. Una publicación.",
-      "subtitle": "Cuenta A · Valentino",
+      "title": "Publicar. Editar. Gestionar.",
+      "subtitle": "Cuenta A · publicación y perfil.",
       "bullets": [
-        "Entrar en sesión A",
-        "Publicar el objeto elegido",
-        "Comprobar persistencia al recargar"
+        "Guardar y volver a abrir",
+        "Mi perfil → Mis publicaciones",
+        "Editar sólo lo propio"
       ],
-      "speaker": "Valentino",
+      "speaker": "Valentino + Germán",
       "script": "",
       "actions": "",
       "hidden": false,
@@ -213,14 +218,14 @@
     {
       "id": "scene-09",
       "kind": "demo",
-      "duration": 90,
+      "duration": 105,
       "kicker": "ACTO III · LA SORPRESA PRINCIPAL",
-      "title": "La otra persona entra en escena.",
-      "subtitle": "Cuenta B · Germán",
+      "title": "Buscar también es ubicar.",
+      "subtitle": "Cuenta B · búsqueda, filtros y mapa.",
       "bullets": [
-        "Buscar y filtrar el objeto",
-        "Revisar ubicación pública",
-        "Publicar el hallazgo compatible"
+        "Texto y filtros combinados",
+        "Marcadores → ficha del objeto",
+        "Hallazgo desde otra cuenta"
       ],
       "speaker": "Germán",
       "script": "",
@@ -240,16 +245,16 @@
     {
       "id": "scene-10",
       "kind": "demo",
-      "duration": 90,
+      "duration": 105,
       "kicker": "ACTO III · LA SORPRESA PRINCIPAL",
-      "title": "Una coincidencia necesita razones.",
-      "subtitle": "Cuenta A + cuenta B",
+      "title": "Coincidencias y conversación.",
+      "subtitle": "Comparar primero. Contactar después.",
       "bullets": [
-        "Abrir comparación",
-        "Revisar categoría, texto, distancia y fecha",
-        "Conversar desde el objeto correcto"
+        "Categoría + texto + distancia + fecha",
+        "Índice orientativo y motivos",
+        "Chat de esa publicación"
       ],
-      "speaker": "Valentino",
+      "speaker": "Valentino + Germán",
       "script": "",
       "actions": "",
       "hidden": false,
@@ -267,16 +272,16 @@
     {
       "id": "scene-11",
       "kind": "demo",
-      "duration": 90,
+      "duration": 105,
       "kicker": "ACTO III · LA SORPRESA PRINCIPAL",
-      "title": "Contactar no es recuperar.",
-      "subtitle": "Una entrega necesita confirmación.",
+      "title": "Del aviso a la recuperación.",
+      "subtitle": "Avisos internos y confirmación de entrega.",
       "bullets": [
-        "Solicitar recuperación si está habilitada",
-        "Confirmar desde la contraparte autorizada",
-        "Recargar ambas sesiones y revisar estado"
+        "Avisos → publicación o conversación",
+        "Leído y sin leer",
+        "Solicitar → aceptar o rechazar"
       ],
-      "speaker": "Germán",
+      "speaker": "Germán + Valentino",
       "script": "",
       "actions": "",
       "hidden": false,
@@ -294,15 +299,14 @@
     {
       "id": "scene-12",
       "kind": "architecture",
-      "duration": 75,
+      "duration": 60,
       "kicker": "ACTO IV · LO QUE EL PÚBLICO NO VE",
       "title": "Entramos al sistema.",
-      "subtitle": "Del navegador a una operación autorizada.",
+      "subtitle": "React + TypeScript + Vite + Supabase.",
       "bullets": [
-        "React + TypeScript + Vite",
-        "Servicios y reglas de coincidencia",
-        "Supabase · PostgreSQL · Auth · RLS",
-        "Firebase Hosting · configuración del repositorio"
+        "Componentes y estado",
+        "Contratos y construcción",
+        "Datos, sesiones y permisos"
       ],
       "speaker": "Valentino",
       "script": "",
@@ -322,14 +326,14 @@
     {
       "id": "scene-13",
       "kind": "code",
-      "duration": 75,
+      "duration": 60,
       "kicker": "ACTO IV · LO QUE EL PÚBLICO NO VE",
       "title": "Una sugerencia. Reglas visibles.",
-      "subtitle": "Código auténtico · src/utils/matcher.ts",
+      "subtitle": "El criterio se puede explicar y revisar.",
       "bullets": [
-        "Categoría como filtro",
-        "Texto + geografía + tiempo",
-        "Excluir propietarios iguales y estados incompatibles"
+        "Categoría y estados compatibles",
+        "Texto, distancia y fechas",
+        "Índice orientativo, no certeza"
       ],
       "speaker": "Germán",
       "script": "",
@@ -349,14 +353,14 @@
     {
       "id": "scene-14",
       "kind": "challenge",
-      "duration": 75,
+      "duration": 60,
       "kicker": "ACTO IV · LO QUE EL PÚBLICO NO VE",
       "title": "La respuesta que no llegó.",
-      "subtitle": "Investigar → conservar el intento → reconciliar",
+      "subtitle": "Guardar una vez. Confirmar antes de anunciar éxito.",
       "bullets": [
-        "Bloqueo documentado: respuestas inciertas",
-        "Corrección: claves idempotentes y confirmación",
-        "Límite: garantías dependen del backend instalado"
+        "Publicación y mensaje con identidad de intento",
+        "Reintentar sin crear otro envío",
+        "Estado pendiente y confirmación"
       ],
       "speaker": "Valentino",
       "script": "",
@@ -376,14 +380,14 @@
     {
       "id": "scene-15",
       "kind": "testing",
-      "duration": 75,
+      "duration": 60,
       "kicker": "ACTO IV · LO QUE EL PÚBLICO NO VE",
-      "title": "Probar también es construir.",
-      "subtitle": "Código, navegador y servicios reales son evidencias distintas.",
+      "title": "Seguridad que se comprueba.",
+      "subtitle": "Cada cuenta opera dentro de sus permisos.",
       "bullets": [
-        "Tests automatizados y seguridad cliente",
-        "TypeScript + build de la versión auditada",
-        "Dos cuentas, teléfonos y proyector: aceptación pendiente"
+        "Propietario: editar su publicación",
+        "Participantes: conversación correcta",
+        "Pruebas locales, navegador y servicio"
       ],
       "speaker": "Germán",
       "script": "",
@@ -403,14 +407,14 @@
     {
       "id": "scene-16",
       "kind": "value",
-      "duration": 80,
+      "duration": 60,
       "kicker": "ACTO V · ¿Y SI ESTO FUERA MÁS GRANDE?",
       "title": "La utilidad antes que el cobro.",
-      "subtitle": "Una red comunitaria necesita participación.",
+      "subtitle": "Base gratuita y opciones comerciales propuestas.",
       "bullets": [
         "Publicar y buscar: base gratuita",
-        "Destacados: opción comercial propuesta",
-        "Patrocinios B2B: hipótesis a validar"
+        "Destacados: propuesta opcional",
+        "Patrocinios: interés por validar"
       ],
       "speaker": "Germán",
       "script": "",
@@ -430,14 +434,14 @@
     {
       "id": "scene-17",
       "kind": "costs",
-      "duration": 80,
+      "duration": 60,
       "kicker": "ACTO V · ¿Y SI ESTO FUERA MÁS GRANDE?",
       "title": "Poner números es diseñar.",
-      "subtitle": "Estimaciones del informe económico.",
+      "subtitle": "Presupuesto del informe · pesos argentinos.",
       "bullets": [
-        "180 h · $1.730.700 ARS de desarrollo web",
-        "$39.250 ARS/mes · fijo directo presupuestado",
-        "$479.500 ARS/año · incluye dominio"
+        "180 h · $1.730.700 de desarrollo",
+        "Fijo: $39.250 por mes",
+        "$479.500 al año, con dominio"
       ],
       "speaker": "Valentino",
       "script": "",
@@ -457,14 +461,14 @@
     {
       "id": "scene-18",
       "kind": "viability",
-      "duration": 80,
+      "duration": 45,
       "kicker": "ACTO V · ¿Y SI ESTO FUERA MÁS GRANDE?",
-      "title": "Hoy, una plataforma.",
-      "subtitle": "Mañana, miles de conexiones posibles.",
+      "title": "Crecer después de probar.",
+      "subtitle": "Primero un piloto. Después, más alcance.",
       "bullets": [
-        "VISIÓN FUTURA",
-        "Piloto antes de expandir",
-        "Viabilidad comercial no demostrada"
+        "Medir publicaciones y contactos",
+        "Confirmar recuperaciones",
+        "VISIÓN FUTURA: más comunidades"
       ],
       "speaker": "Germán",
       "script": "",
@@ -484,14 +488,14 @@
     {
       "id": "scene-19",
       "kind": "management",
-      "duration": 60,
+      "duration": 45,
       "kicker": "ACTO V · ¿Y SI ESTO FUERA MÁS GRANDE?",
-      "title": "Construir. Revisar. Dejar evidencia.",
-      "subtitle": "Git + tareas + pruebas + documentación",
+      "title": "Construir. Revisar. Documentar.",
+      "subtitle": "Git + tareas + pruebas + documentación.",
       "bullets": [
-        "Versiones e historial preservados",
-        "Priorización y criterios de aceptación",
-        "README + manual + bitácora accesibles"
+        "Investigar → programar → probar",
+        "Criterios de aceptación",
+        "README + manual + evidencia"
       ],
       "speaker": "Valentino",
       "script": "",
@@ -514,11 +518,11 @@
       "duration": 60,
       "kicker": "ACTO V · ¿Y SI ESTO FUERA MÁS GRANDE?",
       "title": "The original film.",
-      "subtitle": "Pendiente de incorporar el original de Valentino y Germán.",
+      "subtitle": "Video original de Valentino y Germán.",
       "bullets": [
-        "60 segundos · audio original · sin subtítulos añadidos"
+        "60 segundos · inglés · audio original"
       ],
-      "speaker": "Ambos",
+      "speaker": "Ambos · video original",
       "script": "",
       "actions": "",
       "hidden": false,
@@ -536,14 +540,13 @@
     {
       "id": "scene-21",
       "kind": "marketing",
-      "duration": 60,
+      "duration": 30,
       "kicker": "ACTO V · ¿Y SI ESTO FUERA MÁS GRANDE?",
       "title": "La marca sale de la pantalla.",
-      "subtitle": "Difusión que lleva al mismo lugar.",
+      "subtitle": "Materiales que llevan a BuscAG.",
       "bullets": [
         "Flyer + stickers QR + tarjetas",
-        "Credenciales + indumentaria + stand",
-        "Tutorial y canales reales: pendientes de enlazar"
+        "Credenciales + indumentaria + stand"
       ],
       "speaker": "Germán",
       "script": "",
@@ -563,10 +566,10 @@
     {
       "id": "scene-22",
       "kind": "vision",
-      "duration": 60,
+      "duration": 30,
       "kicker": "ACTO VI · EL FINAL INESPERADO",
       "title": "¿Cuánto tardarías en recuperar algo que perdiste?",
-      "subtitle": "Volvamos al principio.",
+      "subtitle": "Ahora conocemos el recorrido.",
       "bullets": [],
       "speaker": "Valentino",
       "script": "",
@@ -586,14 +589,14 @@
     {
       "id": "scene-23",
       "kind": "invite",
-      "duration": 60,
+      "duration": 45,
       "kicker": "ACTO VI · EL FINAL INESPERADO",
       "title": "Probalo. Revisalo. Mejorémoslo.",
-      "subtitle": "Web de prueba + código + documentación",
+      "subtitle": "Web + código + documentación.",
       "bullets": [
-        "Escanear la web prevista de prueba",
-        "Auditar código y documentación",
-        "Participar del piloto cuando esté habilitado"
+        "Probar el recorrido",
+        "Revisar el código",
+        "Compartir mejoras concretas"
       ],
       "speaker": "Germán",
       "script": "",
@@ -613,7 +616,7 @@
     {
       "id": "scene-24",
       "kind": "closing",
-      "duration": 60,
+      "duration": 45,
       "kicker": "ACTO VI · EL FINAL INESPERADO",
       "title": "¿Y si encontrarlo fuera mucho más fácil?",
       "subtitle": "Encontrarnos hace la diferencia.",
@@ -673,6 +676,6 @@
   ],
   "assets": [],
   "reducedMotion": false,
-  "narrativeVersion": 2,
+  "narrativeVersion": 3,
   "performanceMode": "balanced"
 }

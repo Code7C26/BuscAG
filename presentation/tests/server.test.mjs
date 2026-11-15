@@ -45,17 +45,17 @@ async function harness(fn) {
 test("24 escenas, bloques obligatorios y reserva exacta del video", () => {
   assert.equal(seed.scenes.length, 24);
   assert.deepEqual(timing(validateProject(seed)), {
-    total: 1800,
-    video: { start: 1500, duration: 60 },
+    total: 1500,
+    video: { start: 1290, duration: 60 },
     valid: true,
   });
   assert.equal(
     seed.scenes.slice(0, 3).reduce((a, b) => a + b.duration, 0),
-    240,
+    150,
   );
   assert.equal(
     seed.scenes.slice(6, 11).reduce((a, b) => a + b.duration, 0),
-    420,
+    480,
   );
   const bad = structuredClone(seed);
   bad.links.web = "javascript:alert(1)";
@@ -331,4 +331,18 @@ test("reiniciar ensayo no borra votos reales y los ejemplos se pueden modificar"
   }));
 test('controles concurrentes se guardan ordenadamente sin perder cambios',async()=>harness(async({request,dir})=>{const results=await Promise.all([request('/api/admin/control','POST',{action:'poll',id:'search',open:true}),request('/api/admin/control','POST',{action:'poll',id:'object',open:true}),request('/api/admin/control','POST',{action:'connection',value:true})]);assert.ok(results.every(r=>r.status===200));const saved=JSON.parse(await readFile(join(dir,'state.json')));assert.equal(saved.polls.search.open,true);assert.equal(saved.polls.object.open,true);assert.equal(saved.connection,true);}));
 test('cero votos y empate no producen un ganador ficticio',async()=>harness(async({request,origin})=>{await request('/api/admin/control','POST',{action:'rehearsal',value:false});await request('/api/admin/control','POST',{action:'poll',id:'search',open:true,reveal:true});assert.deepEqual((await request('/api/state')).body.polls[0].winners,[]);for(const choice of [0,1])await fetch(origin+'/api/vote',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({poll:'search',choice})});assert.deepEqual((await request('/api/state')).body.polls[0].winners,[0,1]);}));
-test('aula: seis actos exactos, encuestas en actos II/III y video 25–26',()=>{assert.deepEqual([1,2,3,4,5,6].map(act=>seed.scenes.filter(s=>s.act===act).reduce((n,s)=>n+s.duration,0)),[240,240,420,300,420,180]);let at=0;const polls=[];for(const scene of seed.scenes){if(scene.kind==='poll')polls.push({id:scene.pollId,at,act:scene.act});at+=scene.duration;}assert.deepEqual(polls,[{id:'search',at:240,act:2},{id:'object',at:480,act:3}]);const broken=structuredClone(seed);broken.scenes[0].duration+=10;broken.scenes[3].duration-=10;assert.equal(timing(broken).total,1800);assert.equal(timing(broken).valid,false,'no alcanza sumar 30 min si se desplaza un acto');});
+test('aula: seis actos exactos, encuestas en actos II/III y video 21:30–22:30',()=>{assert.deepEqual([1,2,3,4,5,6].map(act=>seed.scenes.filter(s=>s.act===act).reduce((n,s)=>n+s.duration,0)),[150,210,480,240,300,120]);let at=0;const polls=[];for(const scene of seed.scenes){if(scene.kind==='poll')polls.push({id:scene.pollId,at,act:scene.act});at+=scene.duration;}assert.deepEqual(polls,[{id:'search',at:150,act:2},{id:'object',at:360,act:3}]);const broken=structuredClone(seed);broken.scenes[0].duration+=10;broken.scenes[3].duration-=10;assert.equal(timing(broken).total,1500);assert.equal(timing(broken).valid,false,'no alcanza sumar 25 min si se desplaza un acto');});
+
+test('contenido 25 min: plan, pantalla y guion privado coordinados; reparto equilibrado y legado intacto',async()=>{
+ const plan=JSON.parse(await readFile(new URL('../docs/content-25.json',import.meta.url),'utf8'));
+ let t=0;const speakers={Valentino:0,Germán:0};assert.equal(plan.scenes.length,24);
+ for(const [i,item]of plan.scenes.entries()){
+  const scene=seed.scenes[i];assert.equal(item.number,i+1);assert.equal(scene.title,item.title);assert.equal(scene.subtitle,item.subtitle);assert.deepEqual(scene.bullets,item.bullets);assert.equal(scene.duration,item.interventions.reduce((n,p)=>n+p.seconds,0));
+  for(const part of item.interventions){if(part.text)assert.ok(scene.script.includes(part.text));assert.ok(scene.actions.includes(part.cue));if(part.speaker in speakers)speakers[part.speaker]+=part.seconds;}
+  if(scene.kind==='video')assert.equal(t,1290);t+=scene.duration;
+ }
+ assert.equal(t,1500);assert.deepEqual(speakers,{Valentino:720,Germán:720});
+ const old=JSON.parse(await readFile(new URL('../docs/archive/30-minutos/project.json',import.meta.url),'utf8'));assert.equal(timing(old).total,1800);assert.equal(timing(old).valid,true);for(let i=0;i<24;i++)for(const key of ['id','act','kind','animation','layout','background','speed','fontSize','x','y','media','sound'])assert.deepEqual(seed.scenes[i][key],old.scenes[i][key],`escena ${i+1}: conservar ${key}`);
+ const pdf=await readFile(new URL('../docs/Guion_BuscAG_Valentino_German_25min.pdf',import.meta.url));assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
+ await harness(async({origin})=>{assert.equal((await fetch(origin+'/docs/Guion_BuscAG_Valentino_German_25min.pdf')).status,404);});
+});

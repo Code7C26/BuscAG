@@ -26,7 +26,7 @@ const live: Live = {
     counts: null,
     winners: [],
   })),
-  timing: { total: 1800, valid: true, video: { start: 1500, duration: 60 } },
+  timing: { total: 1500, valid: true, video: { start: 1290, duration: 60 } },
 };
 test("24 escenas renderizan con títulos, estructura 16:9 y recursos identificados", () => {
   Object.defineProperty(globalThis, "location", {

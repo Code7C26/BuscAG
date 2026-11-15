@@ -1,34 +1,40 @@
-import json,pathlib
-base=pathlib.Path(__file__).resolve().parents[1];p=json.loads((base/'docs/archive/project-v1.json').read_text())
-first=json.loads(json.dumps(p['scenes']))
-for i,s in enumerate(p['scenes']):
- s['act']=1 if i<3 else 2 if i<6 else 3 if i<11 else 4 if i<15 else 5 if i<21 else 6
- s['layout']='wide';s['fontSize']=1
- s['kicker']=['ACTO I · EL EXPERIMENTO','ACTO II · EL PÚBLICO DECIDE','ACTO III · LA SORPRESA PRINCIPAL','ACTO IV · LO QUE EL PÚBLICO NO VE','ACTO V · ¿Y SI ESTO FUERA MÁS GRANDE?','ACTO VI · EL FINAL INESPERADO'][s['act']-1]
-a,b,c=p['scenes'][:3]
-a.update(kind='signal',duration=90,title='¿Cuánto tardarías en recuperar algo que perdiste?',subtitle='Pensá en algo que te importaba.',bullets=[],speaker='Valentino',actions='0–3 s negro absoluto. 3–12 s EXPERIMENTO 001. 12–40 s pregunta gigante. 40–75 s pensar en silencio y observar nodos. 75–90 s dos nodos empiezan a buscarse.',script=first[0]['script']+' [Sostener la pregunta y el silencio; la participación a mano alzada empieza en la escena siguiente.]')
-b.update(kind='audience',duration=90,title='Dos personas. Un mismo objetivo.',subtitle='NINGUNA CONEXIÓN.',bullets=['¿Quién perdió algo importante?','¿Quién encontró algo de otra persona?'],speaker='Germán',script='Levanten la mano quienes alguna vez perdieron algo que les importaba. [Diez segundos.] Ahora, quienes alguna vez encontraron algo ajeno. [Diez segundos.] En esta misma aula aparecen los dos lados del problema. No sabemos cuántos objetos recuperó esta comunidad ni usamos estas manos como una estadística. Lo que vemos es una experiencia compartida. Cada nodo representa una persona: ambas quieren resolver una pérdida, pero todavía no saben cómo encontrarse. Nuestro experimento empieza en ese espacio. No vamos a actuar una historia ni a prometer resultados. Ustedes van a decidir por dónde buscarían y qué objeto define el recorrido. Después vamos a abrir el sistema que construimos y explicar sus límites. [Pausa.] BuscAG quiere hacer posible esa conexión.',actions='Nodos orbitan sin tocarse; dos rondas de manos. Al final, un haz conecta los nodos. Logo se forma con partículas. No atribuir recuperaciones al público.')
-c.update(kind='team',duration=60,title='BuscAG. Encontrarnos hace la diferencia.',subtitle='Valentino Mamonde + Germán Luján',bullets=['Desarrollo + investigación','Marketing + documentación'],speaker='Germán',script='Somos Valentino Mamonde y Germán Luján. BuscAG conecta publicaciones de objetos perdidos y encontrados. Valentino dedicó más tiempo al código y yo a marketing y documentación. Los dos investigamos, tomamos decisiones técnicas y vamos a explicar ingeniería y negocio. También vamos a usar dos sesiones independientes. Queremos que puedan distinguir una idea de un producto revisable: van a ver qué existe, qué probamos y qué sigue pendiente. El código y la documentación quedan accesibles al final. Ahora queremos conocer su primera decisión: ¿dónde buscarían un objeto perdido?',actions='Revelación del símbolo original con partículas y onda cian. Nombres grandes; ambos hablarán de ingeniería y negocio. Preparar encuesta 1 sin abrirla todavía.')
-p['scenes'][3].update(kind='poll',pollId='search',duration=120,title='¿Dónde buscarías primero un objeto perdido?',subtitle='El público decide.',bullets=['Redes sociales','Grupos de WhatsApp','Volver al lugar'],script='VALENTINO · 04:00–05:00: '+first[2]['script']+' [Ofrecer treinta segundos para escanear y votar; no completar el silencio con estadísticas.] GERMÁN · 05:00–06:00: Cerramos y revelamos lo que respondió este público. No es una muestra representativa de toda la comunidad. Si hay empate o no llegaron votos, lo decimos. Las tres opciones pueden ayudar; la dificultad es que cada una conserva una parte distinta de la información. BuscAG propone reunir esos caminos. [Si internet falla: seleccionar manos levantadas, preguntar opción por opción y conservar ese conteo como manual.]',speaker='Ambos',actions='04:00 abrir encuesta 1 HTTPS. 30–45 s para escanear/votar. Cerrar, revelar y comentar. Si no hay servicio, pasar a manos levantadas; contar por opción sin mezclar fuentes.')
-p['scenes'][4].update(kind='scatter',duration=60,title='La información está. La conexión falta.',subtitle='Un aviso acá. Una búsqueda allá.',bullets=['Grupos aislados','Avisos que se pierden','Una comunidad como punto de partida'],script=first[3]['script']+' '+first[4]['script'],speaker='Valentino',actions='Avisos flotan en profundidad, saturan y colapsan en un único punto de búsqueda. La representación es conceptual, sin cifras inventadas.')
-p['scenes'][5].update(duration=60,title='Un lugar para encontrarnos.',subtitle='Publicar. Buscar. Comparar. Conversar.',bullets=[],script=first[5]['script'],speaker='Germán',actions='Cámara se acerca a capturas auténticas de la interfaz. Rótulo datos sintéticos; no se presenta como demo real.')
-p['scenes'][6]['pollId']='object'
-new_titles={6:'¿Qué buscamos juntos?',7:'Una cuenta. Una publicación.',8:'La otra persona entra en escena.',9:'Una coincidencia necesita razones.',10:'Contactar no es recuperar.',11:'Entramos al sistema.',12:'Una sugerencia. Reglas visibles.',13:'La respuesta que no llegó.',14:'Probar también es construir.',15:'La utilidad antes que el cobro.',16:'Poner números es diseñar.',17:'Hoy, una plataforma.',18:'Construir. Revisar. Dejar evidencia.',19:'The original film.',20:'La marca sale de la pantalla.',21:'¿Cuánto tardarías en recuperar algo que perdiste?',22:'Probalo. Revisalo. Mejorémoslo.',23:'¿Y si encontrarlo fuera mucho más fácil?'}
-for idx,title in new_titles.items():p['scenes'][idx]['title']=title
-p['scenes'][17]['subtitle']='Mañana, miles de conexiones posibles.'
-p['scenes'][17]['actions']='Mapa: una comunidad → varias localidades → Argentina. Rotular VISIÓN FUTURA, sin atribuir usuarios actuales. Negocio prometedor, no demostrado. Móvil futuro presupuestado en notas.'
-p['scenes'][17]['bullets']=['VISIÓN FUTURA','Piloto antes de expandir','Viabilidad comercial no demostrada']
-p['scenes'][21].update(kind='vision',subtitle='Volvamos al principio.',bullets=[],script='Volvemos a la pregunta con la que empezamos. ¿Cuánto tardarían en recuperar algo que perdieron? No tenemos una cifra para prometerles. Tenemos una propuesta concreta, reglas que se pueden revisar y una comunidad con la que aprender. [Pausa de cinco segundos.] La pregunta empieza a cambiar: ¿y si encontrarlo fuera mucho más fácil? El mapa que aparece es una visión de conexiones futuras, no usuarios actuales. La siguiente conexión podría empezar con una publicación útil y una persona dispuesta a ayudar.',actions='27:00–28:00. La pregunta inicial se transforma en la frase final con máscara tipográfica. Los nodos del inicio reaparecen y expanden sus conexiones. Visión futura explícita.')
-p['scenes'][23]['subtitle']='Encontrarnos hace la diferencia.'
-p['narrativeVersion']=2;p['title']='BUSCAG — EL EXPERIMENTO';p['links']['web']='https://buscag-2677c.web.app';p['links']['demo']='https://buscag-prueba.web.app';p['links']['voteOrigin']='https://buscag-el-experimento-votos.reedyrook2.chatgpt.site';p['performanceMode']='balanced'
-(base/'src/seed.json').write_text(json.dumps(p,ensure_ascii=False,indent=2));pub=json.loads(json.dumps(p))
-for s in pub['scenes']:s['script']='';s['actions']=''
-(base/'src/public-seed.json').write_text(json.dumps(pub,ensure_ascii=False,indent=2))
+"""Generate screen copy, private script and timing from a single audited 25-minute plan."""
+import json,re,pathlib
+base=pathlib.Path(__file__).resolve().parents[1]
+plan=json.loads((base/'docs/content-25.json').read_text())
+p=json.loads((base/'docs/archive/30-minutos/project.json').read_text())
 fmt=lambda t:f'{t//60:02}:{t%60:02}'
-script=['# BUSCAG — EL EXPERIMENTO · Aula / seis actos','\n30:00 nominales. Video original 25:00–26:00. Avance manual. Participación inicial a mano alzada; encuestas reales en actos II y III. El guion anterior completo se conserva en docs/archive/SCRIPT-v1.md.\n'];story=['# Resumen escena por escena','\n| Escena | Acto | Inicio–fin | Expositor | Animación / interacción |\n|---|---|---|---|---|'];t=0
-for i,s in enumerate(p['scenes']):
- script += [f"## {i+1:02} · ACTO {s['act']} · {fmt(t)}–{fmt(t+s['duration'])} · {s['speaker']}",s['title'],s['script'],'\nAcciones: '+s['actions']+'\n']
- story += [f"| {i+1:02} | {s['act']} | {fmt(t)}–{fmt(t+s['duration'])} | {s['speaker']} | {s['actions']} |"]
- t+=s['duration']
-assert t==1800
-(base/'SCRIPT.md').write_text('\n'.join(script));(base/'STORYBOARD.md').write_text('\n'.join(story))
+p['narrativeVersion']=3
+script=['# BUSCAG — EL EXPERIMENTO · Guion coordinado de 25 minutos','', '24 diapositivas · seis actos · 25:00 nominales, incluidas encuestas, operación de la demo y video. Video inglés original: 21:30–22:30. Valentino y Germán disponen de 12:00 cada uno, más el minuto compartido del video. Avance manual; ensayar con cronómetro. Los tiempos son presupuestos de intervención, no una velocidad oral garantizada.','', 'Las capturas de apoyo conservan el rótulo de datos sintéticos. La demostración se hace con dos cuentas en el MVP, sin repetir aparte todo el bloque 08–11. Las condiciones del backend están en las notas de cada escena, no deben leerse como un discurso adicional.','']
+story=['# Las 24 diapositivas · plan de 25 minutos','', '| N.º | Acto | Inicio–fin | Quién | Pantalla | Avance |','|---|---|---|---|---|---|']
+audit=[];clock=0;by_speaker={'Valentino':0,'Germán':0};words={'Valentino':0,'Germán':0}
+for scene,item in zip(p['scenes'],plan['scenes'],strict=True):
+ duration=sum(x['seconds'] for x in item['interventions'])
+ scene.update(title=item['title'],subtitle=item['subtitle'],bullets=item['bullets'],duration=duration)
+ names=list(dict.fromkeys(x['speaker'] for x in item['interventions']))
+ scene['speaker']=' + '.join(names) if names!=['Video'] else 'Ambos · video original'
+ chunks=[];position=clock
+ script += [f"## Diapositiva {item['number']:02} · Acto {scene['act']} · {fmt(clock)}–{fmt(clock+duration)}",f"**En pantalla:** {scene['title']} — {scene['subtitle']}", '**Puntos visibles:** '+' · '.join(scene['bullets']) if scene['bullets'] else '**Visual:** conservar la escena cinematográfica original.','']
+ for part in item['interventions']:
+  who=part['speaker'];secs=part['seconds'];count=len(re.findall(r"\b[\wÁÉÍÓÚÜÑáéíóúüñ]+\b",part['text']))
+  if who in by_speaker:by_speaker[who]+=secs;words[who]+=count
+  text=part['text'] or '[VIDEO: reproducir el original en inglés completo, sin hablar encima.]'
+  chunks += [f"{who.upper()} · {fmt(position)}–{fmt(position+secs)}\n{text}\n[OPERACIÓN / AVANCE] {part['cue']}"]
+  script += [f"### {who.upper()} · {fmt(position)}–{fmt(position+secs)}",text,'',f"**Operación y avance:** {part['cue']}",'']
+  audit.append({'slide':item['number'],'speaker':who,'start':position,'end':position+secs,'seconds':secs,'words':count,'speechSecondsAt130wpm':round(count*60/130,1),'availableForActions':round(secs-count*60/130,1)})
+  position+=secs
+ scene['script']='\n\n'.join(chunks)
+ scene['actions']=' '.join(x['cue'] for x in item['interventions'])+' Nota privada: '+item['notes']
+ script += ['**Nota privada de preparación:** '+item['notes'],'']
+ story += [f"| {item['number']:02} | {scene['act']} | {fmt(clock)}–{fmt(clock+duration)} | {scene['speaker']} | {scene['title']} | {item['interventions'][-1]['cue']} |"]
+ clock+=duration
+assert clock==1500 and len(p['scenes'])==24 and by_speaker=={'Valentino':720,'Germán':720}
+pub=json.loads(json.dumps(p))
+for scene in pub['scenes']:scene['script']='';scene['actions']=''
+for name,data in [('src/seed.json',p),('src/public-seed.json',pub)]: (base/name).write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+(base/'SCRIPT.md').write_text('\n'.join(script).rstrip()+'\n');(base/'STORYBOARD.md').write_text('\n'.join(story)+'\n')
+report={'totalSeconds':clock,'video':{'start':1290,'duration':60},'allocatedBySpeaker':by_speaker,'wordsBySpeaker':words,'segments':audit}
+(base/'docs/TIMING-25.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
+print(json.dumps({'total':clock,'secondsBySpeaker':by_speaker,'wordsBySpeaker':words},ensure_ascii=False))
+for a in audit:
+ if a['speaker']!='Video' and a['availableForActions']<8:print('REVISAR RITMO',a)
